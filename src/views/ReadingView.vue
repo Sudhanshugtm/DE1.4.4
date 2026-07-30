@@ -77,6 +77,9 @@ const editorQuery = computed(() => {
   if (route.query.variant === 'toolbar-outline') {
     query.variant = 'toolbar-outline'
   }
+  if (typeof route.query.outline === 'string') {
+    query.outline = route.query.outline
+  }
   return query
 })
 

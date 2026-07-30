@@ -11,8 +11,23 @@
       </CdxButton>
     </div>
     <div class="outline-popover-body">
+      <template v-if="selectableOutlines">
+        <OutlineSelector
+          v-if="!selectedOutline"
+          v-show="selectedView === 'outline'"
+          @select="onSelectOutline"
+        />
+        <OutlineStructureList
+          v-else
+          v-show="selectedView === 'outline'"
+          v-model:added-items="addedOutlineItems"
+          :outline="selectedOutline"
+          @change-outline="onChangeOutline"
+          @content-inserted="$emit('content-inserted')"
+        />
+      </template>
       <OutlineAccordionList
-        v-if="selectedView === 'outline'"
+        v-else-if="selectedView === 'outline'"
         @content-inserted="$emit('content-inserted')"
       />
       <VerifiedFactsList
@@ -29,6 +44,7 @@
 
 <script setup>
 import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { CdxPopover, CdxMenuButton, CdxButton, CdxIcon } from '@wikimedia/codex'
 import {
   cdxIconListBullet,
@@ -37,8 +53,11 @@ import {
   cdxIconClose,
 } from '@wikimedia/codex-icons'
 import OutlineAccordionList from './OutlineAccordionList.vue'
+import OutlineSelector from './OutlineSelector.vue'
+import OutlineStructureList from './OutlineStructureList.vue'
 import VerifiedFactsList from './VerifiedFactsList.vue'
 import ReferenceSourcesList from './ReferenceSourcesList.vue'
+import { simpleEnglishOutlinesById } from '../config/outlines/simpleEnglish.js'
 
 defineEmits(['content-inserted', 'open-cite-discover'])
 const props = defineProps({
@@ -46,10 +65,40 @@ const props = defineProps({
     type: String,
     default: null,
   },
+  selectableOutlines: {
+    type: Boolean,
+    default: false,
+  },
 })
 const open = defineModel('open', { type: Boolean, default: false })
+const route = useRoute()
+const router = useRouter()
 const anchorRef = ref(null)
 const selectedView = ref('outline')
+const addedOutlineItems = ref(new Set())
+const selectedOutline = computed(() => {
+  if (!props.selectableOutlines) return null
+  const outlineId = route.query.outline
+  if (typeof outlineId !== 'string' || !Object.hasOwn(simpleEnglishOutlinesById, outlineId)) {
+    return null
+  }
+  return simpleEnglishOutlinesById[outlineId]
+})
+
+function onSelectOutline(outlineId) {
+  router.replace({
+    query: {
+      ...route.query,
+      outline: outlineId,
+    },
+  })
+}
+
+function onChangeOutline() {
+  const query = { ...route.query }
+  delete query.outline
+  router.replace({ query })
+}
 
 watch(open, (isOpen) => {
   if (isOpen) {
@@ -119,14 +168,17 @@ function detachObserver() {
   bodyEl = null
 }
 
-watch(selectedView, async () => {
+async function resetBodyScroll() {
   if (bodyEl) {
     await nextTick()
     bodyEl.scrollTop = 0
     bodyEl.classList.remove('is-scrolled')
     checkScrollable()
   }
-})
+}
+
+watch(selectedView, resetBodyScroll)
+watch(selectedOutline, resetBodyScroll)
 
 watch(open, async (isOpen) => {
   if (isOpen) {
@@ -203,6 +255,8 @@ onBeforeUnmount(() => {
 .outline-popover-anchor + :deep(.cdx-popover) {
   min-height: 50vh !important;
   max-height: 50vh !important;
+  min-height: 50dvh !important;
+  max-height: 50dvh !important;
   display: flex;
   flex-direction: column;
   position: fixed !important;
@@ -215,7 +269,8 @@ onBeforeUnmount(() => {
   border-radius: 0 !important;
   border: none !important;
   border-top: 1px solid var(--border-color-base, #a2a9b1) !important;
-  padding: 0 !important;
+  padding: 0 0 env(safe-area-inset-bottom, 0) !important;
+  box-sizing: border-box;
 }
 
 .outline-popover-body :deep(.cdx-accordion__content) {

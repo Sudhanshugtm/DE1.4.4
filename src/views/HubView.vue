@@ -41,8 +41,8 @@ const prototypes = [
   {
     key: 'toolbar-outline',
     lang: 'Variation',
-    label: 'Toolbar entry point',
-    description: 'The outline starts open and can be reopened from the toolbar.',
+    label: 'Selectable article outlines',
+    description: 'Choose any community outline and add its exact article structure.',
     to: { name: 'editor', query: { lang: 'en', variant: 'toolbar-outline' } },
     status: 'active',
     statusLabel: 'New',

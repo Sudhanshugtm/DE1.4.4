@@ -49,6 +49,7 @@
       v-if="effectiveOutlineLocation === 'popover'"
       v-model:open="isPopoverOpen"
       :initial-view="initialView"
+      :selectable-outlines="isToolbarOutlineVariant"
       @content-inserted="onContentInserted"
       @open-cite-discover="onOpenCiteDiscover"
     />
@@ -138,6 +139,9 @@ function onClose() {
   const query = { lang: lang.value }
   if (isToolbarOutlineVariant.value) {
     query.variant = 'toolbar-outline'
+  }
+  if (typeof route.query.outline === 'string') {
+    query.outline = route.query.outline
   }
   router.push({ name: 'article', query })
 }
