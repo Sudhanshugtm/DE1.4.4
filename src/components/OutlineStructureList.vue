@@ -8,32 +8,32 @@
       <CdxButton weight="quiet" @click="emit('change-outline')">Change outline</CdxButton>
     </header>
 
-    <ol class="outline-structure__items">
-      <li
+    <div class="outline-structure__items">
+      <CdxAccordion
         v-for="item in outlineItems"
         :key="item.key"
-        class="outline-structure__item"
-        :class="{ 'outline-structure__item--added': isAdded(item) }"
+        class="outline-structure__accordion"
+        :class="{
+          'outline-structure__accordion--empty': isItemEmpty(item),
+          'outline-structure__accordion--added': isAdded(item),
+        }"
+        separation="none"
+        :model-value="accordionStates[item.key]"
+        :action-icon="isAdded(item) ? cdxIconCheck : cdxIconAdd"
+        :action-always-visible="true"
+        :action-button-label="isAdded(item) ? `${item.title} added` : `Add ${item.title}`"
+        @update:model-value="(value) => onAccordionUpdate(item, value)"
+        @action-button-click="onAdd(item)"
       >
-        <div class="outline-structure__item-header">
-          <h3>{{ item.title }}</h3>
-          <CdxButton
-            weight="quiet"
-            :disabled="isAdded(item)"
-            :aria-label="isAdded(item) ? `${item.title} added` : `Add ${item.title}`"
-            @click="onAdd(item)"
-          >
-            <CdxIcon :icon="isAdded(item) ? cdxIconCheck : cdxIconAdd" />
-            {{ isAdded(item) ? 'Added' : 'Add' }}
-          </CdxButton>
-        </div>
+        <template #title>{{ item.title }}</template>
+
         <div
           v-if="item.previewHtml"
           class="outline-structure__preview"
           v-html="item.previewHtml"
         ></div>
-      </li>
-    </ol>
+      </CdxAccordion>
+    </div>
 
     <a class="outline-structure__source" :href="outline.sourceUrl" target="_blank" rel="noopener">
       View community outline
@@ -42,8 +42,8 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
-import { CdxButton, CdxIcon } from '@wikimedia/codex'
+import { computed, ref, watch } from 'vue'
+import { CdxAccordion, CdxButton } from '@wikimedia/codex'
 import { cdxIconAdd, cdxIconCheck } from '@wikimedia/codex-icons'
 import { useEditorInstance } from '../composables/useEditorInstance'
 import {
@@ -85,8 +85,27 @@ const outlineItems = computed(() => {
   return [lead, ...sections]
 })
 
+const accordionStates = ref({})
+
+watch(
+  outlineItems,
+  (items) => {
+    accordionStates.value = Object.fromEntries(items.map((item, index) => [item.key, index === 0]))
+  },
+  { immediate: true },
+)
+
 function isAdded(item) {
   return addedItems.value.has(item.key)
+}
+
+function isItemEmpty(item) {
+  return !item.previewHtml
+}
+
+function onAccordionUpdate(item, value) {
+  if (isItemEmpty(item) && value) return
+  accordionStates.value[item.key] = value
 }
 
 function onAdd(item) {
@@ -141,40 +160,31 @@ function onAdd(item) {
   flex: 0 0 auto;
 }
 
-.outline-structure__items {
-  margin: 0 calc(var(--spacing-100) * -1);
-  padding: 0;
-  list-style: none;
+.outline-structure__accordion {
+  margin-inline: 0;
 }
 
-.outline-structure__item {
-  padding: var(--spacing-100);
-  border-top: 1px solid var(--border-color-subtle);
+.outline-structure__accordion--empty :deep(> summary::before) {
+  opacity: 0;
 }
 
-.outline-structure__item-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--spacing-75);
+.outline-structure__accordion--empty :deep(> summary) {
+  cursor: default;
+  pointer-events: none;
 }
 
-.outline-structure__item-header h3 {
-  margin: var(--spacing-25) 0 0;
-  font-size: var(--font-size-medium);
-  line-height: var(--line-height-medium);
+.outline-structure__accordion--empty :deep(> summary .cdx-accordion__action) {
+  pointer-events: auto;
+  cursor: pointer;
 }
 
-.outline-structure__item-header .cdx-button {
-  flex: 0 0 auto;
-}
-
-.outline-structure__item--added {
-  background-color: var(--background-color-success-subtle);
+.outline-structure__accordion--added :deep(> summary .cdx-accordion__action) {
+  pointer-events: none;
+  cursor: default;
+  opacity: var(--opacity-icon-base--disabled, 0.51);
 }
 
 .outline-structure__preview {
-  padding-inline-end: var(--spacing-100);
   color: var(--color-subtle);
   font-family: var(--font-family-system-sans);
   font-size: var(--font-size-small);
