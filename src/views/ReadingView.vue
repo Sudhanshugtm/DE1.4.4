@@ -36,7 +36,7 @@
               >{{ item.title }}</a>
               <router-link
                 v-else
-                :to="{ name: 'editor', query: { lang: lang } }"
+                :to="{ name: 'editor', query: editorQuery }"
                 class="reading__link reading__link--red"
               >{{ item.title }}</router-link>
             </li>
@@ -63,13 +63,22 @@
 // ABOUTME: Fetches a real Wikipedia article via fakewiki and renders it
 // ABOUTME: with a Minerva-style shell. One list item is a red link to the editor.
 
-import { ref, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { CdxIcon } from '@wikimedia/codex'
 import { cdxIconArrowPrevious } from '@wikimedia/codex-icons'
 import { FakeWiki } from 'fakewiki'
 import { useLocale } from '@/composables/useLocale'
 
 const { lang, locale } = useLocale()
+const route = useRoute()
+const editorQuery = computed(() => {
+  const query = { lang: lang.value }
+  if (route.query.variant === 'toolbar-outline') {
+    query.variant = 'toolbar-outline'
+  }
+  return query
+})
 
 const summary = ref(null)
 const error = ref(false)
@@ -80,7 +89,7 @@ async function loadArticle() {
   const wiki = new FakeWiki(locale.value.article.wikiBase)
   try {
     summary.value = await wiki.getPageSummary(locale.value.article.title)
-  } catch (e) {
+  } catch {
     error.value = true
   }
 }

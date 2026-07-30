@@ -1,12 +1,28 @@
 <template>
   <div class="editor-page">
-    <CdxToolbar @cite="onOpenCiteDefault" @close="onClose" />
+    <CdxToolbar
+      :show-outline-entry="isToolbarOutlineVariant"
+      @open-outline="onOpenOutline"
+      @cite="onOpenCiteDefault"
+      @close="onClose"
+    />
     <div class="editor-wrapper" :class="{ 'rail-open': isRailOpen }">
       <div class="editor-main" @click="isRailOpen && (isRailOpen = false)">
-        <TextEditor @open-outline="onOpenOutline" @open-settings="settingsDialogOpen = true" />
+        <TextEditor
+          :show-outline-entry="!isToolbarOutlineVariant"
+          :suppress-auto-focus="isToolbarOutlineVariant"
+          @open-outline="onOpenOutline"
+          @open-settings="settingsDialogOpen = true"
+        />
       </div>
       <div class="editor-rail-column">
-        <EditorRail :is-open="isRailOpen" :initial-view="initialView" @content-inserted="onContentInserted" @close="isRailOpen = false" @open-cite-discover="onOpenCiteDiscover" />
+        <EditorRail
+          :is-open="isRailOpen"
+          :initial-view="initialView"
+          @content-inserted="onContentInserted"
+          @close="isRailOpen = false"
+          @open-cite-discover="onOpenCiteDiscover"
+        />
       </div>
     </div>
 
@@ -21,7 +37,13 @@
       <CdxIcon :icon="cdxIconAdd" />
     </div>
 
-    <OutlinePopover v-if="outlineLocation === 'popover'" v-model:open="isPopoverOpen" :initial-view="initialView" @content-inserted="onContentInserted" @open-cite-discover="onOpenCiteDiscover" />
+    <OutlinePopover
+      v-if="outlineLocation === 'popover'"
+      v-model:open="isPopoverOpen"
+      :initial-view="initialView"
+      @content-inserted="onContentInserted"
+      @open-cite-discover="onOpenCiteDiscover"
+    />
     <SettingsDialog v-model:open="settingsDialogOpen" />
     <CiteDialog v-model:open="citeDialogOpen" :initial-tab="citeDialogInitialTab" />
   </div>
@@ -29,7 +51,7 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { CdxIcon } from '@wikimedia/codex'
 import { cdxIconAdd } from '@wikimedia/codex-icons'
 import TextEditor from '@/components/TextEditor.vue'
@@ -43,9 +65,11 @@ import { useEditorInstance } from '@/composables/useEditorInstance'
 import { useCursorRect } from '@/composables/useCursorRect'
 import { useLocale } from '@/composables/useLocale'
 
+const route = useRoute()
 const router = useRouter()
 const { lang } = useLocale()
 const { settings } = useEditorSettings()
+const isToolbarOutlineVariant = computed(() => route.query.variant === 'toolbar-outline')
 const outlineLocation = computed(() => settings.value.outline.location)
 const outlinePersistence = computed(() => settings.value.outline.persistence)
 const entryPointStyle = computed(() => settings.value.entryPoint.style)
@@ -55,6 +79,7 @@ const { getEditor } = useEditorInstance()
 const { cursorRect } = useCursorRect()
 
 const isForceButtonVisible = computed(() => {
+  if (isToolbarOutlineVariant.value) return false
   if (!['force', 'quiet', 'text', 'floating'].includes(entryPointStyle.value)) return false
   if (isRailOpen.value || isPopoverOpen.value) return false
   if (!cursorRect.value) return false
@@ -74,8 +99,8 @@ const forceButtonStyle = computed(() => {
   }
 })
 
-const isRailOpen = ref(false)
-const isPopoverOpen = ref(false)
+const isRailOpen = ref(isToolbarOutlineVariant.value && outlineLocation.value !== 'popover')
+const isPopoverOpen = ref(isToolbarOutlineVariant.value && outlineLocation.value === 'popover')
 const settingsDialogOpen = ref(false)
 const citeDialogOpen = ref(false)
 const citeDialogInitialTab = ref('automatic')
@@ -88,8 +113,7 @@ function onForceButtonClick() {
 
 function onOpenOutline() {
   const editor = getEditor()
-  const isPlaceholderSelected =
-    editor?.state.selection.node?.type.name === 'placeholderChip'
+  const isPlaceholderSelected = editor?.state.selection.node?.type.name === 'placeholderChip'
   initialView.value = isPlaceholderSelected ? 'verified-facts' : null
 
   if (outlineLocation.value === 'popover') {
@@ -100,7 +124,11 @@ function onOpenOutline() {
 }
 
 function onClose() {
-  router.push({ name: 'article', query: { lang: lang.value } })
+  const query = { lang: lang.value }
+  if (isToolbarOutlineVariant.value) {
+    query.variant = 'toolbar-outline'
+  }
+  router.push({ name: 'article', query })
 }
 
 function onOpenCiteDefault() {
@@ -138,6 +166,17 @@ watch(isPopoverOpen, (newVal) => {
 watch(outlineLocation, () => {
   isRailOpen.value = false
   isPopoverOpen.value = false
+  if (isToolbarOutlineVariant.value) {
+    onOpenOutline()
+  }
+})
+
+watch(isToolbarOutlineVariant, (isEnabled) => {
+  isRailOpen.value = false
+  isPopoverOpen.value = false
+  if (isEnabled) {
+    onOpenOutline()
+  }
 })
 </script>
 

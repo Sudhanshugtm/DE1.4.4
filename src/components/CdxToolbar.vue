@@ -21,14 +21,15 @@
       <CdxButton class="cdx-toolbar__btn" weight="quiet" aria-label="Link">
         <CdxIcon :icon="cdxIconLink" />
       </CdxButton>
-      <!-- <CdxButton
-        class="cdx-toolbar__btn cdx-toolbar__btn--dropdown"
+      <CdxButton
+        v-if="showOutlineEntry"
+        class="cdx-toolbar__btn"
         weight="quiet"
-        aria-label="Insert"
+        aria-label="Open article outline"
+        @click="emit('open-outline')"
       >
         <CdxIcon :icon="cdxIconAdd" />
-        <CdxIcon :icon="cdxIconExpand" class="cdx-toolbar__indicator" />
-      </CdxButton> -->
+      </CdxButton>
       <CdxButton
         class="cdx-toolbar__btn cdx-toolbar__btn--dropdown"
         weight="quiet"
@@ -52,7 +53,14 @@
 </template>
 
 <script setup>
-const emit = defineEmits(['cite', 'close'])
+defineProps({
+  showOutlineEntry: {
+    type: Boolean,
+    default: false,
+  },
+})
+
+const emit = defineEmits(['cite', 'close', 'open-outline'])
 import { CdxButton, CdxIcon } from '@wikimedia/codex'
 import {
   cdxIconClose,

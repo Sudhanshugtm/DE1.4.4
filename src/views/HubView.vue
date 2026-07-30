@@ -1,5 +1,5 @@
 <!-- ABOUTME: Internal hub page for managing and accessing prototype builds. -->
-<!-- ABOUTME: Lists available prototypes by language, with direct shareable URLs. -->
+<!-- ABOUTME: Lists baseline locale prototypes and focused design variations. -->
 
 <template>
   <div class="hub">
@@ -12,7 +12,7 @@
       <div class="hub__list">
         <router-link
           v-for="proto in prototypes"
-          :key="proto.lang"
+          :key="proto.key"
           :to="proto.to"
           class="hub__card"
         >
@@ -32,19 +32,31 @@
 </template>
 
 <script setup>
-// ABOUTME: Generates prototype entries from locale metadata.
-// ABOUTME: One card per language, linking to the reading page for that language.
+// ABOUTME: Generates baseline entries from locales and adds named variations.
+// ABOUTME: Every card points to a directly shareable prototype state.
 
 import locales from '@/config/locales'
 
-const prototypes = Object.values(locales).map((loc) => ({
-  lang: loc.name,
-  label: loc.article.title,
-  description: loc.reading.wordmark,
-  to: { name: 'article', query: { lang: loc.code } },
-  status: 'active',
-  statusLabel: 'In progress',
-}))
+const prototypes = [
+  {
+    key: 'toolbar-outline',
+    lang: 'Variation',
+    label: 'Toolbar entry point',
+    description: 'The outline starts open and can be reopened from the toolbar.',
+    to: { name: 'editor', query: { lang: 'en', variant: 'toolbar-outline' } },
+    status: 'active',
+    statusLabel: 'New',
+  },
+  ...Object.values(locales).map((loc) => ({
+    key: `baseline-${loc.code}`,
+    lang: loc.name,
+    label: loc.article.title,
+    description: loc.reading.wordmark,
+    to: { name: 'article', query: { lang: loc.code } },
+    status: 'active',
+    statusLabel: 'In progress',
+  })),
+]
 </script>
 
 <style scoped>

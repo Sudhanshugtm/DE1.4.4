@@ -2,7 +2,7 @@
   <div class="text-editor-wrapper" :class="{ 'hide-placeholder': !(entryPointStyle === 'text' && !hasInteracted) }">
     <EditorContent ref="editorContentRef" class="text-editor" :editor="editor" />
     <div
-      v-show="isButtonVisible"
+      v-show="showOutlineEntry && isButtonVisible"
       ref="floatingElRef"
       class="codex-floating-entry"
       :style="floatingButtonStyle"
@@ -73,6 +73,17 @@ import { useEditorInstance } from '../composables/useEditorInstance'
 import { useCursorRect } from '../composables/useCursorRect'
 import { useLocale } from '../composables/useLocale'
 import { defaultSettings } from '../config/editorSettings'
+
+const props = defineProps({
+  showOutlineEntry: {
+    type: Boolean,
+    default: true,
+  },
+  suppressAutoFocus: {
+    type: Boolean,
+    default: false,
+  },
+})
 
 const emit = defineEmits(['open-outline', 'open-settings'])
 
@@ -278,6 +289,12 @@ function getEditorScrollEl() {
 }
 
 function updateButtonPosition() {
+  if (!props.showOutlineEntry) {
+    isButtonVisible.value = false
+    clearCursorRect()
+    return
+  }
+
   if (!editor.value) {
     isButtonVisible.value = false
     return
@@ -432,6 +449,8 @@ function onCodexButtonClick() {
 }
 
 function onEditorClick(event) {
+  if (!props.showOutlineEntry) return
+
   if (entryPointStyle.value === 'text' && !hasInteracted.value && editor.value?.isEmpty) {
     event.stopPropagation()
     hasInteracted.value = true
@@ -467,7 +486,7 @@ onMounted(() => {
   }
 
   // Auto-focus editor on launch if setting is enabled (default: true)
-  if (settings.value.entryPoint.autoFocus !== 'false') {
+  if (!props.suppressAutoFocus && settings.value.entryPoint.autoFocus !== 'false') {
     editor.value?.commands.focus()
     // Ensure floating button position is calculated after DOM paint
     if (entryPointStyle.value === 'floating') {
