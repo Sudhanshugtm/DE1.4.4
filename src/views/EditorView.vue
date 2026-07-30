@@ -2,20 +2,28 @@
   <div class="editor-page">
     <CdxToolbar
       :show-outline-entry="isToolbarOutlineVariant"
+      :show-cite="!isToolbarOutlineVariant"
       @open-outline="onOpenOutline"
       @cite="onOpenCiteDefault"
       @close="onClose"
     />
-    <div class="editor-wrapper" :class="{ 'rail-open': isRailOpen }">
+    <div
+      class="editor-wrapper"
+      :class="{
+        'rail-open': isRailOpen,
+        'editor-wrapper--full-width': isToolbarOutlineVariant,
+      }"
+    >
       <div class="editor-main" @click="isRailOpen && (isRailOpen = false)">
         <TextEditor
           :show-outline-entry="!isToolbarOutlineVariant"
+          :show-placeholder="isToolbarOutlineVariant"
           :suppress-auto-focus="isToolbarOutlineVariant"
           @open-outline="onOpenOutline"
           @open-settings="settingsDialogOpen = true"
         />
       </div>
-      <div class="editor-rail-column">
+      <div v-if="!isToolbarOutlineVariant" class="editor-rail-column">
         <EditorRail
           :is-open="isRailOpen"
           :initial-view="initialView"
@@ -38,7 +46,7 @@
     </div>
 
     <OutlinePopover
-      v-if="outlineLocation === 'popover'"
+      v-if="effectiveOutlineLocation === 'popover'"
       v-model:open="isPopoverOpen"
       :initial-view="initialView"
       @content-inserted="onContentInserted"
@@ -71,6 +79,9 @@ const { lang } = useLocale()
 const { settings } = useEditorSettings()
 const isToolbarOutlineVariant = computed(() => route.query.variant === 'toolbar-outline')
 const outlineLocation = computed(() => settings.value.outline.location)
+const effectiveOutlineLocation = computed(() =>
+  isToolbarOutlineVariant.value ? 'popover' : outlineLocation.value,
+)
 const outlinePersistence = computed(() => settings.value.outline.persistence)
 const entryPointStyle = computed(() => settings.value.entryPoint.style)
 
@@ -99,8 +110,8 @@ const forceButtonStyle = computed(() => {
   }
 })
 
-const isRailOpen = ref(isToolbarOutlineVariant.value && outlineLocation.value !== 'popover')
-const isPopoverOpen = ref(isToolbarOutlineVariant.value && outlineLocation.value === 'popover')
+const isRailOpen = ref(false)
+const isPopoverOpen = ref(isToolbarOutlineVariant.value)
 const settingsDialogOpen = ref(false)
 const citeDialogOpen = ref(false)
 const citeDialogInitialTab = ref('automatic')
@@ -116,7 +127,7 @@ function onOpenOutline() {
   const isPlaceholderSelected = editor?.state.selection.node?.type.name === 'placeholderChip'
   initialView.value = isPlaceholderSelected ? 'verified-facts' : null
 
-  if (outlineLocation.value === 'popover') {
+  if (effectiveOutlineLocation.value === 'popover') {
     isPopoverOpen.value = true
   } else {
     isRailOpen.value = true
@@ -163,7 +174,7 @@ watch(isPopoverOpen, (newVal) => {
   }
 })
 
-watch(outlineLocation, () => {
+watch(effectiveOutlineLocation, () => {
   isRailOpen.value = false
   isPopoverOpen.value = false
   if (isToolbarOutlineVariant.value) {
@@ -204,6 +215,10 @@ watch(isToolbarOutlineVariant, (isEnabled) => {
   flex: 0 0 calc(100vw - 44px);
   display: flex;
   flex-direction: column;
+}
+
+.editor-wrapper--full-width .editor-main {
+  flex-basis: 100vw;
 }
 
 .editor-rail-column {

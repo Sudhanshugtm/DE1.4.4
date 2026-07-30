@@ -1,5 +1,10 @@
 <template>
-  <div class="text-editor-wrapper" :class="{ 'hide-placeholder': !(entryPointStyle === 'text' && !hasInteracted) }">
+  <div
+    class="text-editor-wrapper"
+    :class="{
+      'hide-placeholder': !showPlaceholder && !(entryPointStyle === 'text' && !hasInteracted),
+    }"
+  >
     <EditorContent ref="editorContentRef" class="text-editor" :editor="editor" />
     <div
       v-show="showOutlineEntry && isButtonVisible"
@@ -80,6 +85,10 @@ const props = defineProps({
     default: true,
   },
   suppressAutoFocus: {
+    type: Boolean,
+    default: false,
+  },
+  showPlaceholder: {
     type: Boolean,
     default: false,
   },

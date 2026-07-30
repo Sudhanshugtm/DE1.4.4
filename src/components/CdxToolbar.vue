@@ -15,7 +15,13 @@
         <CdxIcon :icon="cdxIconTextStyle" />
         <CdxIcon :icon="cdxIconExpand" class="cdx-toolbar__indicator" />
       </CdxButton>
-      <CdxButton class="cdx-toolbar__btn" weight="quiet" aria-label="Cite" @click="emit('cite')">
+      <CdxButton
+        v-if="showCite"
+        class="cdx-toolbar__btn"
+        weight="quiet"
+        aria-label="Cite"
+        @click="emit('cite')"
+      >
         <CdxIcon :icon="cdxIconQuotes" />
       </CdxButton>
       <CdxButton class="cdx-toolbar__btn" weight="quiet" aria-label="Link">
@@ -57,6 +63,10 @@ defineProps({
   showOutlineEntry: {
     type: Boolean,
     default: false,
+  },
+  showCite: {
+    type: Boolean,
+    default: true,
   },
 })
 
