@@ -129,10 +129,10 @@ const currentItem = computed(
 let bodyEl = null
 let resizeObserver = null
 
+// As a bottom sheet the popover is rendered into a backdrop wrapper rather
+// than beside its anchor, so it is found by what it is, not by where it sits.
 function getBodyEl() {
-  if (!anchorRef.value) return null
-  const popover = anchorRef.value.nextElementSibling
-  return popover?.querySelector('.outline-popover-body') ?? null
+  return document.querySelector('.cdx-popover .outline-popover-body')
 }
 
 function checkScrollable() {
@@ -159,8 +159,28 @@ function attachObserver() {
 function detachObserver() {
   bodyEl?.removeEventListener('scroll', onBodyScroll)
   bodyEl?.classList.remove('is-scrollable', 'is-scrolled')
+  popoverEl?.removeEventListener('keydown', showFocusRing)
+  popoverEl?.classList.remove(QUIET_FOCUS_CLASS)
+  popoverEl = null
   resizeObserver?.disconnect()
   bodyEl = null
+}
+
+// Opening the sheet traps focus on its close button, so it can be reached by
+// keyboard and read out on arrival. Keeping the focus but not its ring: no
+// key was pressed to get there, so nothing is drawn until one is.
+const QUIET_FOCUS_CLASS = 'cdx-popover--quiet-focus'
+let popoverEl = null
+
+function quietTrappedFocus() {
+  popoverEl = bodyEl?.closest('.cdx-popover') ?? null
+  if (!popoverEl) return
+  popoverEl.classList.add(QUIET_FOCUS_CLASS)
+  popoverEl.addEventListener('keydown', showFocusRing)
+}
+
+function showFocusRing() {
+  popoverEl?.classList.remove(QUIET_FOCUS_CLASS)
 }
 
 function resetBodyScroll() {
@@ -190,6 +210,7 @@ watch(open, async (isOpen) => {
     await nextTick()
     await nextTick()
     attachObserver()
+    quietTrappedFocus()
     applyPendingOutlineScrollReset()
   } else {
     detachObserver()
@@ -200,6 +221,7 @@ onMounted(async () => {
   if (open.value) {
     await nextTick()
     attachObserver()
+    quietTrappedFocus()
   }
 })
 
@@ -282,12 +304,11 @@ onBeforeUnmount(() => {
   padding: 0;
 }
 
-/* Opening the sheet puts focus on its close button so it can be reached by
-   keyboard. Touch does not need to see that ring, so it is shown only when
-   focus arrives from the keyboard. */
-.cdx-popover--bottom-sheet .cdx-button:focus:not(:focus-visible) {
+/* Focus the sheet placed there itself, rather than the reader asking for it.
+   The ring comes back the moment a key is pressed. Matches the shape of the
+   Codex rule it turns off, which is what it takes to outweigh it. */
+.cdx-popover--quiet-focus .cdx-button:enabled:focus:not(:active):not(.cdx-button--is-active) {
   border-color: transparent;
   box-shadow: none;
-  outline: 0;
 }
 </style>

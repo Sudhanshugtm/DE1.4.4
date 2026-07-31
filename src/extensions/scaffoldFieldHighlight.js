@@ -6,13 +6,14 @@ import { findScaffoldFields } from '../utils/scaffoldFields'
 export const scaffoldFieldHighlightKey = new PluginKey('scaffoldFieldHighlight')
 
 /**
- * Fields carry a quiet tint for what they are asking for, and a louder one
- * once a check has asked for them to be resolved.
+ * Fields carry a quiet tint for what they are asking for. A check does not
+ * add to it: marking every field at once shouts, where the check's own card
+ * and its Review action already say which ones and where.
  */
-function decorate(doc, flagged) {
+function decorate(doc) {
   const decorations = findScaffoldFields(doc).map((field) =>
     Decoration.inline(field.from, field.to, {
-      class: `scaffold-field scaffold-field--${field.kind}${flagged ? ' scaffold-field--flagged' : ''}`,
+      class: `scaffold-field scaffold-field--${field.kind}`,
     }),
   )
 
@@ -20,8 +21,8 @@ function decorate(doc, flagged) {
 }
 
 /**
- * Marks the scaffold fields a check is asking about, so the article shows
- * what the card is talking about.
+ * Tints the scaffold fields an outline leaves behind, so what is waiting to
+ * be filled in reads differently from what has been written.
  */
 export const ScaffoldFieldHighlight = Extension.create({
   name: 'scaffoldFieldHighlight',
@@ -32,23 +33,16 @@ export const ScaffoldFieldHighlight = Extension.create({
         key: scaffoldFieldHighlightKey,
 
         state: {
-          init: (_, state) => ({ active: false, decorations: decorate(state.doc, false) }),
+          init: (_, state) => decorate(state.doc),
 
           apply(tr, value) {
-            const toggled = tr.getMeta(scaffoldFieldHighlightKey)
-            const active = typeof toggled === 'boolean' ? toggled : value.active
-
-            if (!tr.docChanged && typeof toggled !== 'boolean') {
-              return { active, decorations: value.decorations.map(tr.mapping, tr.doc) }
-            }
-
-            return { active, decorations: decorate(tr.doc, active) }
+            return tr.docChanged ? decorate(tr.doc) : value.map(tr.mapping, tr.doc)
           },
         },
 
         props: {
           decorations(state) {
-            return scaffoldFieldHighlightKey.getState(state)?.decorations
+            return scaffoldFieldHighlightKey.getState(state)
           },
         },
       }),
