@@ -1,6 +1,12 @@
 <template>
   <div ref="anchorRef" class="outline-popover-anchor"></div>
-  <CdxPopover v-model:open="open" :anchor="anchorRef" placement="top-start" :render-in-place="true">
+  <CdxPopover
+    v-model:open="open"
+    :anchor="anchorRef"
+    placement="top-start"
+    :use-bottom-sheet="true"
+    :hide-backdrop="true"
+  >
     <div class="outline-popover-header">
       <span class="outline-popover-header__title">
         <CdxIcon :icon="currentItem.icon" size="small" />
@@ -254,45 +260,25 @@ onBeforeUnmount(() => {
   border-top: 1px solid var(--border-color-subtle, #c8ccd1);
 }
 
-.outline-popover-anchor + :deep(.cdx-popover .cdx-popover__body) {
+.outline-popover-body :deep(.cdx-accordion__content) {
+  font-family: var(--font-family-system-sans);
+}
+</style>
+
+<!-- Codex places and sizes the bottom sheet itself; these are the two things
+     the design asks for on top of that. The popover is rendered outside this
+     component, so the rules cannot be scoped. -->
+<style>
+.cdx-popover--bottom-sheet {
+  max-height: 50dvh;
+  background-color: var(--background-color-neutral-subtle, #f8f9fa);
+}
+
+.cdx-popover--bottom-sheet .cdx-popover__body {
   display: flex;
   flex-direction: column;
   flex: 1;
   min-height: 0;
-}
-
-/* The sheet is anchored to the viewport, not to an element, so the popover's
-   pointer would only show up as a stray shape against its edge. */
-.outline-popover-anchor + :deep(.cdx-popover .cdx-popover__arrow) {
-  display: none;
-}
-
-.outline-popover-anchor + :deep(.cdx-popover) {
-  min-height: 50vh !important;
-  max-height: 50vh !important;
-  min-height: 50dvh !important;
-  max-height: 50dvh !important;
-  display: flex;
-  flex-direction: column;
-  position: fixed !important;
-  bottom: 0 !important;
-  left: 0 !important;
-  top: auto !important;
-  width: 100% !important;
-  max-width: 100% !important;
-  transform: none !important;
-  background-color: var(--background-color-neutral-subtle, #f8f9fa) !important;
-  border-radius: var(--border-radius-sharp, 0) !important;
-  border-start-start-radius: var(--border-radius-medium, 8px) !important;
-  border-start-end-radius: var(--border-radius-medium, 8px) !important;
-  border: none !important;
-  border-top: 1px solid var(--border-color-base, #a2a9b1) !important;
-  padding: 0 0 env(safe-area-inset-bottom, 0) !important;
-  box-sizing: border-box;
-  overflow: hidden;
-}
-
-.outline-popover-body :deep(.cdx-accordion__content) {
-  font-family: var(--font-family-system-sans);
+  padding: 0;
 }
 </style>
