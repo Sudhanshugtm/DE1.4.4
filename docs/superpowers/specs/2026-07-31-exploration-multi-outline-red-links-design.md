@@ -141,7 +141,7 @@ The fixture stores sources once and references them from immutable sentence reco
 }
 ```
 
-Every sentence record must have a stable `id`, at least one `sourceId`, and ordered `segments`. Every referenced source ID must exist in the fixture's `sources` object. The source map is research evidence and is not rendered as an article References section in this prototype.
+Every sentence record must have a stable `id`, a `sourceIds` array containing at least one ID, and ordered `segments`. Every referenced source ID must exist in the fixture's `sources` object. The source map is research evidence and is not rendered as an article References section in this prototype.
 
 The exact claim-to-source mapping is:
 
@@ -214,7 +214,7 @@ The two famous people share one Person guidance profile but remain separate jour
 
 ## Type-specific guidance
 
-All guidance is frozen local content. No Wikidata, Citoid, REST, or source-quality request is made.
+All guidance is frozen local content. No Wikidata, Citoid, REST, or source-quality request is made. For each type below, the first three bullets are the exact Guidance-step bullets. The fourth `Prefer ...` bullet is the exact type-specific Sources-step tip shown below the shared requirement for two unique HTTP(S) URLs.
 
 ### Person
 
@@ -346,7 +346,8 @@ The editor already reads valid outline IDs. This work does not change editor com
 - Refreshing Sources or Guidance therefore resets to Subject for the same valid journey because setup state is not persisted.
 - An unknown or missing journey key replaces the setup route with `/article`; it must never silently fall back to Person.
 - A route whose title does not match the journey opens Subject with the provided editable title and no result. Restoring the journey's canonical title restores the result.
-- Route normalization preserves `sourceOrigin=redlink` and `variant=toolbar-outline`, drops unrecognized setup query keys, and moves focus to the setup heading after replacement.
+- The canonical values for this study are `sourceOrigin=redlink` and `variant=toolbar-outline`. Route normalization preserves those values when present and replaces a missing, repeated, or different value with the canonical one.
+- Route normalization drops unrecognized setup query keys and moves focus to the setup heading after replacement.
 
 ## Accessibility
 
