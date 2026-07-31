@@ -37,8 +37,13 @@
         @click.stop="toggleInsertMenu"
       >
         <CdxIcon :icon="cdxIconAdd" />
-        <!-- Marks where the suggestions went once the sheet is dismissed. -->
-        <span v-if="highlightOutlineEntry" class="mw-pulsating-dot" aria-hidden="true"></span>
+        <!-- Marks where the suggestions went once the sheet is dismissed. It has
+             done its job once the menu is open, so it steps aside. -->
+        <span
+          v-if="highlightOutlineEntry && !insertMenuOpen"
+          class="mw-pulsating-dot"
+          aria-hidden="true"
+        ></span>
       </CdxButton>
       <CdxButton
         class="cdx-toolbar__btn cdx-toolbar__btn--dropdown"
@@ -148,13 +153,12 @@ const INSERT_MENU_WIDTH = 200
 
 function toggleInsertMenu() {
   if (!insertMenuOpen.value) {
-    // Drop the menu from the button that opened it, pulled back onto the
-    // screen when the button sits too close to the edge.
+    // The menu hangs to the left of the button that opened it, so it stays
+    // clear of the screen edge and reads as belonging to that button.
     const button = insertButtonRef.value?.$el
-    const toolbar = button?.closest('.cdx-toolbar')
-    if (button && toolbar) {
-      const furthestLeft = toolbar.clientWidth - INSERT_MENU_WIDTH
-      insertMenuLeft.value = `${Math.max(0, Math.min(button.offsetLeft, furthestLeft))}px`
+    if (button) {
+      const alignedToButtonEnd = button.offsetLeft + button.offsetWidth - INSERT_MENU_WIDTH
+      insertMenuLeft.value = `${Math.max(0, alignedToButtonEnd)}px`
     }
   }
   insertMenuOpen.value = !insertMenuOpen.value
