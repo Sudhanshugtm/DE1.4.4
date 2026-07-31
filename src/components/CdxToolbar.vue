@@ -142,7 +142,7 @@ defineProps({
   },
 })
 
-const emit = defineEmits(['cite', 'close', 'open-outline', 'publish'])
+const emit = defineEmits(['cite', 'close', 'open-outline', 'publish', 'insert-menu-opened'])
 import { onMounted, onBeforeUnmount, ref } from 'vue'
 import { CdxButton, CdxIcon } from '@wikimedia/codex'
 import {
@@ -196,6 +196,7 @@ const INSERT_MENU_WIDTH = 200
 
 function toggleInsertMenu() {
   if (!insertMenuOpen.value) {
+    emit('insert-menu-opened')
     // The menu hangs to the left of the button that opened it, so it stays
     // clear of the screen edge and reads as belonging to that button.
     const button = insertButtonRef.value?.$el

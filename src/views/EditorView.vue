@@ -6,6 +6,7 @@
       :highlight-outline-entry="highlightOutlineEntry"
       :can-publish="hasAuthoredText"
       @open-outline="onOpenOutline"
+      @insert-menu-opened="hasOpenedInsertMenu = true"
       @cite="onOpenCiteDefault"
       @close="onClose"
       @publish="onPublish"
@@ -309,7 +310,12 @@ async function onOutlineSelected(outlineId) {
     return
   }
 
+  // A different outline is a different article, so the editor starts clean:
+  // the previous article's text, checks and progress all go with it.
   addedOutlineItems.value = new Set()
+  pendingChecks.value = []
+  activeCheckIndex.value = 0
+  hasAuthoredText.value = false
   initialView.value = 'outline'
   settingsDialogOpen.value = false
   isPopoverOpen.value = true
@@ -321,19 +327,18 @@ function onForceButtonClick() {
 }
 
 // After the sheet is dismissed, the toolbar + carries a pulsating dot so the
-// suggestions are findable again. Opening the sheet from there retires it.
+// suggestions are findable again.
 const hasDismissedSheet = ref(false)
-const hasReopenedSheet = ref(false)
+// Opening the insert menu even once means the editor knows where guidance
+// lives, so the dot has nothing left to say — including after they switch to
+// another outline.
+const hasOpenedInsertMenu = ref(false)
 const highlightOutlineEntry = computed(
-  () => isToolbarOutlineVariant.value && hasDismissedSheet.value && !hasReopenedSheet.value,
+  () => isToolbarOutlineVariant.value && hasDismissedSheet.value && !hasOpenedInsertMenu.value,
 )
 
 watch(isPopoverOpen, (isOpen, wasOpen) => {
-  if (!isOpen && wasOpen) {
-    hasDismissedSheet.value = true
-  } else if (isOpen && hasDismissedSheet.value) {
-    hasReopenedSheet.value = true
-  }
+  if (!isOpen && wasOpen) hasDismissedSheet.value = true
 })
 
 function onOpenOutline() {
