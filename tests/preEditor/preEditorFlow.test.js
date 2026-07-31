@@ -204,7 +204,7 @@ test('person journey fixture provides an immutable Ritu Karidhal journey', () =>
   assert.equal(personJourney.subject.title, 'Ritu Karidhal')
   assert.equal(personJourney.subject.articleType, 'Q5')
   assert.equal(personJourney.subject.sitelinkCount, 8)
-  assert.equal(personJourney.sourceRequirements.requiredCount, 2)
+  assert.equal('requiredCount' in personJourney.sourceRequirements, false)
   assert.equal(Object.isFrozen(personJourney), true)
   assert.equal(Object.isFrozen(personJourney.article.sections), true)
   assert.equal(Object.isFrozen(personJourney.guidance.bullets), true)
@@ -248,10 +248,7 @@ test('exploration catalogue provides the exact sourced article and eight journey
     explorationCatalogue
 
   assert.equal(explorationArticle.title, 'Exploration')
-  assert.deepEqual(explorationArticle.researchNote, {
-    label: 'Research prototype',
-    text: 'Read this short article and choose any red link that interests you. Each red link starts a different article-creation path. Link colours are simulated for this study. Blue links provide context and are not active. When asked, add any two valid web links as sources.',
-  })
+  assert.equal('researchNote' in explorationArticle, false)
   assert.deepEqual(explorationArticle.description, {
     id: 'meta-description',
     text: 'Travel and study undertaken to learn about unfamiliar places',
@@ -335,7 +332,7 @@ test('exploration catalogue provides the exact sourced article and eight journey
       journey.subject.thumbnail.commonsUrl,
       /^https:\/\/commons\.wikimedia\.org\/wiki\/File:/,
     )
-    assert.deepEqual(journey.sourceRequirements, { requiredCount: 2, profileKey: outline })
+    assert.deepEqual(journey.sourceRequirements, { profileKey: outline })
     assert.equal(journey.guidanceProfileKey, outline)
     assert.deepEqual(journey.handoff, {
       lang: 'en',
@@ -508,24 +505,18 @@ test('source changes are immutable and a removed source can be added again', () 
   )
 })
 
-test('canEnterStep requires a subject and then the required sources', () => {
+test('canEnterStep requires a journey-bound subject but no sources for Guidance', () => {
   const initial = createFlowState(personJourney)
   assert.equal(initial.titleInput, 'Ritu Karidhal')
   assert.equal(createFlowState(personJourney, 'Draft title').titleInput, 'Draft title')
   const subjectReady = { ...initial, selectedSubject: personJourney.subject }
-  const sourceReady = {
-    ...subjectReady,
-    sources: [
-      { url: 'https://example.com/one', domain: 'example.com' },
-      { url: 'https://example.org/two', domain: 'example.org' },
-    ],
-  }
 
+  assert.equal('requiredSourceCount' in initial, false)
   assert.equal(canEnterStep(initial, STEPS.SUBJECT), true)
   assert.equal(canEnterStep(initial, STEPS.SOURCES), false)
+  assert.equal(canEnterStep(initial, STEPS.GUIDANCE), false)
   assert.equal(canEnterStep(subjectReady, STEPS.SOURCES), true)
-  assert.equal(canEnterStep(subjectReady, STEPS.GUIDANCE), false)
-  assert.equal(canEnterStep(sourceReady, STEPS.GUIDANCE), true)
+  assert.equal(canEnterStep(subjectReady, STEPS.GUIDANCE), true)
 })
 
 test('canEnterStep allows backward navigation from a ready Guidance state', () => {
@@ -548,10 +539,6 @@ test('buildEditorQuery maps a ready Guidance state to the editor handoff', () =>
     ...createFlowState(personJourney),
     step: STEPS.GUIDANCE,
     selectedSubject: personJourney.subject,
-    sources: [
-      { url: 'https://example.com/one', domain: 'example.com' },
-      { url: 'https://example.org/two', domain: 'example.org' },
-    ],
   }
 
   assert.deepEqual(buildEditorQuery(state, personJourney), {
@@ -561,7 +548,7 @@ test('buildEditorQuery maps a ready Guidance state to the editor handoff', () =>
     title: 'Ritu Karidhal',
     articleguidance: '1',
     sourceOrigin: 'redlink',
-    source: ['https://example.com/one', 'https://example.org/two'],
+    source: [],
   })
 })
 
@@ -723,17 +710,6 @@ test('setup routing recovers invalid steps and unmet prerequisites to canonical 
     assert.deepEqual(resolved.canonicalQuery, canonicalSubject)
     assert.equal(resolved.resetFlow, true)
   }
-
-  const sourcesReady = {
-    ...createFlowState(journey),
-    selectedSubject: journey.subject,
-  }
-  const guidanceWithoutSources = resolveSetupRoute(
-    buildSetupQuery(journey, STEPS.GUIDANCE),
-    sourcesReady,
-  )
-  assert.equal(guidanceWithoutSources.step, STEPS.SUBJECT)
-  assert.equal(guidanceWithoutSources.resetFlow, true)
 })
 
 test('setup routing preserves a nonmatching Subject title and repairs provenance and unknown keys', () => {
@@ -772,26 +748,64 @@ test('setup routing NFKC-normalizes an unmatched draft title before canonical ou
   assert.equal(resolved.needsReplace, true)
 })
 
-test('setup routing permits Guidance only for a matching ready state', () => {
+test('setup routing permits zero-source Sources and Guidance only for matching state', () => {
   const journey = explorationCatalogue.journeysByKey['island-easter-island']
-  const ready = {
+  const matching = {
     ...createFlowState(journey),
-    step: STEPS.GUIDANCE,
     selectedSubject: journey.subject,
-    sources: [
-      { url: 'https://example.com/one', domain: 'example.com' },
-      { url: 'https://example.org/two', domain: 'example.org' },
-    ],
   }
-  const query = buildSetupQuery(journey, STEPS.GUIDANCE)
-  const resolved = resolveSetupRoute(query, ready)
+  const otherJourney = explorationCatalogue.journeysByKey['object-mars']
+  const invalidStates = [
+    { label: 'missing state', state: undefined },
+    {
+      label: 'stale-title state',
+      state: { ...matching, titleInput: 'Old draft title' },
+      title: 'Old draft title',
+    },
+    {
+      label: 'foreign selected subject',
+      state: { ...matching, selectedSubject: otherJourney.subject },
+    },
+    {
+      label: 'foreign journey state',
+      state: {
+        ...createFlowState(otherJourney),
+        selectedSubject: otherJourney.subject,
+      },
+    },
+  ]
+  const canonicalSubject = buildSetupQuery(journey)
 
-  assert.equal(resolved.step, STEPS.GUIDANCE)
-  assert.equal(resolved.needsReplace, false)
-  assert.equal(resolved.resetFlow, false)
+  for (const step of [STEPS.SOURCES, STEPS.GUIDANCE]) {
+    const query = buildSetupQuery(journey, step)
+    assert.deepEqual(resolveSetupRoute(query, matching), {
+      kind: 'setup',
+      journey,
+      step,
+      titleInput: journey.subject.title,
+      canonicalQuery: query,
+      needsReplace: false,
+      resetFlow: false,
+    })
 
-  const wrongJourneyState = { ...ready, journeyKey: 'object-mars' }
-  const recovered = resolveSetupRoute(query, wrongJourneyState)
-  assert.equal(recovered.step, STEPS.SUBJECT)
-  assert.equal(recovered.resetFlow, true)
+    for (const { label, state, title } of invalidStates) {
+      const recovered = resolveSetupRoute(
+        buildSetupQuery(journey, step, title ?? journey.subject.title),
+        state,
+      )
+      assert.deepEqual(
+        recovered,
+        {
+          kind: 'setup',
+          journey,
+          step: STEPS.SUBJECT,
+          titleInput: journey.subject.title,
+          canonicalQuery: canonicalSubject,
+          needsReplace: true,
+          resetFlow: true,
+        },
+        `${step}: ${label}`,
+      )
+    }
+  }
 })

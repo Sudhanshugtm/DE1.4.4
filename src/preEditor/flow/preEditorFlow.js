@@ -18,7 +18,6 @@ const createFlowState = (journey, initialTitle = journey.subject.title) => ({
   titleInput: initialTitle,
   selectedSubject: null,
   sources: [],
-  requiredSourceCount: journey.sourceRequirements.requiredCount,
 })
 
 const findSubject = (journey, title) => {
@@ -80,11 +79,8 @@ const canEnterStep = (state, step) => {
   if (step === STEPS.SUBJECT) {
     return true
   }
-  if (step === STEPS.SOURCES) {
+  if (step === STEPS.SOURCES || step === STEPS.GUIDANCE) {
     return hasOwnSelectedSubject(state)
-  }
-  if (step === STEPS.GUIDANCE) {
-    return hasOwnSelectedSubject(state) && state.sources.length >= state.requiredSourceCount
   }
   return false
 }
