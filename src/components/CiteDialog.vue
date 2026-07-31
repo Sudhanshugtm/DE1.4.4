@@ -18,6 +18,7 @@
               :hide-icon="true"
               button-label="Create"
               placeholder="e.g. http://www.example.com"
+              @submit-click="onCreate"
             />
             <div>
               <CdxButton>
@@ -59,6 +60,8 @@ const props = defineProps({
   },
 })
 
+const emit = defineEmits(['citation-created'])
+
 const open = defineModel('open', { type: Boolean, default: false })
 const activeTab = ref(props.initialTab)
 const searchQuery = ref('')
@@ -68,6 +71,13 @@ watch(open, (isOpen) => {
     activeTab.value = props.initialTab
   }
 })
+
+function onCreate() {
+  if (!searchQuery.value.trim()) return
+  searchQuery.value = ''
+  open.value = false
+  emit('citation-created')
+}
 </script>
 
 <style scoped>

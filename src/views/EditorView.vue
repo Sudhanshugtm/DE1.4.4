@@ -21,6 +21,7 @@
           :suppress-auto-focus="isToolbarOutlineVariant"
           @open-outline="onOpenOutline"
           @open-settings="settingsDialogOpen = true"
+          @open-source-context="onOpenSourceContext"
         />
       </div>
       <div v-if="!isToolbarOutlineVariant" class="editor-rail-column">
@@ -53,8 +54,13 @@
       @content-inserted="onContentInserted"
       @open-cite-discover="onOpenCiteDiscover"
     />
+    <SourceContextSheet v-model:open="sourceContextOpen" @add-citation="onAddCitationFromSource" />
     <SettingsDialog v-model:open="settingsDialogOpen" />
-    <CiteDialog v-model:open="citeDialogOpen" :initial-tab="citeDialogInitialTab" />
+    <CiteDialog
+      v-model:open="citeDialogOpen"
+      :initial-tab="citeDialogInitialTab"
+      @citation-created="onCitationCreated"
+    />
   </div>
 </template>
 
@@ -69,6 +75,7 @@ import CdxToolbar from '@/components/CdxToolbar.vue'
 import SettingsDialog from '@/components/SettingsDialog.vue'
 import CiteDialog from '@/components/CiteDialog.vue'
 import OutlinePopover from '@/components/OutlinePopover.vue'
+import SourceContextSheet from '@/components/SourceContextSheet.vue'
 import { useEditorSettings } from '@/composables/useEditorSettings'
 import { useEditorInstance } from '@/composables/useEditorInstance'
 import { useCursorRect } from '@/composables/useCursorRect'
@@ -115,6 +122,9 @@ const settingsDialogOpen = ref(false)
 const citeDialogOpen = ref(false)
 const citeDialogInitialTab = ref('automatic')
 const initialView = ref(null)
+const sourceContextOpen = ref(false)
+const pendingSourceRange = ref(null)
+const nextCitationNumber = ref(1)
 
 function onForceButtonClick() {
   getEditor()?.commands.blur()
@@ -138,8 +148,42 @@ function onClose() {
 }
 
 function onOpenCiteDefault() {
+  pendingSourceRange.value = null
   citeDialogInitialTab.value = 'automatic'
   citeDialogOpen.value = true
+}
+
+// ── Source prompt → citation, mirroring the citation-needed flow in VE ──
+
+function onOpenSourceContext(range) {
+  pendingSourceRange.value = range
+  sourceContextOpen.value = true
+}
+
+function onAddCitationFromSource() {
+  sourceContextOpen.value = false
+  citeDialogInitialTab.value = 'automatic'
+  citeDialogOpen.value = true
+}
+
+// A created citation replaces the Source prompt that asked for it, the way
+// Citoid replaces a citation-needed template rather than sitting beside it.
+function onCitationCreated() {
+  const editor = getEditor()
+  const range = pendingSourceRange.value
+  pendingSourceRange.value = null
+  if (!editor || !range) return
+
+  editor
+    .chain()
+    .focus()
+    .insertContentAt(
+      range,
+      `<sup class="citation-reference">[${nextCitationNumber.value}]</sup>`,
+    )
+    .run()
+
+  nextCitationNumber.value += 1
 }
 
 function onOpenCiteDiscover() {

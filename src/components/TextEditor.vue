@@ -95,7 +95,7 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['open-outline', 'open-settings'])
+const emit = defineEmits(['open-outline', 'open-settings', 'open-source-context'])
 
 const { settings } = useEditorSettings()
 const { setEditor } = useEditorInstance()
@@ -139,6 +139,19 @@ const editor = useEditor({
     AnnotationHighlight,
     PlaceholderChip,
   ],
+  editorProps: {
+    handleClick(view, pos, event) {
+      // Tapping a Source prompt opens its context item, the way tapping a
+      // citation-needed template does in Visual Editor.
+      const marker = event.target.closest?.('.outline-source-prompt')
+      if (!marker) return false
+      // Resolve the marker's own range from the DOM so the whole prompt is
+      // replaced when a citation is created, not just the clicked offset.
+      const from = view.posAtDOM(marker, 0)
+      emit('open-source-context', { from, to: from + marker.textContent.length })
+      return true
+    },
+  },
   onSelectionUpdate() {
     if (!typingTimer) {
       updateButtonPosition()
@@ -594,6 +607,15 @@ defineExpose({ editor })
 }
 
 .text-editor :deep(.ProseMirror sup.outline-source-prompt) {
+  color: var(--color-progressive);
+  font-size: var(--font-size-x-small);
+  line-height: 0;
+  vertical-align: super;
+  cursor: pointer;
+}
+
+/* A citation that resolved a Source prompt, rendered like a reference marker. */
+.text-editor :deep(.ProseMirror sup.citation-reference) {
   color: var(--color-progressive);
   font-size: var(--font-size-x-small);
   line-height: 0;
