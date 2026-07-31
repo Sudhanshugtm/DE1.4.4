@@ -8,8 +8,8 @@ has rather than a tool beside it.
 
 ## What it covers
 
-This prototype picks up at the moment a junior editor lands in the editor, having
-already chosen their topic and sources.
+This prototype follows a junior editor from a red link into the editor. They confirm
+the topic, may add sources if they have them ready, and review guidance before writing.
 
 - **Suggested sections** — the community's outline for this topic, added a section
   at a time from the toolbar's insert menu. References comes along with the first
@@ -38,12 +38,12 @@ npm run dev
 The dev server also listens on the local network, so the prototype can be opened
 on a phone at `http://<your-ip>:5173`.
 
-| Command | Description |
-|---|---|
-| `npm run dev` | Vite dev server on port 5173 |
-| `npm run build` | Production build |
-| `npm run lint` | Oxlint + ESLint |
-| `npm run format` | Prettier |
+| Command          | Description                  |
+| ---------------- | ---------------------------- |
+| `npm run dev`    | Vite dev server on port 5173 |
+| `npm run build`  | Production build             |
+| `npm run lint`   | Oxlint + ESLint              |
+| `npm run format` | Prettier                     |
 
 ## Where this sits
 

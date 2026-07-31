@@ -10,6 +10,8 @@ const APP_BASE_PATHNAME = BASE.pathname === '/' ? '' : BASE.pathname.replace(/\/
 const APP_TITLE = '<title>Article creation</title>'
 const SOURCE_ONE = 'https://example.com/source-one'
 const SOURCE_TWO = 'https://example.org/source-two'
+const VALID_DRAFT_SOURCE = 'https://example.net/not-added'
+const INVALID_DRAFT_SOURCE = 'not a valid URL'
 
 const JOURNEYS = [
   {
@@ -148,6 +150,70 @@ async function addSource(page, source) {
   await page.getByRole('button', { name: 'Add source', exact: true }).click()
 }
 
+async function assertOptionalSourcesUi(page) {
+  await assertVisible(page.getByRole('heading', { level: 3, name: 'Add sources (optional)' }))
+  await assertVisible(
+    page.getByText(
+      'If you have sources ready, add them now. You can also add citations while writing.',
+      { exact: true },
+    ),
+  )
+  assert.equal(await page.locator('.article-guidance-sources__required').count(), 0)
+  assert.equal(
+    await page
+      .getByText('This type of article requires sources before you can continue.', {
+        exact: true,
+      })
+      .count(),
+    0,
+  )
+}
+
+async function assertSourceStatus(page, expectedText) {
+  const sourceStatus = page.locator('.article-guidance-actions__helper[role="status"]')
+  await assertVisible(sourceStatus)
+  assert.equal(await sourceStatus.getAttribute('aria-live'), 'polite')
+  assert.equal((await sourceStatus.innerText()).trim(), expectedText)
+}
+
+async function openSourcesStep(page, journey) {
+  await page.goto(setupUrl(journey))
+  await assertStep(page, journey, 'subject')
+  await page.locator('.subject-result').click()
+  await assertStep(page, journey, 'sources')
+}
+
+async function assertEditorHandoff(page, journey, expectedSources) {
+  await page.waitForURL((url) => url.pathname === appPath('/editor'))
+
+  const editorUrl = new URL(page.url())
+  assert.deepEqual(
+    {
+      articleguidance: editorUrl.searchParams.get('articleguidance'),
+      lang: editorUrl.searchParams.get('lang'),
+      outline: editorUrl.searchParams.get('outline'),
+      sourceOrigin: editorUrl.searchParams.get('sourceOrigin'),
+      title: editorUrl.searchParams.get('title'),
+      variant: editorUrl.searchParams.get('variant'),
+    },
+    {
+      articleguidance: '1',
+      lang: 'en',
+      outline: journey.outline,
+      sourceOrigin: 'redlink',
+      title: journey.title,
+      variant: 'toolbar-outline',
+    },
+  )
+  assert.deepEqual(editorUrl.searchParams.getAll('source'), expectedSources)
+  await assertVisible(
+    page.getByRole('region', {
+      name: `${journey.outlineLabel} article outline sections`,
+      exact: true,
+    }),
+  )
+}
+
 async function newLocalContext(viewport = { width: 1280, height: 900 }) {
   const context = await browser.newContext({ viewport })
   const externalRequests = []
@@ -205,7 +271,7 @@ test('Exploration exposes eight exact red-link setup routes', async () => {
   }
 })
 
-test('every red link completes its pictured setup journey and opens its own outline', async (t) => {
+test('every red link can skip sources and opens its own outline', async (t) => {
   for (const [index, journey] of JOURNEYS.entries()) {
     await t.test(journey.title, async () => {
       const viewport = index === 0 ? { width: 390, height: 844 } : { width: 1280, height: 900 }
@@ -266,39 +332,155 @@ test('every red link completes its pictured setup journey and opens its own outl
 
         await result.click()
         await assertStep(page, journey, 'sources')
-        await addSource(page, SOURCE_ONE)
-        await addSource(page, SOURCE_TWO)
-        await page.getByRole('button', { name: 'Continue', exact: true }).click()
+        await assertOptionalSourcesUi(page)
+        await assertSourceStatus(page, 'You can continue without adding a source.')
+        assert.equal(
+          await page.getByRole('button', { name: 'Add source', exact: true }).isEnabled(),
+          false,
+        )
+        const continueButton = page.getByRole('button', { name: 'Continue', exact: true })
+        assert.equal(await continueButton.isEnabled(), true)
+        await continueButton.click()
         await assertStep(page, journey, 'guidance')
         await page.getByRole('button', { name: 'Start writing', exact: true }).click()
-        await page.waitForURL((url) => url.pathname === appPath('/editor'))
+        await assertEditorHandoff(page, journey, [])
+        assert.deepEqual(externalRequests, [])
+      } finally {
+        await context.close()
+      }
+    })
+  }
+})
 
-        const editorUrl = new URL(page.url())
-        assert.deepEqual(
-          {
-            articleguidance: editorUrl.searchParams.get('articleguidance'),
-            lang: editorUrl.searchParams.get('lang'),
-            outline: editorUrl.searchParams.get('outline'),
-            sourceOrigin: editorUrl.searchParams.get('sourceOrigin'),
-            title: editorUrl.searchParams.get('title'),
-            variant: editorUrl.searchParams.get('variant'),
-          },
-          {
-            articleguidance: '1',
-            lang: 'en',
-            outline: journey.outline,
-            sourceOrigin: 'redlink',
-            title: journey.title,
-            variant: 'toolbar-outline',
-          },
+test('source status announces add and remove transitions through zero', async () => {
+  const journey = JOURNEYS.find(({ key }) => key === 'island-easter-island')
+  const { context, externalRequests } = await newLocalContext()
+  const page = await context.newPage()
+
+  try {
+    await openSourcesStep(page, journey)
+    await assertOptionalSourcesUi(page)
+    await assertSourceStatus(page, 'You can continue without adding a source.')
+    assert.equal(
+      await page.getByRole('button', { name: 'Add source', exact: true }).isEnabled(),
+      false,
+    )
+
+    await addSource(page, SOURCE_ONE)
+    await assertSourceStatus(page, '1 source added. You can add more while writing.')
+    await addSource(page, SOURCE_TWO)
+    await assertSourceStatus(page, '2 sources added. You can add more while writing.')
+
+    await page
+      .getByRole('button', { name: `Remove source from example.com: ${SOURCE_ONE}` })
+      .click()
+    await assertSourceStatus(page, '1 source added. You can add more while writing.')
+    await page
+      .getByRole('button', { name: `Remove source from example.org: ${SOURCE_TWO}` })
+      .click()
+    await assertSourceStatus(page, 'You can continue without adding a source.')
+    assert.deepEqual(externalRequests, [])
+  } finally {
+    await context.close()
+  }
+})
+
+test('accepted sources retain their order in the editor handoff', async () => {
+  const journey = JOURNEYS.find(({ key }) => key === 'company-spacex')
+  const { context, externalRequests } = await newLocalContext()
+  const page = await context.newPage()
+
+  try {
+    await openSourcesStep(page, journey)
+    await addSource(page, SOURCE_ONE)
+    await addSource(page, SOURCE_TWO)
+    await page.getByRole('button', { name: 'Continue', exact: true }).click()
+    await assertStep(page, journey, 'guidance')
+    await page.getByRole('button', { name: 'Start writing', exact: true }).click()
+    await assertEditorHandoff(page, journey, [SOURCE_ONE, SOURCE_TWO])
+    assert.deepEqual(externalRequests, [])
+  } finally {
+    await context.close()
+  }
+})
+
+test('unsubmitted source drafts never block Continue or reach the editor', async (t) => {
+  const draftCases = [
+    {
+      name: 'empty draft',
+      journey: JOURNEYS.find(({ key }) => key === 'landform-mount-everest'),
+      expectedSources: [],
+      async prepare(page) {
+        assert.equal(
+          await page.getByRole('button', { name: 'Add source', exact: true }).isEnabled(),
+          false,
         )
-        assert.deepEqual(editorUrl.searchParams.getAll('source'), [SOURCE_ONE, SOURCE_TWO])
+      },
+    },
+    {
+      name: 'valid unsubmitted draft',
+      journey: JOURNEYS.find(({ key }) => key === 'software-google-earth'),
+      expectedSources: [],
+      async prepare(page) {
+        await page.getByLabel('Paste a link to a source').fill(VALID_DRAFT_SOURCE)
+        assert.equal(await page.getByRole('alert').count(), 0)
+        assert.equal(
+          await page.getByRole('button', { name: 'Add source', exact: true }).isEnabled(),
+          true,
+        )
+      },
+    },
+    {
+      name: 'invalid unsubmitted draft',
+      journey: JOURNEYS.find(({ key }) => key === 'object-mars'),
+      expectedSources: [],
+      async prepare(page) {
+        await page.getByLabel('Paste a link to a source').fill(INVALID_DRAFT_SOURCE)
+        assert.equal(await page.getByRole('alert').count(), 0)
+        await page.getByRole('button', { name: 'Add source', exact: true }).click()
+        await assertVisible(page.getByRole('alert').getByText('Enter a valid URL', { exact: true }))
+      },
+    },
+    {
+      name: 'duplicate unsubmitted draft',
+      journey: JOURNEYS.find(({ key }) => key === 'person-neil-armstrong'),
+      expectedSources: [SOURCE_ONE],
+      async prepare(page) {
+        await addSource(page, SOURCE_ONE)
+        await page.getByLabel('Paste a link to a source').fill(SOURCE_ONE)
+        assert.equal(await page.getByRole('alert').count(), 0)
+        await page.getByRole('button', { name: 'Add source', exact: true }).click()
         await assertVisible(
-          page.getByRole('region', {
-            name: `${journey.outlineLabel} article outline sections`,
-            exact: true,
-          }),
+          page.getByRole('alert').getByText('This source has already been added', { exact: true }),
         )
+      },
+    },
+  ]
+
+  for (const draftCase of draftCases) {
+    await t.test(draftCase.name, async () => {
+      const { context, externalRequests } = await newLocalContext()
+      const page = await context.newPage()
+
+      try {
+        await openSourcesStep(page, draftCase.journey)
+        await draftCase.prepare(page)
+
+        const continueButton = page.getByRole('button', { name: 'Continue', exact: true })
+        assert.equal(await continueButton.isEnabled(), true)
+        await continueButton.click()
+        await assertStep(page, draftCase.journey, 'guidance')
+
+        await page.getByRole('button', { name: 'Back', exact: true }).click()
+        await assertStep(page, draftCase.journey, 'sources')
+        assert.equal(await page.getByLabel('Paste a link to a source').inputValue(), '')
+        assert.equal(await page.getByRole('alert').count(), 0)
+        assert.equal(await continueButton.isEnabled(), true)
+
+        await continueButton.click()
+        await assertStep(page, draftCase.journey, 'guidance')
+        await page.getByRole('button', { name: 'Start writing', exact: true }).click()
+        await assertEditorHandoff(page, draftCase.journey, draftCase.expectedSources)
         assert.deepEqual(externalRequests, [])
       } finally {
         await context.close()
@@ -318,8 +500,6 @@ test('compact setup routes recover illegal stages and a refresh to Subject', asy
     assert.equal(page.url(), setupUrl(journey))
 
     await page.locator('.subject-result').click()
-    await addSource(page, SOURCE_ONE)
-    await addSource(page, SOURCE_TWO)
     await page.getByRole('button', { name: 'Continue', exact: true }).click()
     await assertStep(page, journey, 'guidance')
     await page.reload()

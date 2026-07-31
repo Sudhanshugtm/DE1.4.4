@@ -82,12 +82,9 @@
 
       <div class="article-guidance-sources">
         <div class="article-guidance-sources__main">
-          <h3 class="article-guidance-sources__heading">
-            Add sources
-            <span class="article-guidance-sources__required">*</span>
-          </h3>
+          <h3 class="article-guidance-sources__heading">Add sources (optional)</h3>
           <p class="article-guidance-sources__subtitle">
-            This type of article requires sources before you can continue.
+            If you have sources ready, add them now. You can also add citations while writing.
           </p>
 
           <SourceUrlForm
@@ -123,7 +120,6 @@
               action="progressive"
               weight="primary"
               type="button"
-              :disabled="!sourcesComplete"
               @click="continueToGuidance"
             >
               Continue
@@ -219,18 +215,15 @@ const sourceRecommendations = computed(() => [
 const showNoResults = computed(
   () => flowState.value.titleInput.trim().length > 0 && !subjectResult.value,
 )
-const sourcesComplete = computed(
-  () => flowState.value.sources.length >= flowState.value.requiredSourceCount,
-)
 const sourceHelperText = computed(() => {
   const sourceCount = flowState.value.sources.length
   if (sourceCount === 0) {
-    return `${activeJourney.value.subject.typeLabel} articles on this wiki require sources.`
+    return 'You can continue without adding a source.'
   }
-  if (sourceCount < flowState.value.requiredSourceCount) {
-    return `${sourceCount} of ${flowState.value.requiredSourceCount} sources added.`
+  if (sourceCount === 1) {
+    return '1 source added. You can add more while writing.'
   }
-  return 'You can add sources while you write.'
+  return `${sourceCount} sources added. You can add more while writing.`
 })
 
 function pushStep(step) {
@@ -292,10 +285,12 @@ function editArticleTitle() {
 }
 
 function continueToGuidance() {
-  if (!sourcesComplete.value || !canEnterStep(flowState.value, STEPS.GUIDANCE)) {
+  if (!canEnterStep(flowState.value, STEPS.GUIDANCE)) {
     return
   }
 
+  sourceUrl.value = ''
+  sourceError.value = ''
   flowState.value = { ...flowState.value, step: STEPS.GUIDANCE }
   pushStep(STEPS.GUIDANCE)
 }
@@ -487,10 +482,6 @@ watch(
   font-size: var(--font-size-x-large);
   font-weight: var(--font-weight-bold);
   line-height: var(--line-height-x-large);
-}
-
-.article-guidance-sources__required {
-  color: var(--color-error);
 }
 
 .article-guidance-sources__subtitle {
