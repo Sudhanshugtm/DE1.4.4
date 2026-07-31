@@ -11,10 +11,6 @@ const deepFreeze = (value) => {
 
 const explorationArticle = deepFreeze({
   title: 'Exploration',
-  researchNote: {
-    label: 'Research prototype',
-    text: 'Read this short article and choose any red link that interests you. Each red link starts a different article-creation path. Link colours are simulated for this study. Blue links provide context and are not active. When asked, add any two valid web links as sources.',
-  },
   description: {
     id: 'meta-description',
     text: 'Travel and study undertaken to learn about unfamiliar places',
