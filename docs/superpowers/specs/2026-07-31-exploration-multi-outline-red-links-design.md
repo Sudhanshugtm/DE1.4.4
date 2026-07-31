@@ -34,7 +34,7 @@ Policy references:
 
 The prose uses short declarative sentences and plain international English. It avoids rhetorical introductions, promotional adjectives, neat moral conclusions, vague claims such as "throughout history", and stock phrases such as "a testament to", "plays a vital role", or "continues to inspire". It does not use an em dash as a general-purpose aside. If a claim cannot be sourced cleanly, remove or narrow the claim instead of qualifying it with vague language.
 
-Before implementation, verify the stable source URL for each factual sentence. Routine biographical and mission facts may use authoritative institutional sources. Claims about significance, reception, or impact require independent published coverage. The simulated link state is never presented as a factual statement about a live wiki.
+The article fixture below records a stable source ID on every factual sentence. Routine biographical, mission, and product facts use authoritative institutional sources; geographic facts use independent or intergovernmental sources. The copy makes no claim about significance, reception, or impact. A factual sentence cannot be changed during implementation unless its exact text and source mapping are first updated in this design specification. The simulated link state is never presented as a factual statement about a live wiki.
 
 ## Article and research note
 
@@ -51,28 +51,116 @@ The note is visible at direct `/article` entry, because shared research links ma
 ### Article metadata
 
 - Title: **Exploration**
-- Description: **The study of unfamiliar places and environments**
+- Description: **Travel and study undertaken to learn about unfamiliar places**
 - Target reading level: plain international English suitable for a Simple English Wikipedia-style prototype
 
 ### Approved article copy
 
 #### Introduction
 
-Exploration is the act of travelling through or studying an unfamiliar place in order to learn about it. It includes journeys across land and sea, scientific fieldwork, and the use of instruments to study places that people cannot reach directly. Maps, navigation, and observation are used in many forms of exploration.
+Exploration is travel over unfamiliar territory for discovery, or the careful study of something in order to learn more about it. Modern geographical exploration includes field research and the use of different tools and methods. *Maps* and *satellite images* are among the tools used to study places.
 
 #### Exploration on Earth
 
-Explorers and researchers have mapped coastlines, islands, oceans, and mountain ranges. **Mount Everest** has been surveyed and climbed by expeditions from several countries. **Easter Island** has been studied for its geography, archaeology, and history. Modern software such as **Google Earth** combines maps, satellite images, and geographic data.
+**Mount Everest** lies in the *Himalayas* on the border between *Nepal* and *China*. **Easter Island**, also called *Rapa Nui*, is a Chilean island in the *Pacific Ocean*. **Google Earth** displays satellite imagery and 3D representations of *terrain* and *buildings*.
 
 #### Space exploration
 
-Space exploration uses telescopes, robotic spacecraft, and crewed missions to study the Solar System and the wider universe. **Mars** has been explored by orbiters, landers, and rovers. **Neil Armstrong** became the first person to walk on the Moon in 1969. **Valentina Tereshkova** became the first woman to travel in space in 1963.
+**Mars** has been explored by robotic *orbiters*, *landers*, and *rovers*. **Neil Armstrong** became the first person to set foot on the *Moon* on 20 July 1969. **Valentina Tereshkova** became the first woman in space when *Vostok 6* launched on 16 June 1963.
 
-The **Chandrayaan-3 Moon landing** took place in 2023 as part of India's lunar programme. Space exploration is carried out by public agencies, research institutions, and companies, including **SpaceX**.
+The **Chandrayaan-3 Moon landing** was a successful soft landing on the *Moon* on 23 August 2023. **SpaceX** developed the *Dragon spacecraft*, which carries crew and cargo to orbiting destinations such as the *International Space Station*.
 
-Bold text above identifies red-link segments in the fixture; the rendered article does not bold those links. Context terms such as maps, navigation, satellite images, telescopes, spacecraft, Solar System, orbiters, landers, rovers, public agencies, and research institutions are rendered as blue contextual text.
+Bold text above identifies red-link segments in the fixture, and italic text identifies blue contextual segments. The rendered article does not add bold or italic styling to either link treatment.
 
-The final implementation review must compare every sentence with its recorded sources. It may make small factual corrections or delete an unsupported clause without reopening the interaction design. Any change that alters a red-link subject or its outline mapping requires design review.
+### Sentence-level source fixture
+
+The fixture stores sources once and references them from immutable sentence records:
+
+```js
+{
+  title: 'Exploration',
+  description: {
+    id: 'meta-description',
+    text: 'Travel and study undertaken to learn about unfamiliar places',
+    sourceIds: [ 'national-geographic-why-we-explore' ]
+  },
+  sources: {
+    'national-geographic-why-we-explore': {
+      publisher: 'National Geographic Society',
+      url: 'https://education.nationalgeographic.org/resource/why-we-explore/'
+    },
+    'rgs-geographical-exploration': {
+      publisher: 'Royal Geographical Society',
+      url: 'https://www.rgs.org/exploration/what-is-geographical-exploration'
+    },
+    'national-geographic-geography': {
+      publisher: 'National Geographic Society',
+      url: 'https://education.nationalgeographic.org/resource/geography-article/'
+    },
+    'national-geographic-everest': {
+      publisher: 'National Geographic',
+      url: 'https://www.nationalgeographic.com/adventure/article/climbing-mount-everest-1'
+    },
+    'unesco-rapa-nui': {
+      publisher: 'UNESCO World Heritage Centre',
+      url: 'https://whc.unesco.org/en/list/715'
+    },
+    'google-earth-desktop': {
+      publisher: 'Google Earth',
+      url: 'https://earth.google.com/desktop/'
+    },
+    'nasa-mars-exploration': {
+      publisher: 'NASA',
+      url: 'https://science.nasa.gov/planetary-science/programs/mars-exploration/'
+    },
+    'nasa-neil-armstrong': {
+      publisher: 'NASA',
+      url: 'https://www.nasa.gov/people/neil-a-armstrong/'
+    },
+    'esa-valentina-tereshkova': {
+      publisher: 'European Space Agency',
+      url: 'https://www.esa.int/About_Us/50_years_of_ESA/50_years_of_humans_in_space/First_woman_in_space_Valentina'
+    },
+    'isro-chandrayaan-3': {
+      publisher: 'Indian Space Research Organisation',
+      url: 'https://www.isro.gov.in/ISRO_EN/Chandrayaan3.html'
+    },
+    'nasa-commercial-crew-dragon': {
+      publisher: 'NASA',
+      url: 'https://www.nasa.gov/commercial-crew-program-press-kit/'
+    }
+  },
+  sections: [ {
+    heading: 'Introduction',
+    sentences: [ {
+      id: 'intro-definition',
+      segments: [ { kind: 'text', text: 'Exploration is ...' } ],
+      sourceIds: [ 'national-geographic-why-we-explore' ]
+    } ]
+  } ]
+}
+```
+
+Every sentence record must have a stable `id`, at least one `sourceId`, and ordered `segments`. Every referenced source ID must exist in the fixture's `sources` object. The source map is research evidence and is not rendered as an article References section in this prototype.
+
+The exact claim-to-source mapping is:
+
+| Claim ID | Exact claim | Source ID and stable URL |
+|---|---|---|
+| `meta-description` | Travel and study undertaken to learn about unfamiliar places | `national-geographic-why-we-explore` — <https://education.nationalgeographic.org/resource/why-we-explore/> |
+| `intro-definition` | Exploration is travel over unfamiliar territory for discovery, or the careful study of something in order to learn more about it. | `national-geographic-why-we-explore` — <https://education.nationalgeographic.org/resource/why-we-explore/> |
+| `intro-modern-practice` | Modern geographical exploration includes field research and the use of different tools and methods. | `rgs-geographical-exploration` — <https://www.rgs.org/exploration/what-is-geographical-exploration> |
+| `intro-tools` | Maps and satellite images are among the tools used to study places. | `national-geographic-geography` — <https://education.nationalgeographic.org/resource/geography-article/> |
+| `earth-everest` | Mount Everest lies in the Himalayas on the border between Nepal and China. | `national-geographic-everest` — <https://www.nationalgeographic.com/adventure/article/climbing-mount-everest-1> |
+| `earth-easter-island` | Easter Island, also called Rapa Nui, is a Chilean island in the Pacific Ocean. | `unesco-rapa-nui` — <https://whc.unesco.org/en/list/715> |
+| `earth-google-earth` | Google Earth displays satellite imagery and 3D representations of terrain and buildings. | `google-earth-desktop` — <https://earth.google.com/desktop/> |
+| `space-mars` | Mars has been explored by robotic orbiters, landers, and rovers. | `nasa-mars-exploration` — <https://science.nasa.gov/planetary-science/programs/mars-exploration/> |
+| `space-armstrong` | Neil Armstrong became the first person to set foot on the Moon on 20 July 1969. | `nasa-neil-armstrong` — <https://www.nasa.gov/people/neil-a-armstrong/> |
+| `space-tereshkova` | Valentina Tereshkova became the first woman in space when Vostok 6 launched on 16 June 1963. | `esa-valentina-tereshkova` — <https://www.esa.int/About_Us/50_years_of_ESA/50_years_of_humans_in_space/First_woman_in_space_Valentina> |
+| `space-chandrayaan` | The Chandrayaan-3 Moon landing was a successful soft landing on the Moon on 23 August 2023. | `isro-chandrayaan-3` — <https://www.isro.gov.in/ISRO_EN/Chandrayaan3.html> |
+| `space-spacex` | SpaceX developed the Dragon spacecraft, which carries crew and cargo to orbiting destinations such as the International Space Station. | `nasa-commercial-crew-dragon` — <https://www.nasa.gov/commercial-crew-program-press-kit/> |
+
+Implementation review compares every rendered sentence with this table and fails if a factual sentence has no source mapping. Any wording, red-link subject, or outline-mapping change requires a specification update before implementation continues.
 
 ## Link model
 
@@ -185,7 +273,8 @@ All runtime changes remain under `src/preEditor/`, apart from tests and any nece
 
 Replace the single hard-coded Person fixture with a catalogue containing:
 
-- one immutable `explorationArticle`;
+- one immutable `explorationArticle` with sentence IDs, ordered segments, and sentence-level source IDs;
+- the complete immutable source records listed in the claim-to-source table;
 - `journeysByKey`;
 - `guidanceProfilesByOutline`;
 - a validated list of blue context segments.
@@ -201,11 +290,21 @@ The catalogue imports the existing `simpleEnglishOutlinesById` only for integrit
   ?step=subject
   &journey=<journey-key>
   &title=<subject-title>
-  &source=redlink
+  &sourceOrigin=redlink
   &variant=toolbar-outline
 ```
 
 The route's `journey` value is authoritative. `title` initializes the editable subject field but cannot change which outline the journey represents.
+
+`sourceOrigin` records how the participant entered the flow. The repeated `source` query key is reserved exclusively for participant-entered source URLs at editor handoff; it is never used for provenance and never appears on a setup-step URL. Participant-entered URLs remain in in-memory flow state during Subject, Sources, and Guidance.
+
+Title matching is deterministic:
+
+1. Vue Router performs URL decoding once; application code must not call `decodeURIComponent` again.
+2. If `title` is repeated, use its first string value. Treat a missing, non-string, or whitespace-only value as absent and initialize the field with the journey's canonical title.
+3. For comparison, normalize both values with Unicode NFKC, trim leading and trailing whitespace, collapse internal whitespace to one space, and compare with English locale-insensitive lowercase.
+4. A normalized match displays the canonical title and the journey's single deterministic result.
+5. A non-match displays the participant's trimmed input and no result. Typing a value that normalizes to the canonical title restores the result.
 
 ### Article Guidance
 
@@ -238,12 +337,16 @@ The editor already reads valid outline IDs. This work does not change editor com
 
 ## Route, history, and recovery
 
-- Forward setup transitions use `router.push` and preserve `journey`, `title`, `source`, and `variant`.
+- The only valid `step` values are `subject`, `sources`, and `guidance`.
+- Forward setup transitions use `router.push` and preserve `journey`, `title`, `sourceOrigin`, and `variant`. Participant-entered source URLs remain in flow state and are not serialized into setup-step URLs.
 - Back and Forward retain state while the mounted flow belongs to the same journey.
 - Returning to `/article` and choosing another red link starts a clean journey.
-- Refreshing Sources or Guidance resets to Subject for the same valid journey because setup state is not persisted.
+- A missing or unknown `step` on a valid journey uses `router.replace` to the canonical Subject URL for that journey and resets its transient flow state. It does not add a history entry.
+- `sources` requires a matched and selected Subject result. `guidance` requires that result plus two unique valid HTTP(S) URLs. A direct route, refresh, Back, or Forward operation that does not meet the requested step's prerequisites uses `router.replace` to the canonical Subject URL and resets transient flow state.
+- Refreshing Sources or Guidance therefore resets to Subject for the same valid journey because setup state is not persisted.
 - An unknown or missing journey key replaces the setup route with `/article`; it must never silently fall back to Person.
 - A route whose title does not match the journey opens Subject with the provided editable title and no result. Restoring the journey's canonical title restores the result.
+- Route normalization preserves `sourceOrigin=redlink` and `variant=toolbar-outline`, drops unrecognized setup query keys, and moves focus to the setup heading after replacement.
 
 ## Accessibility
 
@@ -266,7 +369,13 @@ The editor already reads valid outline IDs. This work does not change editor com
 - every journey outline exists in `simpleEnglishOutlinesById`;
 - every journey article type matches the registered outline article type;
 - shared guidance profiles exist for all seven outline IDs;
+- every article description and factual sentence has at least one source ID;
+- every referenced source ID resolves to the exact HTTPS URL in the approved source table;
+- rendered sentence text exactly matches the approved claim text;
 - cross-journey subject/state combinations are rejected;
+- missing, empty, repeated, decoded, whitespace-varied, and case-varied titles follow the specified normalization rules;
+- missing and unknown steps replace to Subject, while unmet step prerequisites reset to Subject;
+- setup URLs use `sourceOrigin` only and editor handoff URLs reserve repeated `source` keys for entered URLs;
 - exact editor handoff queries are correct for all eight journeys;
 - the catalogue remains deeply immutable.
 
@@ -279,13 +388,14 @@ At mobile, compact/tablet, and desktop widths:
 3. Every red link exposes its own journey, title, and accessible name in its `href`.
 4. Keyboard Enter on every red link opens its matching Subject result.
 5. Blue context items have no link role or tab stop.
-6. Subject displays the correct title, description, and type.
-7. Sources displays the correct type-specific tips.
-8. Guidance displays the correct type-specific guidance.
-9. Completing each of the seven unique outline paths reaches `/editor` with the exact outline ID; both Person subjects are checked separately for title identity.
-10. Back, Forward, invalid-step recovery, and refresh preserve or reset the journey as specified.
-11. No request to Wikimedia or another content API occurs during the flow.
-12. The final diff contains no editor-owned files.
+6. Automated accessibility checks verify text contrast, distinct accessible names, visible keyboard focus, and focus on the setup heading after navigation.
+7. Subject displays the correct title, description, and type, including the specified title-normalization cases.
+8. Sources displays the correct type-specific tips.
+9. Guidance displays the correct type-specific guidance.
+10. Completing each of the seven unique outline paths reaches `/editor` with the exact outline ID; both Person subjects are checked separately for title identity.
+11. Back, Forward, missing-step recovery, invalid-step recovery, prerequisite recovery, and refresh preserve or reset the journey as specified.
+12. No request to Wikimedia or another content API occurs during the flow.
+13. The final diff contains no editor-owned files.
 
 Run existing unit, browser, lint, and production-base checks in addition to the new catalogue and journey cases.
 
@@ -298,7 +408,7 @@ Run existing unit, browser, lint, and production-base checks in addition to the 
 - claiming the famous subjects are genuinely missing;
 - persisting incomplete setup state across reloads;
 - changing editor rendering, toolbar behaviour, or outline content;
-- publication-ready sourcing or community review of the fixture article.
+- formal Wikipedia community review or publication of the fixture article.
 
 ## Acceptance boundary
 
