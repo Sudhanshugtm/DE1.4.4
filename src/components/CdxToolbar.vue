@@ -29,11 +29,12 @@
       </CdxButton>
       <CdxButton
         v-if="showOutlineEntry"
+        ref="insertButtonRef"
         class="cdx-toolbar__btn cdx-toolbar__btn--outline"
         weight="quiet"
         aria-label="Insert"
         :aria-expanded="insertMenuOpen"
-        @click.stop="insertMenuOpen = !insertMenuOpen"
+        @click.stop="toggleInsertMenu"
       >
         <CdxIcon :icon="cdxIconAdd" />
         <!-- Marks where the suggestions went once the sheet is dismissed. -->
@@ -62,26 +63,37 @@
     </div>
 
     <!-- Insert menu, matching the tool list the + opens in production. -->
-    <div v-if="insertMenuOpen" class="cdx-toolbar__insert-menu" role="menu" @click.stop>
+    <div
+      v-if="insertMenuOpen"
+      class="cdx-toolbar__insert-menu"
+      :style="{ left: insertMenuLeft }"
+      role="menu"
+      @click.stop
+    >
       <button
-        class="cdx-toolbar__insert-item cdx-toolbar__insert-item--guidance"
+        class="cdx-toolbar__insert-item"
         role="menuitem"
         type="button"
         @click="onInsertSuggestedSections"
       >
-        <CdxIcon :icon="cdxIconListBullet" />
+        <CdxIcon :icon="cdxIconListBullet" size="small" />
         <span>Suggested sections</span>
       </button>
-      <div class="cdx-toolbar__insert-separator" role="separator"></div>
-      <button
-        v-for="tool in nativeInsertTools"
-        :key="tool.label"
-        class="cdx-toolbar__insert-item"
-        role="menuitem"
-        type="button"
-      >
-        <CdxIcon :icon="tool.icon" />
-        <span>{{ tool.label }}</span>
+      <div class="cdx-toolbar__insert-group">
+        <button
+          v-for="tool in nativeInsertTools"
+          :key="tool.label"
+          class="cdx-toolbar__insert-item"
+          role="menuitem"
+          type="button"
+        >
+          <CdxIcon :icon="tool.icon" size="small" />
+          <span>{{ tool.label }}</span>
+        </button>
+      </div>
+      <button class="cdx-toolbar__insert-item" role="menuitem" type="button">
+        <CdxIcon :icon="cdxIconExpand" size="small" />
+        <span>More</span>
       </button>
     </div>
   </div>
@@ -117,20 +129,36 @@ import {
   cdxIconExpand,
   cdxIconNext,
   cdxIconListBullet,
-  cdxIconPuzzle,
+  cdxIconImage,
   cdxIconTable,
 } from '@wikimedia/codex-icons'
 
 const insertMenuOpen = ref(false)
+const insertButtonRef = ref(null)
+const insertMenuLeft = ref('0px')
 
 // The tools a wiki lists in its mobile insert menu. Inert here: this prototype
 // is about what article guidance adds to the menu, not the tools themselves.
 const nativeInsertTools = [
-  { label: 'Citation', icon: cdxIconQuotes },
-  { label: 'Template', icon: cdxIconPuzzle },
+  { label: 'Images and media', icon: cdxIconImage },
   { label: 'Table', icon: cdxIconTable },
-  { label: 'More', icon: cdxIconExpand },
 ]
+
+const INSERT_MENU_WIDTH = 200
+
+function toggleInsertMenu() {
+  if (!insertMenuOpen.value) {
+    // Drop the menu from the button that opened it, pulled back onto the
+    // screen when the button sits too close to the edge.
+    const button = insertButtonRef.value?.$el
+    const toolbar = button?.closest('.cdx-toolbar')
+    if (button && toolbar) {
+      const furthestLeft = toolbar.clientWidth - INSERT_MENU_WIDTH
+      insertMenuLeft.value = `${Math.max(0, Math.min(button.offsetLeft, furthestLeft))}px`
+    }
+  }
+  insertMenuOpen.value = !insertMenuOpen.value
+}
 
 function onInsertSuggestedSections() {
   insertMenuOpen.value = false
@@ -208,28 +236,32 @@ onBeforeUnmount(() => document.removeEventListener('click', closeInsertMenu))
 .cdx-toolbar__insert-menu {
   position: absolute;
   top: 48px;
-  left: 0;
-  right: 0;
   z-index: 2;
   display: flex;
   flex-direction: column;
+  min-width: 200px;
   background-color: var(--background-color-base, #fff);
-  border-bottom: 1px solid var(--border-color-subtle, #c8ccd1);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
+  border: 1px solid var(--border-color-base, #a2a9b1);
+  box-shadow:
+    0 0 8px 0 rgba(0, 0, 0, 0.06),
+    0 4px 4px 0 rgba(0, 0, 0, 0.06);
 }
 
 .cdx-toolbar__insert-item {
   display: flex;
   align-items: center;
-  gap: var(--spacing-100, 16px);
-  min-height: 48px;
-  padding: var(--spacing-50, 8px) var(--spacing-100, 16px);
+  gap: var(--spacing-50, 8px);
+  min-height: 38px;
+  padding: var(--spacing-50, 8px) var(--spacing-75, 12px);
   border: 0;
   background: var(--background-color-transparent);
-  color: var(--color-base);
+  color: var(--color-base, #202122);
   font-family: inherit;
   font-size: var(--font-size-medium);
+  line-height: var(--line-height-small);
+  font-weight: var(--font-weight-normal);
   text-align: start;
+  white-space: nowrap;
   cursor: pointer;
 }
 
@@ -237,14 +269,12 @@ onBeforeUnmount(() => document.removeEventListener('click', closeInsertMenu))
   background-color: var(--background-color-interactive-subtle);
 }
 
-.cdx-toolbar__insert-item--guidance {
-  font-weight: var(--font-weight-bold);
-}
-
-.cdx-toolbar__insert-separator {
-  height: 1px;
-  margin: var(--spacing-25, 4px) 0;
-  background-color: var(--border-color-subtle, #c8ccd1);
+/* The wiki's own tools sit together, divided from what guidance adds. */
+.cdx-toolbar__insert-group {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--border-color-subtle, #c8ccd1);
+  border-bottom: 1px solid var(--border-color-subtle, #c8ccd1);
 }
 
 /* Where the suggestions live once the sheet is closed. Geometry and timing
