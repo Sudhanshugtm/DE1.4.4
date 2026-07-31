@@ -95,11 +95,7 @@
         />
 
         <div class="article-guidance-actions article-guidance-actions--sources">
-          <span
-            class="article-guidance-actions__helper"
-            role="status"
-            aria-live="polite"
-          >
+          <span class="article-guidance-actions__helper" role="status" aria-live="polite">
             {{ sourceHelperText }}
           </span>
           <div class="article-guidance-actions__right">

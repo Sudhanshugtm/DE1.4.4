@@ -19,7 +19,7 @@ const readFirstString = (value) => {
 }
 
 const canonicalTitle = (journey, value) => {
-  const trimmed = typeof value === 'string' ? value.trim() : ''
+  const trimmed = typeof value === 'string' ? value.normalize('NFKC').trim() : ''
   if (!trimmed || findSubject(journey, trimmed)) {
     return journey.subject.title
   }

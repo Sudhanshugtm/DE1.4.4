@@ -760,6 +760,18 @@ test('setup routing preserves a nonmatching Subject title and repairs provenance
   assert.equal(resolved.resetFlow, false)
 })
 
+test('setup routing NFKC-normalizes an unmatched draft title before canonical output', () => {
+  const journey = explorationCatalogue.journeysByKey['software-google-earth']
+  const resolved = resolveSetupRoute({
+    ...buildSetupQuery(journey),
+    title: '  Ｄｒａｆｔ　title  ',
+  })
+
+  assert.equal(resolved.titleInput, 'Draft title')
+  assert.equal(resolved.canonicalQuery.title, 'Draft title')
+  assert.equal(resolved.needsReplace, true)
+})
+
 test('setup routing permits Guidance only for a matching ready state', () => {
   const journey = explorationCatalogue.journeysByKey['island-easter-island']
   const ready = {
