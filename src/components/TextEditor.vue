@@ -71,6 +71,7 @@ import { cdxIconAdd, cdxIconSettings } from '@wikimedia/codex-icons'
 import { useEditor, EditorContent } from '@tiptap/vue-3'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
+import Superscript from '@tiptap/extension-superscript'
 import { AnnotationHighlight } from '../extensions/annotationHighlight'
 import { PlaceholderChip } from '../extensions/placeholderChip'
 import { useEditorSettings } from '../composables/useEditorSettings'
@@ -134,6 +135,7 @@ const editor = useEditor({
     Placeholder.configure({
       placeholder: 'Start writing or tap here to continue...',
     }),
+    Superscript,
     AnnotationHighlight,
     PlaceholderChip,
   ],

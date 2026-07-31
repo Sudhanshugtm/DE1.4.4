@@ -38,7 +38,7 @@ export function renderInlineWikitext(value = '') {
   let source = String(value)
 
   source = source.replace(/\{\{\s*(?:citation needed|cn)\b[^{}]*\}\}/gi, () =>
-    stash('<span class="outline-source-prompt">[source?]</span>'),
+    stash('<sup class="outline-source-prompt">Source</sup>'),
   )
 
   source = source.replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_match, target, label) => {

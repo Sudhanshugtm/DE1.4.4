@@ -2,10 +2,18 @@
   <div ref="anchorRef" class="outline-popover-anchor"></div>
   <CdxPopover v-model:open="open" :anchor="anchorRef" placement="top-start" :render-in-place="true">
     <div class="outline-popover-header">
-      <CdxMenuButton v-model:selected="selectedView" :menu-items="menuItems">
-        <CdxIcon :icon="currentItem.icon" />
-        {{ currentItem.label }}
-      </CdxMenuButton>
+      <div class="outline-popover-header__menu">
+        <CdxMenuButton v-model:selected="selectedView" :menu-items="menuItems">
+          <CdxIcon :icon="currentItem.icon" />
+          {{ currentItem.label }}
+        </CdxMenuButton>
+        <p
+          v-if="selectableOutlines && selectedView === 'outline'"
+          class="outline-popover-header__attribution"
+        >
+          From Simple English Wikipedia editors
+        </p>
+      </div>
       <CdxButton weight="quiet" aria-label="Close" @click="open = false">
         <CdxIcon :icon="cdxIconClose" />
       </CdxButton>
@@ -22,7 +30,6 @@
           v-show="selectedView === 'outline'"
           v-model:added-items="addedOutlineItems"
           :outline="selectedOutline"
-          @change-outline="onChangeOutline"
           @content-inserted="$emit('content-inserted')"
         />
       </template>
@@ -92,12 +99,6 @@ function onSelectOutline(outlineId) {
       outline: outlineId,
     },
   })
-}
-
-function onChangeOutline() {
-  const query = { ...route.query }
-  delete query.outline
-  router.replace({ query })
 }
 
 watch(open, (isOpen) => {
@@ -210,9 +211,20 @@ onBeforeUnmount(() => {
 
 .outline-popover-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   padding: var(--spacing-100, 16px);
+}
+
+.outline-popover-header__menu {
+  min-width: 0;
+}
+
+.outline-popover-header__attribution {
+  margin: var(--spacing-25, 4px) 0 0;
+  color: var(--color-subtle);
+  font-size: var(--font-size-x-small);
+  line-height: var(--line-height-x-small);
 }
 
 .outline-popover-header :deep(.cdx-menu-button__menu) {

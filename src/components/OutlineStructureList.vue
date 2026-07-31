@@ -1,18 +1,11 @@
 <template>
-  <section class="outline-structure" :aria-labelledby="`${outline.id}-outline-title`">
-    <header class="outline-structure__header">
-      <div>
-        <p class="outline-structure__eyebrow">Article outline</p>
-        <h2 :id="`${outline.id}-outline-title`">{{ outline.label }}</h2>
-      </div>
-      <CdxButton weight="quiet" @click="emit('change-outline')">Change outline</CdxButton>
-    </header>
-
+  <section class="outline-structure" :aria-label="`${outline.label} article outline sections`">
     <div class="outline-structure__items">
       <CdxAccordion
         v-for="item in outlineItems"
         :key="item.key"
         class="outline-structure__accordion"
+        heading-level="h2"
         :class="{
           'outline-structure__accordion--empty': isItemEmpty(item),
           'outline-structure__accordion--added': isAdded(item),
@@ -26,6 +19,9 @@
         @action-button-click="onAdd(item)"
       >
         <template #title>{{ item.title }}</template>
+        <template #description>
+          <span class="outline-structure__description">{{ item.description }}</span>
+        </template>
 
         <div
           v-if="item.previewHtml"
@@ -43,9 +39,10 @@
 
 <script setup>
 import { computed, ref, watch } from 'vue'
-import { CdxAccordion, CdxButton } from '@wikimedia/codex'
+import { CdxAccordion } from '@wikimedia/codex'
 import { cdxIconAdd, cdxIconCheck } from '@wikimedia/codex-icons'
 import { useEditorInstance } from '../composables/useEditorInstance'
+import { getOutlineItemDescription } from '../config/outlines/sectionDescriptions.js'
 import {
   isReferencesSection,
   outlineItemToEditorHtml,
@@ -59,7 +56,7 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['change-outline', 'content-inserted'])
+const emit = defineEmits(['content-inserted'])
 const { getEditor } = useEditorInstance()
 const addedItems = defineModel('addedItems', {
   type: Set,
@@ -74,11 +71,13 @@ const outlineItems = computed(() => {
     isLead: true,
     previewHtml: outlineWikitextToHtml(props.outline.lead?.content || ''),
   }
+  lead.description = getOutlineItemDescription(lead, props.outline)
 
   const sections = (props.outline.sections || []).map((section) => ({
     ...section,
     key: `${props.outline.id}:${section.id}`,
     isLead: false,
+    description: getOutlineItemDescription(section, props.outline),
     previewHtml: isReferencesSection(section) ? '' : outlineWikitextToHtml(section.content || ''),
   }))
 
@@ -90,7 +89,7 @@ const accordionStates = ref({})
 watch(
   outlineItems,
   (items) => {
-    accordionStates.value = Object.fromEntries(items.map((item, index) => [item.key, index === 0]))
+    accordionStates.value = Object.fromEntries(items.map((item) => [item.key, false]))
   },
   { immediate: true },
 )
@@ -131,37 +130,23 @@ function onAdd(item) {
   flex-direction: column;
 }
 
-.outline-structure__header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--spacing-75);
-  padding-bottom: var(--spacing-100);
-}
-
-.outline-structure__eyebrow,
-.outline-structure__header h2 {
-  margin: 0;
-}
-
-.outline-structure__eyebrow {
-  color: var(--color-subtle);
-  font-size: var(--font-size-x-small);
-  line-height: var(--line-height-x-small);
-}
-
-.outline-structure__header h2 {
-  margin-top: var(--spacing-25);
-  font-size: var(--font-size-large);
-  line-height: var(--line-height-large);
-}
-
-.outline-structure__header .cdx-button {
-  flex: 0 0 auto;
-}
-
 .outline-structure__accordion {
   margin-inline: 0;
+}
+
+.outline-structure__accordion :deep(.cdx-accordion__header) {
+  min-width: 0;
+}
+
+.outline-structure__description {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--color-subtle);
+  font-size: var(--font-size-small);
+  line-height: var(--line-height-small);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .outline-structure__accordion--empty :deep(> summary::before) {
@@ -207,6 +192,12 @@ function onAdd(item) {
 
 .outline-structure__preview :deep(.outline-source-prompt) {
   color: var(--color-subtle);
+}
+
+.outline-structure__preview :deep(sup.outline-source-prompt) {
+  font-size: var(--font-size-x-small);
+  line-height: 0;
+  vertical-align: super;
 }
 
 .outline-structure__source {
