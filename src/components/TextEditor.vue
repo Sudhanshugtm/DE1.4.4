@@ -83,6 +83,7 @@ import { ScaffoldFieldHighlight } from '../extensions/scaffoldFieldHighlight'
 import { FieldBinding } from '../extensions/fieldBinding'
 import { findScaffoldFields } from '../utils/scaffoldFields'
 import { TextSelection } from '@tiptap/pm/state'
+import { closeHistory } from '@tiptap/pm/history'
 import { useEditorSettings } from '../composables/useEditorSettings'
 import { useEditorInstance } from '../composables/useEditorInstance'
 import { useCursorRect } from '../composables/useCursorRect'
@@ -182,6 +183,10 @@ const editor = useEditor({
     handlePaste(view, event) {
       const pasted = event.clipboardData?.getData('text/plain') ?? ''
       if (pasted.trim().length >= PASTE_CHECK_MINIMUM_CHARACTERS) {
+        // Start a new history entry, so answering the check with "remove"
+        // takes back the paste and only the paste. Without this it undoes
+        // whatever it was grouped with, which can be the whole section.
+        view.dispatch(closeHistory(view.state.tr))
         emit('pasted', pasted)
       }
       return false
