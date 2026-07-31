@@ -189,21 +189,41 @@ Blue items are visual context only for this study. They render as non-focusable 
 
 The repository currently contains 38 Simple English article outlines. This study wires eight famous red-link subjects to seven of those existing outlines:
 
-| Journey key | Visible subject | Subject description | Type label | Article type | Editor outline |
-|---|---|---|---|---|---|
-| `person-neil-armstrong` | Neil Armstrong | American astronaut and aeronautical engineer | Person | `Q5` | `person` |
-| `person-valentina-tereshkova` | Valentina Tereshkova | Soviet cosmonaut and the first woman in space | Person | `Q5` | `person` |
-| `event-chandrayaan-3-landing` | Chandrayaan-3 Moon landing | 2023 lunar landing by India's Chandrayaan-3 mission | Recent Event | `Q108586636` | `recent-event` |
-| `object-mars` | Mars | Fourth planet from the Sun | Astronomical Object | `Q6999` | `astronomical-object` |
-| `software-google-earth` | Google Earth | Virtual globe and mapping software | Software | `Q7397` | `software` |
-| `company-spacex` | SpaceX | American aerospace company | Company | `Q4830453` | `company` |
-| `landform-mount-everest` | Mount Everest | Earth's highest mountain above sea level | Landform | `Q271669` | `landform` |
-| `island-easter-island` | Easter Island | Island and special territory of Chile in the Pacific Ocean | Island | `Q23442` | `island` |
+| Journey key | Visible subject | Subject description | Wikidata item | Type label | Article type | Editor outline |
+|---|---|---|---|---|---|---|
+| `person-neil-armstrong` | Neil Armstrong | American astronaut and aeronautical engineer | `Q1615` | Person | `Q5` | `person` |
+| `person-valentina-tereshkova` | Valentina Tereshkova | Soviet cosmonaut and the first woman in space | `Q44371` | Person | `Q5` | `person` |
+| `event-chandrayaan-3-landing` | Chandrayaan-3 Moon landing | 2023 lunar landing by India's Chandrayaan-3 mission | related item `Q65049774` | Recent Event | `Q108586636` | `recent-event` |
+| `object-mars` | Mars | Fourth planet from the Sun | `Q111` | Astronomical Object | `Q6999` | `astronomical-object` |
+| `software-google-earth` | Google Earth | Virtual globe and mapping software | `Q42274` | Software | `Q7397` | `software` |
+| `company-spacex` | SpaceX | American aerospace company | `Q193701` | Company | `Q4830453` | `company` |
+| `landform-mount-everest` | Mount Everest | Earth's highest mountain above sea level | `Q513` | Landform | `Q271669` | `landform` |
+| `island-easter-island` | Easter Island | Island and special territory of Chile in the Pacific Ocean | `Q14452` | Island | `Q23442` | `island` |
+
+### Frozen Wikidata-style results
+
+The Subject step presents the active journey as a pictured Wikidata-style result without making a live Wikidata request. Each journey stores an exact or explicitly related Wikidata item ID and a bundled thumbnail copied from that item's image field at design time:
+
+| Wikidata item | Bundled thumbnail source file |
+|---|---|
+| `Q1615` | `Neil Armstrong pose.jpg` |
+| `Q44371` | `1st meeting of 8th State Duma 07.jpg` |
+| `Q65049774` | `Chandrayaan-3 Integrated Module in clean-room 01.webp` |
+| `Q111` | `Mars - August 30 2021 - Flickr - Kevin M. Gill.png` |
+| `Q42274` | `NASA World Wind - Google Earth bar.png` |
+| `Q193701` | `Entrance to SpaceX headquarters.jpg` |
+| `Q513` | `Mount Everest as seen from Drukair2 PLW edit.jpg` |
+| `Q14452` | `Easter Island 5.jpg` |
+
+Seven cards show the thumbnail, title, type, description, and supporting text `Wikidata item · <QID>`. There is no separate Wikidata item for the landing event used by this study: `Q65049774` identifies the related Chandrayaan-3 mission. That event card therefore uses the honest supporting text `Related Wikidata item · Q65049774` and stores `wikidataRelation: 'related'`; it must not present the mission item as the landing event's exact identity.
+
+Every thumbnail is bundled into `src/preEditor/assets/subjects/` and resolves to the application's own origin at runtime. The thumbnail is decorative because the same or related identity is available as text. If an image cannot be decoded, Codex's image placeholder remains visible and the result stays selectable. Runtime code neither searches Wikidata nor derives the editor outline from an item; the frozen journey mapping remains authoritative.
 
 Every journey contains:
 
 - a stable key;
 - subject identity and description;
+- an exact or explicitly related Wikidata item ID and bundled thumbnail;
 - the exact existing outline ID and article type;
 - a two-source minimum;
 - type-appropriate recommended source categories;
@@ -395,8 +415,10 @@ At mobile, compact/tablet, and desktop widths:
 9. Guidance displays the correct type-specific guidance.
 10. Completing each of the seven unique outline paths reaches `/editor` with the exact outline ID; both Person subjects are checked separately for title identity.
 11. Back, Forward, missing-step recovery, invalid-step recovery, prerequisite recovery, and refresh preserve or reset the journey as specified.
-12. No request to Wikimedia or another content API occurs during the flow.
-13. The final diff contains no editor-owned files.
+12. Every Subject result displays a same-origin bundled thumbnail and its exact or explicitly related Wikidata item ID.
+13. No request to any Wikidata, Wikimedia, or Commons origin or to another content API occurs during the flow.
+14. When a thumbnail request is deliberately failed, the Codex placeholder is visible and the result remains keyboard- and pointer-selectable.
+15. The final diff contains no editor-owned files.
 
 Run existing unit, browser, lint, and production-base checks in addition to the new catalogue and journey cases.
 
