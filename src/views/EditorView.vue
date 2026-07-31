@@ -333,8 +333,15 @@ const hasDismissedSheet = ref(false)
 // lives, so the dot has nothing left to say — including after they switch to
 // another outline.
 const hasOpenedInsertMenu = ref(false)
+// Only ever one thing asking to be looked at. With an empty article the + is
+// the only move, so the dot points at it; once a section is in, the caret
+// waiting in the text is the thing to see.
 const highlightOutlineEntry = computed(
-  () => isToolbarOutlineVariant.value && hasDismissedSheet.value && !hasOpenedInsertMenu.value,
+  () =>
+    isToolbarOutlineVariant.value &&
+    hasDismissedSheet.value &&
+    !hasOpenedInsertMenu.value &&
+    addedOutlineItems.value.size === 0,
 )
 
 watch(isPopoverOpen, (isOpen, wasOpen) => {
@@ -399,16 +406,16 @@ function onOpenCiteDiscover() {
 }
 
 // Adding a section hands the editor straight back to writing: the guidance
-// steps aside and the first thing to fill in is selected and waiting, so the
+// steps aside and the caret waits at the first thing to fill in, so the
 // keyboard comes up on the article rather than on top of the sheet.
 async function onContentInserted() {
   isRailOpen.value = false
   isPopoverOpen.value = false
   await nextTick()
-  selectFirstFieldToFill()
+  placeCursorAtFirstField()
 }
 
-function selectFirstFieldToFill() {
+function placeCursorAtFirstField() {
   const editor = getEditor()
   if (!editor) return
 
@@ -418,8 +425,10 @@ function selectFirstFieldToFill() {
   const fields = findScaffoldFields(editor.state.doc)
   const field = fields.find((candidate) => candidate.from >= caret) ?? fields[0]
 
+  // A caret, not a selection: arriving with text already selected reads as
+  // something having been picked up, and brings grab handles with it.
   const chain = editor.chain().focus()
-  if (field) chain.setTextSelection({ from: field.from, to: field.to })
+  if (field) chain.setTextSelection(field.from)
   chain.scrollIntoView().run()
 }
 

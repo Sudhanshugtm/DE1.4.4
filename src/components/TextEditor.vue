@@ -609,10 +609,25 @@ defineExpose({ editor })
 
 .text-editor :deep(.ProseMirror) {
   flex: 1;
+  display: flex;
+  flex-direction: column;
   padding: var(--spacing-100);
   background-color: var(--background-color-base);
   outline: none;
   overflow-y: auto;
+}
+
+/* The column is only there to seat the references section; nothing in the
+   article gives up height for it. */
+.text-editor :deep(.ProseMirror > *) {
+  flex-shrink: 0;
+}
+
+/* References closes an article, so it sits at the foot of the page rather
+   than under whatever was written last, where it reads as the next thing to
+   fill in. It rejoins the text once there is enough to push it there. */
+.text-editor :deep(.ProseMirror h2[data-outline-item-key$='references']) {
+  margin-top: auto;
 }
 
 /* Placeholder */
