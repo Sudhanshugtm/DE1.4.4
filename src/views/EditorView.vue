@@ -162,8 +162,13 @@ const activeCheckIndex = ref(0)
 
 // Pasted text is raised as it happens, not held back until publishing:
 // the sooner it is asked about, the less there is to unpick.
-function onPasted() {
+async function onPasted() {
   if (pendingChecks.value.some((check) => check.name === 'paste')) return
+
+  // Once the paste has landed, the keyboard steps aside for the card asking
+  // about it, which sits where the keyboard was.
+  await nextTick()
+  getEditor()?.commands.blur()
 
   pendingChecks.value = [
     {
@@ -186,6 +191,10 @@ function onPasted() {
 function onPublish() {
   const editor = getEditor()
   if (!editor) return
+
+  // Checks are answered, not typed into, and their card sits at the foot of
+  // the screen. The keyboard steps aside so it is not left behind it.
+  editor.commands.blur()
 
   const fields = findScaffoldFields(editor.state.doc)
   activeCheckIndex.value = 0
