@@ -4,69 +4,53 @@
 <template>
   <div class="source-url-form">
     <form class="source-url-form__form" novalidate @submit.prevent="emit('submit')">
-      <CdxField
-        class="source-url-form__field"
-        :status="error ? 'error' : 'default'"
-        :disabled="entryDisabled"
-      >
-        <template #label>Paste a link to a source</template>
-        <template #description>
-          <span v-if="error" class="source-url-form__error" role="alert">{{ error }}</span>
-        </template>
-
-        <div class="source-url-form__controls">
-          <CdxTextInput
-            id="source-url"
-            class="source-url-form__input"
-            :model-value="modelValue"
-            input-type="url"
-            autocomplete="url"
-            :status="error ? 'error' : 'default'"
-            :disabled="entryDisabled"
-            :aria-invalid="error ? 'true' : undefined"
-            @update:model-value="emit('update:modelValue', String($event))"
-          />
-          <CdxButton
-            class="source-url-form__add"
-            action="progressive"
-            type="submit"
-            aria-label="Add source"
-            :disabled="entryDisabled"
-          >
-            <CdxIcon :icon="cdxIconAdd" />
-            <span class="source-url-form__add-label">Add source</span>
-          </CdxButton>
-        </div>
-      </CdxField>
+      <div class="source-url-form__controls">
+        <CdxTextInput
+          id="source-url"
+          class="source-url-form__input"
+          :model-value="modelValue"
+          input-type="url"
+          autocomplete="url"
+          clearable
+          aria-label="Paste a link to a source"
+          placeholder="Paste a link to a source"
+          :status="error ? 'error' : 'default'"
+          :disabled="entryDisabled"
+          :aria-invalid="error ? 'true' : undefined"
+          @update:model-value="emit('update:modelValue', String($event))"
+        />
+        <CdxButton
+          class="source-url-form__add"
+          type="submit"
+          aria-label="Add source"
+          :disabled="entryDisabled || !modelValue.trim()"
+        >
+          <CdxIcon :icon="cdxIconAdd" />
+          <span class="source-url-form__add-label">Add source</span>
+        </CdxButton>
+      </div>
+      <div v-if="error" class="source-url-form__error" role="alert">{{ error }}</div>
     </form>
 
     <ul v-if="sources.length" class="source-url-form__sources" aria-label="Added sources">
-      <li v-for="source in sources" :key="source.url" class="source-url-form__source">
-        <div class="source-url-form__source-copy">
-          <strong class="source-url-form__domain">{{ source.domain }}</strong>
-          <span class="source-url-form__url">{{ source.url }}</span>
-        </div>
-        <CdxButton
-          class="source-url-form__remove"
-          weight="quiet"
-          type="button"
-          :aria-label="`Remove source from ${source.domain}: ${source.url}`"
-          @click="emit('remove', source.url)"
+      <li v-for="source in sources" :key="source.url" class="source-url-form__source-item">
+        <CdxMessage
+          type="notice"
+          class="source-url-form__source"
+          allow-user-dismiss
+          :dismiss-button-label="`Remove source from ${source.domain}: ${source.url}`"
+          @user-dismissed="emit('remove', source.url)"
         >
-          Remove
-        </CdxButton>
+          <p class="source-url-form__domain">{{ source.domain }}</p>
+        </CdxMessage>
       </li>
     </ul>
-
-    <p class="source-url-form__progress" role="status" aria-live="polite">
-      {{ sources.length }} of {{ requiredCount }} sources added
-    </p>
   </div>
 </template>
 
 <script setup>
 import { computed } from 'vue'
-import { CdxButton, CdxField, CdxIcon, CdxTextInput } from '@wikimedia/codex'
+import { CdxButton, CdxIcon, CdxMessage, CdxTextInput } from '@wikimedia/codex'
 import { cdxIconAdd } from '@wikimedia/codex-icons'
 
 const props = defineProps({
@@ -82,10 +66,6 @@ const props = defineProps({
     type: Array,
     required: true,
   },
-  requiredCount: {
-    type: Number,
-    required: true,
-  },
   disabled: {
     type: Boolean,
     default: false,
@@ -93,19 +73,27 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['update:modelValue', 'submit', 'remove'])
-const entryDisabled = computed(() => props.disabled || props.sources.length >= props.requiredCount)
+const entryDisabled = computed(() => props.disabled)
 </script>
 
 <style scoped>
 .source-url-form {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-100);
 }
 
 .source-url-form__controls {
   display: flex;
+  flex-direction: row;
   align-items: stretch;
+  margin-bottom: var(--spacing-25);
+  border: var(--border-base);
+  border-radius: var(--border-radius-base);
+  background-color: var(--background-color-base);
+}
+
+.source-url-form__controls:focus-within {
+  border-color: var(--border-color-progressive--focus);
 }
 
 .source-url-form__input {
@@ -114,14 +102,30 @@ const entryDisabled = computed(() => props.disabled || props.sources.length >= p
 }
 
 .source-url-form__input :deep(.cdx-text-input__input) {
-  border-start-end-radius: 0;
-  border-end-end-radius: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.source-url-form__input :deep(.cdx-text-input__input:focus) {
+  box-shadow: none;
+  outline: 0;
 }
 
 .source-url-form__add {
   flex: 0 0 auto;
-  border-start-start-radius: 0;
-  border-end-start-radius: 0;
+  border: 0;
+  border-inline-start: var(--border-base);
+  border-radius: 0 var(--border-radius-base) var(--border-radius-base) 0;
+  background-color: var(--background-color-neutral-subtle);
+}
+
+.source-url-form__add:hover:not(:disabled) {
+  background-color: var(--background-color-interactive);
+}
+
+.source-url-form__add:disabled {
+  background-color: var(--background-color-neutral-subtle);
 }
 
 .source-url-form__add-label {
@@ -129,69 +133,69 @@ const entryDisabled = computed(() => props.disabled || props.sources.length >= p
 }
 
 .source-url-form__error {
+  margin-bottom: var(--spacing-75);
   color: var(--color-error);
+  font-size: var(--font-size-small);
 }
 
 .source-url-form__sources {
-  margin: 0;
+  margin-top: var(--spacing-50);
+  margin-bottom: 0;
   padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-50);
   list-style: none;
 }
 
-.source-url-form__source {
-  min-width: 0;
-  padding: var(--spacing-75);
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-75);
-  border: var(--border-subtle);
-  border-radius: var(--border-radius-base);
+.source-url-form__source-item {
+  margin: 0;
+  padding: 0;
 }
 
-.source-url-form__source-copy {
+.source-url-form__source.cdx-message {
+  padding: var(--spacing-75) 0;
+  border: 0;
+  border-bottom: var(--border-subtle);
+  border-radius: 0;
+  background-color: var(--background-color-base);
+}
+
+.source-url-form__source :deep(.cdx-message__content) {
   min-width: 0;
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  gap: var(--spacing-12);
 }
 
 .source-url-form__domain {
-  font-size: var(--font-size-small);
-  line-height: var(--line-height-small);
-}
-
-.source-url-form__url {
-  overflow-wrap: anywhere;
-  color: var(--color-subtle);
-  font-size: var(--font-size-x-small);
-  line-height: var(--line-height-x-small);
-}
-
-.source-url-form__remove {
-  flex: 0 0 auto;
-}
-
-.source-url-form__progress {
   margin: 0;
-  color: var(--color-subtle);
+  overflow-wrap: anywhere;
   font-size: var(--font-size-small);
+  font-weight: var(--font-weight-bold);
   line-height: var(--line-height-small);
 }
 
-@media (min-width: 640px) {
+@media (min-width: 1120px) {
   .source-url-form__controls {
+    border: 0;
+    border-radius: 0;
+    background-color: transparent;
     gap: var(--spacing-50);
   }
 
-  .source-url-form__input :deep(.cdx-text-input__input) {
+  .source-url-form__input {
+    border: var(--border-base);
     border-radius: var(--border-radius-base);
+    background-color: var(--background-color-base);
+  }
+
+  .source-url-form__input:focus-within {
+    border-color: var(--border-color-progressive--focus);
+  }
+
+  .source-url-form__input :deep(.cdx-text-input__input) {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
   }
 
   .source-url-form__add {
+    border: var(--border-base);
     border-radius: var(--border-radius-base);
   }
 

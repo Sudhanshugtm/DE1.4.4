@@ -10,15 +10,15 @@
     @back="goBack"
   >
     <section v-if="currentStep === STEPS.SUBJECT" class="article-guidance-stage">
-      <div class="article-guidance-field">
-        <label class="article-guidance-field__label" for="article-title">Article title</label>
-        <CdxTextInput
-          id="article-title"
-          :model-value="flowState.titleInput"
-          autocomplete="off"
-          @update:model-value="updateTitle"
-        />
-      </div>
+      <CdxTextInput
+        id="article-title"
+        class="article-guidance-search-input"
+        :model-value="flowState.titleInput"
+        autocomplete="off"
+        aria-label="Article title"
+        placeholder="Article title"
+        @update:model-value="updateTitle"
+      />
 
       <section class="subject-results" aria-labelledby="subject-results-heading">
         <h2 id="subject-results-heading" class="article-guidance-stage__subheading">
@@ -34,13 +34,27 @@
           Back
         </CdxButton>
 
-        <button v-if="subjectResult" class="subject-result" type="button" @click="selectSubject">
-          <span class="subject-result__title">
-            <strong>{{ subjectResult.title }}</strong>
-            <span> · {{ subjectResult.typeLabel }}</span>
-          </span>
-          <span class="subject-result__description">{{ subjectResult.description }}</span>
-        </button>
+        <CdxCard
+          v-if="subjectResult"
+          class="subject-result"
+          role="button"
+          tabindex="0"
+          :aria-label="`${subjectResult.title} · ${subjectResult.typeLabel} ${subjectResult.description}`"
+          @click="selectSubject"
+          @keydown.enter.prevent="selectSubject"
+          @keydown.space.prevent="selectSubject"
+        >
+          <template #title>
+            <span class="subject-result__title">
+              <strong>{{ subjectResult.title }}</strong>
+              <span class="subject-result__separator">·</span>
+              <span class="subject-result__type">{{ subjectResult.typeLabel }}</span>
+            </span>
+          </template>
+          <template #description>
+            <span class="subject-result__description">{{ subjectResult.description }}</span>
+          </template>
+        </CdxCard>
 
         <p v-else-if="showNoResults" class="subject-results__empty" role="status">
           No subjects found for "{{ flowState.titleInput }}"
@@ -49,85 +63,87 @@
     </section>
 
     <section v-else-if="currentStep === STEPS.SOURCES" class="article-guidance-stage">
-      <div class="article-guidance-subject" aria-label="Selected article subject">
-        <strong>{{ personJourney.subject.title }}</strong>
-        <CdxInfoChip>{{ personJourney.subject.typeLabel }}</CdxInfoChip>
-      </div>
-
-      <p class="article-guidance-stage__intro">
-        Sources help readers check the facts and shows why this subject matters.
-      </p>
-      <p class="article-guidance-stage__requirement">
-        Person articles on this wiki require sources.
-      </p>
-
-      <SourceUrlForm
-        :model-value="sourceUrl"
-        :error="sourceError"
-        :sources="flowState.sources"
-        :required-count="flowState.requiredSourceCount"
-        :disabled="sourceEntryDisabled"
-        @update:model-value="updateSourceUrl"
-        @submit="submitSource"
-        @remove="removeAcceptedSource"
+      <ArticleGuidanceArticleInfo
+        :title="personJourney.subject.title"
+        :type-label="personJourney.subject.typeLabel"
+        @edit="editArticleTitle"
       />
 
-      <div class="article-guidance-actions">
-        <CdxButton
-          class="article-guidance-actions__back"
-          weight="quiet"
-          type="button"
-          @click="goBack"
-        >
-          Back
-        </CdxButton>
-        <CdxButton
-          class="article-guidance-actions__primary"
-          action="progressive"
-          weight="primary"
-          type="button"
-          :disabled="!sourcesComplete"
-          @click="continueToGuidance"
-        >
-          Continue
-        </CdxButton>
+      <div class="article-guidance-sources">
+        <div class="article-guidance-sources__main">
+          <h3 class="article-guidance-sources__heading">
+            Add sources
+            <span class="article-guidance-sources__required">*</span>
+          </h3>
+          <p class="article-guidance-sources__subtitle">
+            This type of article requires sources before you can continue.
+          </p>
+
+          <SourceUrlForm
+            :model-value="sourceUrl"
+            :error="sourceError"
+            :sources="flowState.sources"
+            @update:model-value="updateSourceUrl"
+            @submit="submitSource"
+            @remove="removeAcceptedSource"
+          />
+        </div>
+
+        <ArticleGuidanceSourceTips
+          :type-label="personJourney.subject.typeLabel"
+          :recommended="personJourney.sourceRequirements.recommended"
+        />
+
+        <div class="article-guidance-actions article-guidance-actions--sources">
+          <span
+            class="article-guidance-actions__helper"
+            role="status"
+            aria-live="polite"
+          >
+            {{ sourceHelperText }}
+          </span>
+          <div class="article-guidance-actions__right">
+            <CdxButton
+              class="article-guidance-actions__back"
+              weight="quiet"
+              type="button"
+              @click="goBack"
+            >
+              Back
+            </CdxButton>
+            <CdxButton
+              class="article-guidance-actions__primary"
+              action="progressive"
+              weight="primary"
+              type="button"
+              :disabled="!sourcesComplete"
+              @click="continueToGuidance"
+            >
+              Continue
+            </CdxButton>
+          </div>
+        </div>
       </div>
     </section>
 
     <section v-else-if="currentStep === STEPS.GUIDANCE" class="article-guidance-stage">
-      <div class="article-guidance-subject" aria-label="Selected article subject">
-        <strong>{{ personJourney.subject.title }}</strong>
-        <CdxInfoChip>{{ personJourney.subject.typeLabel }}</CdxInfoChip>
+      <ArticleGuidanceArticleInfo
+        :title="personJourney.subject.title"
+        :type-label="personJourney.subject.typeLabel"
+        @edit="editArticleTitle"
+      />
+
+      <h4 class="article-guidance-guidance__heading">
+        {{ personJourney.guidance.heading }}
+      </h4>
+      <div class="article-guidance-guidance__card">
+        <p class="article-guidance-guidance__intro">{{ personJourney.guidance.intro }}</p>
+        <ul class="article-guidance-list">
+          <li v-for="bullet in personJourney.guidance.bullets" :key="bullet">{{ bullet }}</li>
+        </ul>
       </div>
 
-      <p class="article-guidance-stage__intro">{{ personJourney.guidance.intro }}</p>
-      <ul class="article-guidance-list">
-        <li v-for="bullet in personJourney.guidance.bullets" :key="bullet">{{ bullet }}</li>
-      </ul>
-
-      <section class="source-guidance" aria-labelledby="recommended-sources-heading">
-        <h2 id="recommended-sources-heading" class="article-guidance-stage__subheading">
-          Recommended sources
-        </h2>
-        <ul class="article-guidance-list">
-          <li v-for="source in personJourney.sourceRequirements.recommended" :key="source">
-            {{ source }}
-          </li>
-        </ul>
-      </section>
-
-      <section class="source-guidance" aria-labelledby="discouraged-sources-heading">
-        <h2 id="discouraged-sources-heading" class="article-guidance-stage__subheading">
-          Sources to avoid
-        </h2>
-        <ul class="article-guidance-list">
-          <li v-for="source in personJourney.sourceRequirements.discouraged" :key="source">
-            {{ source }}
-          </li>
-        </ul>
-      </section>
-
-      <div class="article-guidance-actions">
+      <div class="article-guidance-actions article-guidance-actions--guidance">
         <CdxButton
           class="article-guidance-actions__back"
           weight="quiet"
@@ -153,9 +169,11 @@
 <script setup>
 import { computed, nextTick, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { CdxButton, CdxInfoChip, CdxTextInput } from '@wikimedia/codex'
+import { CdxButton, CdxCard, CdxTextInput } from '@wikimedia/codex'
 
+import ArticleGuidanceArticleInfo from '../components/ArticleGuidanceArticleInfo.vue'
 import ArticleGuidanceShell from '../components/ArticleGuidanceShell.vue'
+import ArticleGuidanceSourceTips from '../components/ArticleGuidanceSourceTips.vue'
 import SourceUrlForm from '../components/SourceUrlForm.vue'
 import { personJourney } from '../data/personJourney.js'
 import {
@@ -179,25 +197,24 @@ const shellRef = ref(null)
 const allowedSteps = new Set(Object.values(STEPS))
 
 const currentStep = computed(() => (typeof route.query.step === 'string' ? route.query.step : ''))
-const currentHeading = computed(() => {
-  if (currentStep.value === STEPS.SOURCES) {
-    return 'Add sources'
-  }
-  if (currentStep.value === STEPS.GUIDANCE) {
-    return personJourney.guidance.heading
-  }
-  return 'New article'
-})
+const currentHeading = computed(() => 'New article')
 const subjectResult = computed(() => findSubject(personJourney, flowState.value.titleInput))
 const showNoResults = computed(
   () => flowState.value.titleInput.trim().length > 0 && !subjectResult.value,
 )
-const sourceEntryDisabled = computed(
+const sourcesComplete = computed(
   () => flowState.value.sources.length >= flowState.value.requiredSourceCount,
 )
-const sourcesComplete = computed(
-  () => flowState.value.sources.length === flowState.value.requiredSourceCount,
-)
+const sourceHelperText = computed(() => {
+  const sourceCount = flowState.value.sources.length
+  if (sourceCount === 0) {
+    return `${personJourney.subject.typeLabel} articles on this wiki require sources.`
+  }
+  if (sourceCount < flowState.value.requiredSourceCount) {
+    return `${sourceCount} of ${flowState.value.requiredSourceCount} sources added.`
+  }
+  return 'You can add sources while you write.'
+})
 
 function preservedSetupQuery(step) {
   const query = {
@@ -265,10 +282,6 @@ function updateSourceUrl(value) {
 }
 
 function submitSource() {
-  if (sourceEntryDisabled.value) {
-    return
-  }
-
   const result = addSource(flowState.value, sourceUrl.value)
   flowState.value = result.state
   sourceError.value = result.error
@@ -281,6 +294,11 @@ function submitSource() {
 function removeAcceptedSource(normalizedUrl) {
   flowState.value = removeSource(flowState.value, normalizedUrl)
   sourceError.value = ''
+}
+
+function editArticleTitle() {
+  flowState.value = { ...flowState.value, step: STEPS.SUBJECT }
+  pushStep(STEPS.SUBJECT)
 }
 
 function continueToGuidance() {
@@ -343,139 +361,247 @@ watch(
 </script>
 
 <style scoped>
-.article-guidance-stage {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-100);
+.article-guidance-search-input {
+  width: 100%;
 }
 
-.article-guidance-field {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-25);
+.article-guidance-search-input :deep(.cdx-text-input__input) {
+  border-top: 0;
+  border-right: 0;
+  border-bottom: var(--border-base);
+  border-left: 0;
+  border-radius: 0;
+  box-shadow: none;
+  caret-color: var(--color-progressive);
+  font-family: var(--font-family-heading-main);
+  font-size: var(--font-size-x-large);
+  line-height: var(--line-height-x-large);
+  outline: 0;
 }
 
-.article-guidance-field__label {
-  font-size: var(--font-size-small);
-  font-weight: var(--font-weight-bold);
-  line-height: var(--line-height-small);
+.article-guidance-search-input :deep(.cdx-text-input__input:hover) {
+  border-top: 0;
+  border-right: 0;
+  border-bottom: var(--border-base);
+  border-left: 0;
+  box-shadow: none;
+}
+
+.article-guidance-search-input :deep(.cdx-text-input__input:focus),
+.article-guidance-search-input :deep(.cdx-text-input__input:focus-visible) {
+  border-top: 0;
+  border-right: 0;
+  border-bottom: var(--border-width-thick) var(--border-style-base)
+    var(--border-color-progressive--focus);
+  border-left: 0;
+  box-shadow: none;
+  outline: 0;
+}
+
+.article-guidance-search-input :deep(.cdx-text-input__input::placeholder) {
+  color: var(--color-subtle);
+  opacity: var(--opacity-medium);
 }
 
 .subject-results {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-75);
+  gap: var(--spacing-50);
+  margin-top: var(--spacing-100);
 }
 
 .article-guidance-stage__subheading {
-  margin: var(--spacing-50) 0 0;
-  font-size: var(--font-size-medium);
+  margin: 0;
+  font-size: var(--font-size-x-large);
   font-weight: var(--font-weight-bold);
-  line-height: var(--line-height-medium);
+  line-height: var(--line-height-x-large);
 }
 
-.subject-result {
+.subject-result.cdx-card {
   width: 100%;
-  padding: var(--spacing-100);
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-25);
-  border: var(--border-base);
-  border-radius: var(--border-radius-base);
-  background-color: var(--background-color-base);
-  color: var(--color-base);
-  font: inherit;
-  text-align: left;
+  transition: background-color var(--transition-duration-medium);
   cursor: var(--cursor-base--hover);
 }
 
 .subject-result:hover {
-  border-color: var(--border-color-progressive--hover);
   background-color: var(--background-color-interactive-subtle);
 }
 
 .subject-result:active {
-  border-color: var(--border-color-progressive--active);
-  background-color: var(--background-color-interactive-subtle--active);
+  background-color: var(--background-color-interactive);
 }
 
 .subject-result:focus-visible {
-  border-color: var(--border-color-progressive--focus);
   outline: var(--border-width-thick) var(--border-style-base)
     var(--outline-color-progressive--focus);
-  outline-offset: var(--spacing-12);
+  outline-offset: var(--spacing-25);
 }
 
 .subject-result__title {
-  font-size: var(--font-size-medium);
-  line-height: var(--line-height-medium);
+  display: inline;
+}
+
+.subject-result__separator {
+  margin: 0 var(--spacing-25);
+}
+
+.subject-result__separator,
+.subject-result__type {
+  color: var(--color-placeholder);
+  opacity: var(--opacity-medium);
 }
 
 .subject-result__description,
-.subject-results__empty,
-.article-guidance-stage__intro,
-.article-guidance-stage__requirement {
+.subject-results__empty {
   margin: 0;
   font-size: var(--font-size-small);
   line-height: var(--line-height-small);
 }
 
 .subject-result__description,
-.subject-results__empty,
-.article-guidance-stage__intro {
+.subject-results__empty {
   color: var(--color-subtle);
 }
 
-.article-guidance-stage__requirement {
-  font-weight: var(--font-weight-bold);
+.article-guidance-sources {
+  display: grid;
+  gap: 0;
 }
 
-.article-guidance-subject {
-  padding-bottom: var(--spacing-100);
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-50);
-  border-bottom: var(--border-subtle);
+.article-guidance-sources__main {
+  min-width: 0;
+}
+
+.article-guidance-sources__heading {
+  margin: 0 0 var(--spacing-25);
+  border: 0;
+  color: var(--color-base);
+  font-size: var(--font-size-x-large);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-x-large);
+}
+
+.article-guidance-sources__required {
+  color: var(--color-error);
+}
+
+.article-guidance-sources__subtitle {
+  margin: 0 0 var(--spacing-100);
+  color: var(--color-subtle);
 }
 
 .article-guidance-list {
   margin: 0;
   padding-left: var(--spacing-150);
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-50);
-  font-size: var(--font-size-small);
-  line-height: var(--line-height-small);
+  color: var(--color-base);
+  line-height: var(--line-height-medium);
 }
 
-.source-guidance {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-75);
+.article-guidance-list li + li {
+  margin-top: var(--spacing-50);
 }
 
 .article-guidance-actions {
   display: flex;
-  flex-direction: column;
-  gap: var(--spacing-50);
-  padding-top: var(--spacing-100);
+  margin-top: var(--spacing-200);
 }
 
-.article-guidance-actions__back {
+.article-guidance-actions--sources {
+  flex-direction: column-reverse;
+  gap: var(--spacing-50);
+  padding-top: var(--spacing-100);
+  border-top: var(--border-subtle);
+}
+
+.article-guidance-actions__right {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-50);
+}
+
+.article-guidance-actions__helper {
+  color: var(--color-placeholder);
+  font-size: var(--font-size-small);
+  line-height: var(--line-height-small);
+  text-align: center;
+}
+
+.article-guidance-actions__right .article-guidance-actions__back,
+.article-guidance-actions--guidance .article-guidance-actions__back,
+.article-guidance-actions__back--subject {
   display: none;
 }
 
 .article-guidance-actions__primary {
   width: 100%;
+  max-width: 400px;
 }
 
-@media (min-width: 640px) {
-  .article-guidance-actions {
-    flex-direction: row;
-    align-items: center;
+.article-guidance-guidance__heading {
+  margin: 0 0 var(--spacing-25);
+  border: 0;
+  color: var(--color-emphasized);
+  font-size: var(--font-size-large);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-large);
+}
+
+.article-guidance-guidance__intro {
+  margin: 0 0 var(--spacing-75);
+  color: var(--color-subtle);
+  font-size: var(--font-size-small);
+  line-height: var(--line-height-small);
+}
+
+.article-guidance-actions--guidance {
+  position: sticky;
+  bottom: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-50);
+  padding: var(--spacing-100) 0;
+  background-color: var(--background-color-base);
+}
+
+@media (min-width: 1120px) {
+  .article-guidance-sources {
+    grid-template-areas:
+      'main tips'
+      'actions tips';
+    grid-template-columns: minmax(0, 1fr) minmax(0, 22em);
+    column-gap: var(--spacing-200);
+    row-gap: 0;
+    align-items: start;
   }
 
-  .article-guidance-actions__back {
+  .article-guidance-sources__main {
+    grid-area: main;
+  }
+
+  .article-guidance-sources > :deep(.article-guidance-source-tips) {
+    grid-area: tips;
+  }
+
+  .article-guidance-actions--sources {
+    grid-area: actions;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--spacing-100);
+    padding-top: 0;
+    border-top: 0;
+  }
+
+  .article-guidance-actions__right {
+    width: auto;
+    flex-direction: row;
+  }
+
+  .article-guidance-actions__right .article-guidance-actions__back,
+  .article-guidance-actions--guidance .article-guidance-actions__back,
+  .article-guidance-actions__back--subject {
     display: inline-flex;
   }
 
@@ -485,6 +611,29 @@ watch(
 
   .article-guidance-actions__primary {
     width: auto;
+    max-width: none;
+  }
+
+  .article-guidance-actions__helper {
+    text-align: left;
+  }
+
+  .article-guidance-guidance__card {
+    padding: var(--spacing-150);
+    border: var(--border-subtle);
+    border-radius: var(--border-radius-base);
+    background-color: var(--background-color-neutral-subtle);
+  }
+
+  .article-guidance-guidance__intro {
+    display: none;
+  }
+
+  .article-guidance-actions--guidance {
+    position: static;
+    flex-direction: row;
+    justify-content: flex-end;
+    padding: var(--spacing-100) 0;
   }
 }
 </style>
