@@ -94,8 +94,7 @@ import CiteDialog from '@/components/CiteDialog.vue'
 import OutlinePopover from '@/components/OutlinePopover.vue'
 import SourceContextSheet from '@/components/SourceContextSheet.vue'
 import EditCheckRail from '@/components/EditCheckRail.vue'
-import { findScaffoldFields } from '@/utils/scaffoldFields'
-import { scaffoldFieldHighlightKey } from '@/extensions/scaffoldFieldHighlight'
+import { findIncompleteSentences, findScaffoldFields } from '@/utils/scaffoldFields'
 import { useEditorSettings } from '@/composables/useEditorSettings'
 import { useEditorInstance } from '@/composables/useEditorInstance'
 import { useCursorRect } from '@/composables/useCursorRect'
@@ -184,19 +183,12 @@ function onPasted() {
   activeCheckIndex.value = 0
 }
 
-function setFieldHighlight(on) {
-  const editor = getEditor()
-  if (!editor) return
-  editor.view.dispatch(editor.state.tr.setMeta(scaffoldFieldHighlightKey, on))
-}
-
 function onPublish() {
   const editor = getEditor()
   if (!editor) return
 
   const fields = findScaffoldFields(editor.state.doc)
   activeCheckIndex.value = 0
-  setFieldHighlight(fields.length > 0)
 
   // Anything already waiting stays waiting; publishing adds to the list.
   const carried = pendingChecks.value.filter((check) => check.name !== 'completeSection')
@@ -210,7 +202,7 @@ function onPublish() {
           type: 'check',
           title: 'Complete section',
           message:
-            'Fields in templates cannot be empty. Before publishing, replace them with real content, or delete them.',
+            'Fields in templates cannot be empty. Before publishing, replace them with real content, or delete the sentences holding them.',
           actions: [
             { name: 'review', label: 'Review' },
             { name: 'delete', label: 'Delete' },
@@ -258,10 +250,11 @@ function onCheckAction({ action, check }) {
     return
   }
 
-  // Delete from the end so earlier positions stay valid.
+  // A field cannot go on its own: "[Full name] was born on [date] in [place]."
+  // would be left as " was born on  in .". The sentence goes with it.
   const chain = editor.chain().focus()
-  ;[...check.fields].reverse().forEach((field) => {
-    chain.deleteRange({ from: field.from, to: field.to })
+  ;[...findIncompleteSentences(editor.state.doc)].reverse().forEach((sentence) => {
+    chain.deleteRange(sentence)
   })
   chain.run()
 
@@ -276,7 +269,6 @@ function refreshChecks() {
 
   if (!fields.length) {
     pendingChecks.value = []
-    setFieldHighlight(false)
     return
   }
 
@@ -287,7 +279,6 @@ function refreshChecks() {
 
 function onDismissChecks() {
   pendingChecks.value = []
-  setFieldHighlight(false)
 }
 
 function onOutlineSectionsChanged(sectionKeys) {

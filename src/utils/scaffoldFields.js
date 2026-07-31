@@ -2,6 +2,7 @@
 // ABOUTME: These are what the Complete section check asks the editor to resolve.
 
 const FIELD_PATTERN = /\[[^[\]]+\]/g
+const HAS_FIELD = /\[[^[\]]+\]/
 
 /**
  * What a field is asking for.
@@ -23,6 +24,84 @@ export function classifyField(label) {
   if (/^(description|brief|one sentence|any |key |list |name the)/i.test(inner)) return 'write'
 
   return inner.split(/\s+/).length <= 3 ? 'pick' : 'write'
+}
+
+// A full stop only ends a sentence when a new one starts after it. Without
+// this, "e.g., won the [Award Name]" reads as two sentences and deleting
+// leaves a stray "g." behind.
+const SENTENCE_START = /^[A-Z[]/
+// A source prompt belongs to the sentence it was asked of, so it leaves with
+// it — along with the spacing that separated them.
+const TRAILING_SOURCE = /^(\s+|Source)/
+
+/**
+ * The sentences still carrying an unfilled field, in reading order.
+ *
+ * Removing a field on its own leaves the sentence it was holding up — "was
+ * born on  in ." — so a sentence that cannot be completed goes whole.
+ *
+ * @param {Object} doc ProseMirror document
+ * @return {{ from: number, to: number }[]}
+ */
+export function findIncompleteSentences(doc) {
+  const ranges = []
+
+  doc.descendants((node, nodePosition) => {
+    if (!node.isTextblock) return true
+
+    // Flatten the block so a sentence can be read across source prompts and
+    // other marks, keeping each character's position in the document.
+    let text = ''
+    const positions = []
+    node.forEach((child, childOffset) => {
+      if (!child.isText) return
+      for (let index = 0; index < child.text.length; index++) {
+        text += child.text[index]
+        positions.push(nodePosition + 1 + childOffset + index)
+      }
+    })
+
+    const take = (start, end) => {
+      if (end > start && HAS_FIELD.test(text.slice(start, end))) {
+        ranges.push({ from: positions[start], to: positions[end - 1] + 1 })
+      }
+    }
+
+    let sentenceStart = 0
+    let index = 0
+    while (index < text.length) {
+      if (!'.!?'.includes(text[index])) {
+        index++
+        continue
+      }
+
+      // Whatever trails the stop and belongs to this sentence — its spacing,
+      // and any source prompt asked of it — leaves with it.
+      let end = index + 1
+      for (;;) {
+        const trailing = text.slice(end).match(TRAILING_SOURCE)
+        if (!trailing) break
+        end += trailing[0].length
+      }
+
+      const rest = text.slice(end)
+      if (rest !== '' && !SENTENCE_START.test(rest)) {
+        index++
+        continue
+      }
+
+      take(sentenceStart, end)
+      sentenceStart = end
+      index = end
+    }
+
+    // A last sentence that never got its full stop.
+    take(sentenceStart, text.length)
+
+    return false
+  })
+
+  return ranges
 }
 
 /**

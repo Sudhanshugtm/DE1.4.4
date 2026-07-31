@@ -182,9 +182,7 @@ const editor = useEditor({
       )
       if (field) {
         view.dispatch(
-          view.state.tr.setSelection(
-            TextSelection.create(view.state.doc, field.from, field.to),
-          ),
+          view.state.tr.setSelection(TextSelection.create(view.state.doc, field.from, field.to)),
         )
         return true
       }
@@ -625,9 +623,13 @@ defineExpose({ editor })
 
 /* References closes an article, so it sits at the foot of the page rather
    than under whatever was written last, where it reads as the next thing to
-   fill in. It rejoins the text once there is enough to push it there. */
-.text-editor :deep(.ProseMirror h2[data-outline-item-key$='references']) {
-  margin-top: auto;
+   fill in. It rejoins the text once there is enough to push it there.
+
+   The space belongs to the paragraph above rather than to a margin, so it
+   stays part of the article: tapping in it puts the caret at the end of what
+   is being written instead of in a gap that cannot be typed in. */
+.text-editor :deep(.ProseMirror > p:has(+ h2[data-outline-item-key$='references'])) {
+  flex-grow: 1;
 }
 
 /* Placeholder */
@@ -742,15 +744,6 @@ defineExpose({ editor })
 
 .text-editor :deep(.scaffold-field--write) {
   color: var(--color-placeholder, #72777d);
-}
-
-/* A field a check is asking about. This one is meant to be seen, since the
-   card is asking the editor to act on it. */
-.text-editor :deep(.scaffold-field--flagged) {
-  background-color: var(--background-color-warning-subtle, #fdf2d5);
-  box-shadow: 0 0 0 1px var(--border-color-warning, #edab49);
-  border-radius: 2px;
-  color: var(--color-base);
 }
 
 .text-editor :deep(.annotation-highlight) {
