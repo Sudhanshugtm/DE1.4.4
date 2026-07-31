@@ -10,20 +10,6 @@
         </p>
         <OutlineSelector @select="onSelectOutline" />
       </div>
-      <!-- Entry point section -->
-      <div class="field-group">
-        <CdxLabel>Entry point</CdxLabel>
-        <CdxRadio
-          v-for="(label, styleKey) in entryPointLabels"
-          :key="styleKey"
-          v-model="localSettings.entryPoint.style"
-          :input-value="styleKey"
-          name="entryPoint-style"
-          @update:model-value="onSettingChange"
-        >
-          {{ label }}
-        </CdxRadio>
-      </div>
       <!-- Auto-focus section -->
       <div class="field-group">
         <CdxLabel>Auto-focus</CdxLabel>
@@ -78,7 +64,6 @@ import OutlineSelector from './OutlineSelector.vue'
 import { simpleEnglishOutlinesById } from '../config/outlines/simpleEnglish.js'
 import { useEditorSettings } from '../composables/useEditorSettings'
 import {
-  entryPointLabels,
   autoFocusLabels,
   outlineLocationLabels,
   outlinePersistenceLabels,
