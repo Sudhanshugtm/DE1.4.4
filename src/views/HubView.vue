@@ -16,12 +16,6 @@
           :to="proto.to"
           class="hub__card"
         >
-          <div class="hub__card-top">
-            <span class="hub__card-lang">{{ proto.lang }}</span>
-            <span class="hub__card-status" :class="`hub__card-status--${proto.status}`">
-              {{ proto.statusLabel }}
-            </span>
-          </div>
           <span class="hub__card-label">{{ proto.label }}</span>
           <span class="hub__card-description">{{ proto.description }}</span>
         </router-link>
@@ -32,30 +26,15 @@
 </template>
 
 <script setup>
-// ABOUTME: Generates baseline entries from locales and adds named variations.
-// ABOUTME: Every card points to a directly shareable prototype state.
-
-import locales from '@/config/locales'
+// ABOUTME: Lists the active prototype builds for the current design direction.
 
 const prototypes = [
   {
-    key: 'toolbar-outline',
-    lang: 'Variation',
-    label: 'Selectable article outlines',
-    description: 'Choose any community outline and add its exact article structure.',
+    key: 'ag-in-ve',
+    label: 'Visual editor with article guidance',
+    description: 'Mobile-first · suggested sections, guidance, and checks inside the editor.',
     to: { name: 'editor', query: { lang: 'en', variant: 'toolbar-outline' } },
-    status: 'active',
-    statusLabel: 'New',
   },
-  ...Object.values(locales).map((loc) => ({
-    key: `baseline-${loc.code}`,
-    lang: loc.name,
-    label: loc.article.title,
-    description: loc.reading.wordmark,
-    to: { name: 'article', query: { lang: loc.code } },
-    status: 'active',
-    statusLabel: 'In progress',
-  })),
 ]
 </script>
 

@@ -133,7 +133,7 @@ const editor = useEditor({
       link: { openOnClick: false },
     }),
     Placeholder.configure({
-      placeholder: 'Start writing or tap here to continue...',
+      placeholder: 'Start writing or tap + to add suggested sections',
     }),
     SourceSuperscript,
     AnnotationHighlight,

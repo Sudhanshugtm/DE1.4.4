@@ -72,11 +72,9 @@ import OutlinePopover from '@/components/OutlinePopover.vue'
 import { useEditorSettings } from '@/composables/useEditorSettings'
 import { useEditorInstance } from '@/composables/useEditorInstance'
 import { useCursorRect } from '@/composables/useCursorRect'
-import { useLocale } from '@/composables/useLocale'
 
 const route = useRoute()
 const router = useRouter()
-const { lang } = useLocale()
 const { settings } = useEditorSettings()
 const isToolbarOutlineVariant = computed(() => route.query.variant === 'toolbar-outline')
 const outlineLocation = computed(() => settings.value.outline.location)
@@ -112,7 +110,7 @@ const forceButtonStyle = computed(() => {
 })
 
 const isRailOpen = ref(false)
-const isPopoverOpen = ref(isToolbarOutlineVariant.value)
+const isPopoverOpen = ref(false)
 const settingsDialogOpen = ref(false)
 const citeDialogOpen = ref(false)
 const citeDialogInitialTab = ref('automatic')
@@ -136,14 +134,7 @@ function onOpenOutline() {
 }
 
 function onClose() {
-  const query = { lang: lang.value }
-  if (isToolbarOutlineVariant.value) {
-    query.variant = 'toolbar-outline'
-  }
-  if (typeof route.query.outline === 'string') {
-    query.outline = route.query.outline
-  }
-  router.push({ name: 'article', query })
+  router.push({ name: 'hub' })
 }
 
 function onOpenCiteDefault() {
@@ -178,20 +169,16 @@ watch(isPopoverOpen, (newVal) => {
   }
 })
 
+// The panel never auto-opens: the toolbar + (and the editor's entry points)
+// are the only doors. Location/variant changes just reset any open panel.
 watch(effectiveOutlineLocation, () => {
   isRailOpen.value = false
   isPopoverOpen.value = false
-  if (isToolbarOutlineVariant.value) {
-    onOpenOutline()
-  }
 })
 
-watch(isToolbarOutlineVariant, (isEnabled) => {
+watch(isToolbarOutlineVariant, () => {
   isRailOpen.value = false
   isPopoverOpen.value = false
-  if (isEnabled) {
-    onOpenOutline()
-  }
 })
 </script>
 

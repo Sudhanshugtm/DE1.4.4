@@ -1,6 +1,15 @@
 <template>
   <CdxDialog v-model:open="open" title="Settings" :use-close-button="true">
     <div class="settings-content" :class="{ 'no-transitions': suppressTransitions }">
+      <!-- Article outline (topic type) section -->
+      <div class="field-group">
+        <CdxLabel>Article outline</CdxLabel>
+        <p class="field-group__hint">
+          Currently: <strong>{{ currentOutlineLabel }}</strong> — in the real flow the topic is
+          chosen before the editor opens.
+        </p>
+        <OutlineSelector @select="onSelectOutline" />
+      </div>
       <!-- Entry point section -->
       <div class="field-group">
         <CdxLabel>Entry point</CdxLabel>
@@ -62,8 +71,11 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { CdxDialog, CdxLabel, CdxRadio } from '@wikimedia/codex'
+import OutlineSelector from './OutlineSelector.vue'
+import { simpleEnglishOutlinesById } from '../config/outlines/simpleEnglish.js'
 import { useEditorSettings } from '../composables/useEditorSettings'
 import {
   entryPointLabels,
@@ -73,6 +85,23 @@ import {
 } from '../config/editorSettings'
 
 const open = defineModel('open', { type: Boolean, default: false })
+
+const route = useRoute()
+const router = useRouter()
+
+const currentOutlineLabel = computed(() => {
+  const outlineId = route.query.outline
+  const outline =
+    typeof outlineId === 'string' && Object.hasOwn(simpleEnglishOutlinesById, outlineId)
+      ? simpleEnglishOutlinesById[outlineId]
+      : simpleEnglishOutlinesById.person
+  return outline?.label ?? 'Person'
+})
+
+function onSelectOutline(outlineId) {
+  router.replace({ query: { ...route.query, outline: outlineId } })
+  open.value = false
+}
 
 // Suppress CSS transitions on mount so radios don't animate to their initial state
 const suppressTransitions = ref(true)
@@ -110,6 +139,13 @@ function onSettingChange() {
 
 .field-group :deep(.cdx-label) {
   font-weight: var(--font-weight-bold);
+}
+
+.field-group__hint {
+  margin: var(--spacing-25) 0 var(--spacing-50);
+  color: var(--color-subtle);
+  font-size: var(--font-size-small);
+  line-height: var(--line-height-small);
 }
 
 .no-transitions :deep(*) {

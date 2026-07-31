@@ -20,13 +20,7 @@
     </div>
     <div class="outline-popover-body">
       <template v-if="selectableOutlines">
-        <OutlineSelector
-          v-if="!selectedOutline"
-          v-show="selectedView === 'outline'"
-          @select="onSelectOutline"
-        />
         <OutlineStructureList
-          v-else
           v-show="selectedView === 'outline'"
           v-model:added-items="addedOutlineItems"
           :outline="selectedOutline"
@@ -51,7 +45,7 @@
 
 <script setup>
 import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { CdxPopover, CdxMenuButton, CdxButton, CdxIcon } from '@wikimedia/codex'
 import {
   cdxIconListBullet,
@@ -60,7 +54,6 @@ import {
   cdxIconClose,
 } from '@wikimedia/codex-icons'
 import OutlineAccordionList from './OutlineAccordionList.vue'
-import OutlineSelector from './OutlineSelector.vue'
 import OutlineStructureList from './OutlineStructureList.vue'
 import VerifiedFactsList from './VerifiedFactsList.vue'
 import ReferenceSourcesList from './ReferenceSourcesList.vue'
@@ -79,27 +72,20 @@ const props = defineProps({
 })
 const open = defineModel('open', { type: Boolean, default: false })
 const route = useRoute()
-const router = useRouter()
 const anchorRef = ref(null)
 const selectedView = ref('outline')
 const addedOutlineItems = ref(new Set())
+// Default topic type for the prototype. Switching outlines lives in Settings,
+// mirroring the real flow where the topic is known before the editor opens.
+const DEFAULT_OUTLINE_ID = 'person'
 const selectedOutline = computed(() => {
   if (!props.selectableOutlines) return null
   const outlineId = route.query.outline
-  if (typeof outlineId !== 'string' || !Object.hasOwn(simpleEnglishOutlinesById, outlineId)) {
-    return null
+  if (typeof outlineId === 'string' && Object.hasOwn(simpleEnglishOutlinesById, outlineId)) {
+    return simpleEnglishOutlinesById[outlineId]
   }
-  return simpleEnglishOutlinesById[outlineId]
+  return simpleEnglishOutlinesById[DEFAULT_OUTLINE_ID]
 })
-
-function onSelectOutline(outlineId) {
-  router.replace({
-    query: {
-      ...route.query,
-      outline: outlineId,
-    },
-  })
-}
 
 watch(open, (isOpen) => {
   if (isOpen) {
@@ -110,8 +96,8 @@ watch(open, (isOpen) => {
 const menuItems = [
   {
     value: 'outline',
-    label: 'Outline',
-    description: 'Build off similar articles',
+    label: 'Suggested sections',
+    description: 'From Simple English editors',
     icon: cdxIconListBullet,
   },
   {
