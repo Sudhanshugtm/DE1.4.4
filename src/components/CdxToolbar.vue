@@ -55,13 +55,14 @@
       </CdxButton>
     </div>
     <div class="cdx-toolbar__rhs">
-      <!-- Publishing stays out of reach until the article has something in it. -->
+      <!-- Publishing stays out of reach until the editor has written something. -->
       <CdxButton
         class="cdx-toolbar__btn cdx-toolbar__btn--publish"
         action="progressive"
         weight="primary"
-        :disabled="true"
+        :disabled="!canPublish"
         aria-label="Publish"
+        @click="emit('publish')"
       >
         <CdxIcon :icon="cdxIconNext" />
       </CdxButton>
@@ -135,9 +136,13 @@ defineProps({
     type: Boolean,
     default: false,
   },
+  canPublish: {
+    type: Boolean,
+    default: false,
+  },
 })
 
-const emit = defineEmits(['cite', 'close', 'open-outline'])
+const emit = defineEmits(['cite', 'close', 'open-outline', 'publish'])
 import { onMounted, onBeforeUnmount, ref } from 'vue'
 import { CdxButton, CdxIcon } from '@wikimedia/codex'
 import {

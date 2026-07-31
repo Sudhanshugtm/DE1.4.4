@@ -4,9 +4,11 @@
       :show-outline-entry="isToolbarOutlineVariant"
       :show-cite="!isToolbarOutlineVariant"
       :highlight-outline-entry="highlightOutlineEntry"
+      :can-publish="hasAuthoredText"
       @open-outline="onOpenOutline"
       @cite="onOpenCiteDefault"
       @close="onClose"
+      @publish="onPublish"
     />
     <div
       class="editor-wrapper"
@@ -25,6 +27,7 @@
           @open-settings="settingsDialogOpen = true"
           @open-source-context="onOpenSourceContext"
           @outline-sections-changed="onOutlineSectionsChanged"
+          @authored="hasAuthoredText = true"
         />
       </div>
       <div v-if="!isToolbarOutlineVariant" class="editor-rail-column">
@@ -58,6 +61,13 @@
       @content-inserted="onContentInserted"
       @open-cite-discover="onOpenCiteDiscover"
     />
+    <EditCheckRail
+      :checks="pendingChecks"
+      :index="activeCheckIndex"
+      @act="onCheckAction"
+      @dismiss="onDismissChecks"
+      @navigate="onNavigateChecks"
+    />
     <SourceContextSheet v-model:open="sourceContextOpen" @add-citation="onAddCitationFromSource" />
     <SettingsDialog v-model:open="settingsDialogOpen" @outline-selected="onOutlineSelected" />
     <CiteDialog
@@ -80,6 +90,9 @@ import SettingsDialog from '@/components/SettingsDialog.vue'
 import CiteDialog from '@/components/CiteDialog.vue'
 import OutlinePopover from '@/components/OutlinePopover.vue'
 import SourceContextSheet from '@/components/SourceContextSheet.vue'
+import EditCheckRail from '@/components/EditCheckRail.vue'
+import { findScaffoldFields } from '@/utils/scaffoldFields'
+import { scaffoldFieldHighlightKey } from '@/extensions/scaffoldFieldHighlight'
 import { useEditorSettings } from '@/composables/useEditorSettings'
 import { useEditorInstance } from '@/composables/useEditorInstance'
 import { useCursorRect } from '@/composables/useCursorRect'
@@ -139,6 +152,104 @@ const addedOutlineItems = ref(new Set())
 const sourceContextOpen = ref(false)
 const pendingSourceRange = ref(null)
 const nextCitationNumber = ref(1)
+
+// Publishing opens up once the editor has written something of their own.
+// The scaffold they still have to resolve is raised at the publish moment.
+const hasAuthoredText = ref(false)
+const pendingChecks = ref([])
+const activeCheckIndex = ref(0)
+
+function setFieldHighlight(on) {
+  const editor = getEditor()
+  if (!editor) return
+  editor.view.dispatch(editor.state.tr.setMeta(scaffoldFieldHighlightKey, on))
+}
+
+function onPublish() {
+  const editor = getEditor()
+  if (!editor) return
+
+  const fields = findScaffoldFields(editor.state.doc)
+  activeCheckIndex.value = 0
+  setFieldHighlight(fields.length > 0)
+
+  // Unfilled fields are one thing to put right, however many there are.
+  pendingChecks.value = fields.length
+    ? [
+        {
+          type: 'check',
+          title: 'Complete section',
+          message:
+            'Fields in templates cannot be empty. Before publishing, replace them with real content, or delete them.',
+          actions: [
+            { name: 'review', label: 'Review' },
+            { name: 'delete', label: 'Delete' },
+          ],
+          fields,
+        },
+      ]
+    : []
+
+  if (!pendingChecks.value.length) {
+    // Nothing left to resolve; a real editor would save here.
+    window.alert('Published')
+  }
+}
+
+function onNavigateChecks(nextIndex) {
+  activeCheckIndex.value = Math.max(0, Math.min(nextIndex, pendingChecks.value.length - 1))
+}
+
+// Review walks the fields one at a time; Delete clears the ones still empty.
+const reviewedFieldIndex = ref(0)
+
+function onCheckAction({ action, check }) {
+  const editor = getEditor()
+  if (!editor || !check?.fields?.length) return
+
+  if (action === 'review') {
+    const field = check.fields[reviewedFieldIndex.value % check.fields.length]
+    reviewedFieldIndex.value += 1
+    editor
+      .chain()
+      .focus()
+      .setTextSelection({ from: field.from, to: field.to })
+      .scrollIntoView()
+      .run()
+    return
+  }
+
+  // Delete from the end so earlier positions stay valid.
+  const chain = editor.chain().focus()
+  ;[...check.fields].reverse().forEach((field) => {
+    chain.deleteRange({ from: field.from, to: field.to })
+  })
+  chain.run()
+
+  refreshChecks()
+}
+
+// The document moved, so the fields still empty are found again.
+function refreshChecks() {
+  const editor = getEditor()
+  const fields = editor ? findScaffoldFields(editor.state.doc) : []
+  reviewedFieldIndex.value = 0
+
+  if (!fields.length) {
+    pendingChecks.value = []
+    setFieldHighlight(false)
+    return
+  }
+
+  pendingChecks.value = pendingChecks.value.map((check) =>
+    check.type === 'check' ? { ...check, fields } : check,
+  )
+}
+
+function onDismissChecks() {
+  pendingChecks.value = []
+  setFieldHighlight(false)
+}
 
 function onOutlineSectionsChanged(sectionKeys) {
   const leadKeys = [...addedOutlineItems.value].filter((key) => key.endsWith(':lead'))

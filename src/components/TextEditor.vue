@@ -79,6 +79,7 @@ import { PlaceholderChip } from '../extensions/placeholderChip'
 import SectionDeleteControls, { getOutlineSectionKeys } from '../extensions/sectionDeleteControls'
 import SectionHeading from '../extensions/sectionHeading'
 import { SourceSuperscript } from '../extensions/sourceSuperscript'
+import { ScaffoldFieldHighlight } from '../extensions/scaffoldFieldHighlight'
 import { useEditorSettings } from '../composables/useEditorSettings'
 import { useEditorInstance } from '../composables/useEditorInstance'
 import { useCursorRect } from '../composables/useCursorRect'
@@ -105,6 +106,7 @@ const emit = defineEmits([
   'open-settings',
   'open-source-context',
   'outline-sections-changed',
+  'authored',
 ])
 
 const { settings } = useEditorSettings()
@@ -149,6 +151,7 @@ const editor = useEditor({
     }),
     SourceSuperscript,
     AnnotationHighlight,
+    ScaffoldFieldHighlight,
     PlaceholderChip,
   ],
   editorProps: {
@@ -172,6 +175,12 @@ const editor = useEditor({
   onTransaction({ editor: currentEditor, transaction }) {
     if (transaction.docChanged) {
       emit('outline-sections-changed', getOutlineSectionKeys(currentEditor.state.doc))
+      // Inserting an outline is the community writing, not the editor, and
+      // the editor's own setup runs before anyone has typed. Only edits made
+      // while writing count as having written something.
+      if (!transaction.getMeta('outlineInsertion') && currentEditor.isFocused) {
+        emit('authored')
+      }
       if (isPlaceholderInitialState.value) {
         hasInteracted.value = true
       }
@@ -673,6 +682,13 @@ defineExpose({ editor })
   font-size: var(--font-size-x-small);
   line-height: 0;
   vertical-align: super;
+}
+
+/* A field a check is asking about, marked in the article itself. */
+.text-editor :deep(.scaffold-field-highlight) {
+  background-color: var(--background-color-warning-subtle, #fef6e7);
+  box-shadow: 0 0 0 1px var(--border-color-warning, #edab49);
+  border-radius: 1px;
 }
 
 .text-editor :deep(.annotation-highlight) {

@@ -40,6 +40,10 @@ export function insertOutlineContent(editor, content) {
     .focus('end')
     .insertContent(addCursorMarker(content))
     .command(({ tr }) => {
+      // Mark this as the outline arriving, so it is not mistaken for the
+      // editor having written something.
+      tr.setMeta('outlineInsertion', true)
+
       const marker = findCursorMarker(tr.doc)
 
       if (!marker) return true
