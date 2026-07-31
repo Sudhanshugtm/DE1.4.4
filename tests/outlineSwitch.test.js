@@ -8,7 +8,6 @@ import TextEditor from '../src/components/TextEditor.vue'
 
 const mocks = vi.hoisted(() => ({
   getEditor: vi.fn(),
-  resetEditorContent: vi.fn(),
   setEditor: vi.fn(),
 }))
 
@@ -24,10 +23,6 @@ vi.mock('@/composables/useEditorInstance', () => ({
     getEditor: mocks.getEditor,
     setEditor: mocks.setEditor,
   }),
-}))
-
-vi.mock('@/utils/resetEditorContent', () => ({
-  resetEditorContent: mocks.resetEditorContent,
 }))
 
 import EditorView from '../src/views/EditorView.vue'
@@ -103,11 +98,38 @@ afterEach(() => {
   wrapper = undefined
   vi.restoreAllMocks()
   mocks.getEditor.mockReset()
-  mocks.resetEditorContent.mockReset()
   mocks.setEditor.mockReset()
 })
 
 describe('outline switching', () => {
+  it('starts a fresh editor session so later inserts cannot restore the previous outline', async () => {
+    await mountEditor({ variant: 'toolbar-outline', outline: 'person' }, true)
+    const previousEditor = wrapper.findComponent(TextEditor).vm.editor
+
+    previousEditor.commands.setContent(`
+      <h2 data-outline-item-key="person:early-life">Early life</h2>
+      <p>Previous outline text</p>
+    `)
+    await openSettings()
+
+    settingsDialog().vm.$emit('outline-selected', 'city')
+    await flushPromises()
+    await nextTick()
+
+    const currentEditor = wrapper.findComponent(TextEditor).vm.editor
+    expect(currentEditor.instanceId).not.toBe(previousEditor.instanceId)
+    expect(currentEditor.getText()).toBe('')
+    expect(currentEditor.commands.undo()).toBe(false)
+
+    currentEditor.commands.insertContent(`
+      <h2 data-outline-item-key="city:history">History</h2>
+      <p>New outline text</p>
+    `)
+
+    expect(currentEditor.getText()).toContain('New outline text')
+    expect(currentEditor.getText()).not.toContain('Previous outline text')
+  })
+
   it('coordinates document-derived delete, undo, and redo Sets while preserving lead keys', async () => {
     await mountEditor({ variant: 'toolbar-outline', outline: 'person' }, true)
     const textEditor = wrapper.findComponent(TextEditor)
@@ -144,8 +166,6 @@ describe('outline switching', () => {
   })
 
   it('switches outline, resets editor, closes settings, and opens outline sheet', async () => {
-    const editor = { id: 'editor' }
-    mocks.getEditor.mockReturnValue(editor)
     await mountEditor({ lang: 'en', variant: 'toolbar-outline', outline: 'person' })
 
     outlinePopover().vm.$emit('update:open', false)
@@ -161,7 +181,6 @@ describe('outline switching', () => {
       variant: 'toolbar-outline',
       outline: 'city',
     })
-    expect(mocks.resetEditorContent).toHaveBeenCalledWith(editor)
     expect(outlinePopover().props('addedItems')).toEqual(new Set())
     expect(settingsDialog().props('open')).toBe(false)
     expect(outlinePopover().props('open')).toBe(true)
@@ -178,7 +197,6 @@ describe('outline switching', () => {
     settingsDialog().vm.$emit('outline-selected', 'person')
     await nextTick()
 
-    expect(mocks.resetEditorContent).not.toHaveBeenCalled()
     expect(settingsDialog().props('open')).toBe(false)
     expect(outlinePopover().props('open')).toBe(false)
   })
@@ -202,7 +220,6 @@ describe('outline switching', () => {
 
     expect(guardReached).toBe(true)
     expect(router.currentRoute.value.query.outline).toBe('person')
-    expect(mocks.resetEditorContent).not.toHaveBeenCalled()
     expect(outlinePopover().props('open')).toBe(false)
     expect(settingsDialog().props('open')).toBe(true)
   })
@@ -220,34 +237,35 @@ describe('outline switching', () => {
 
     expect(replace).toHaveBeenCalled()
     expect(router.currentRoute.value.query.outline).toBe('person')
-    expect(mocks.resetEditorContent).not.toHaveBeenCalled()
     expect(outlinePopover().props('open')).toBe(false)
     expect(settingsDialog().props('open')).toBe(true)
   })
 
-  it('waits for successful navigation before resetting editor state', async () => {
-    const editor = { id: 'editor' }
-    mocks.getEditor.mockReturnValue(editor)
+  it('waits for successful navigation before reopening the outline sheet', async () => {
     await mountEditor({ variant: 'toolbar-outline', outline: 'person' })
 
     let resolveNavigation
-    const replace = vi.spyOn(router, 'replace').mockImplementation(
-      () =>
-        new Promise((resolve) => {
-          resolveNavigation = resolve
-        }),
-    )
+    const navigationGate = new Promise((resolve) => {
+      resolveNavigation = resolve
+    })
+    const originalReplace = router.replace.bind(router)
+    const replace = vi.spyOn(router, 'replace').mockImplementation(async (location) => {
+      await navigationGate
+      return originalReplace(location)
+    })
     await openSettings()
     settingsDialog().vm.$emit('outline-selected', 'city')
     await nextTick()
 
     expect(replace).toHaveBeenCalled()
-    expect(mocks.resetEditorContent).not.toHaveBeenCalled()
+    expect(router.currentRoute.value.query.outline).toBe('person')
+    expect(outlinePopover().props('open')).toBe(true)
 
     resolveNavigation()
     await flushPromises()
 
-    expect(mocks.resetEditorContent).toHaveBeenCalledWith(editor)
+    expect(router.currentRoute.value.query.outline).toBe('city')
+    expect(outlinePopover().props('open')).toBe(true)
   })
 
   it('switches route and sheet when no editor instance is available', async () => {
@@ -261,7 +279,6 @@ describe('outline switching', () => {
     await flushPromises()
 
     expect(router.currentRoute.value.query.outline).toBe('city')
-    expect(mocks.resetEditorContent).toHaveBeenCalledWith(null)
     expect(settingsDialog().props('open')).toBe(false)
     expect(outlinePopover().props('open')).toBe(true)
     expect(outlinePopover().props('initialView')).toBe('outline')

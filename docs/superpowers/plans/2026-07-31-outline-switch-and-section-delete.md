@@ -4,13 +4,24 @@
 
 **Goal:** Reset the local VisualEditor when a different outline is selected, reopen the new outline sheet, and add accessible per-section trash controls matching the supplied mobile reference.
 
-**Architecture:** `EditorView` coordinates the outline transition and controlled added-item state. TipTap extensions preserve stable outline keys on H2 nodes and render semantic delete buttons as non-document decorations; editor transactions remain the source of truth for which H2 sections are present.
+**Architecture:** `EditorView` coordinates the outline transition, keys `TextEditor` by active
+outline so every successful switch starts a fresh TipTap session, and owns the controlled
+added-item state. TipTap extensions preserve stable outline keys on H2 nodes and render semantic
+delete buttons as non-document decorations; editor transactions remain the source of truth for
+which H2 sections are present.
 
 **Tech Stack:** Vue 3, TipTap 3, ProseMirror, Wikimedia Codex icons/tokens, Vitest 2, Vue Test Utils, jsdom.
 
 **Design sources:** The approved behavior is in `docs/superpowers/specs/2026-07-31-outline-switch-reset-design.md`. The section control follows the supplied `Mobile.png` reference: compact visible trash glyph, right-aligned on the H2 rule, with a larger invisible tap target.
 
 **Workspace constraint:** Preserve the user's uncommitted `src/components/CdxToolbar.vue` work. Do not stage, format, or edit that file. The untracked pre-editor plan is also outside scope.
+
+**Verified implementation correction:** The original Task 1 utility below used
+`editor.view.updateState()` and passed its Core Editor unit test, but a browser test showed that
+TipTap Vue's separate reactive state stayed stale and restored the old outline on the next
+command. The shipped implementation supersedes that utility: `TextEditor` is keyed by
+`activeOutlineId`, and the integration test verifies a new instance, empty history, and a clean
+first insertion. The obsolete utility and its unit test were removed.
 
 ---
 
@@ -19,6 +30,7 @@
 ### Task 1: Add focused test infrastructure and a fresh editor reset
 
 **Files:**
+
 - Modify: `package.json`
 - Modify: `package-lock.json`
 - Create: `src/utils/resetEditorContent.js`
@@ -127,6 +139,7 @@ git commit -m "Add fresh editor reset foundation"
 ### Task 2: Coordinate outline selection, route safety, and automatic sheet reopening
 
 **Files:**
+
 - Modify: `src/components/SettingsDialog.vue`
 - Modify: `src/views/EditorView.vue`
 - Modify: `src/components/OutlinePopover.vue`
@@ -228,11 +241,10 @@ this component.
 
 - [ ] **Step 5: Implement the safe EditorView transition**
 
-In `EditorView.vue`:
+In `EditorView.vue`, key the editor lifecycle and coordinate the transition:
 
 ```js
 import { isNavigationFailure } from 'vue-router'
-import { resetEditorContent } from '@/utils/resetEditorContent'
 import { simpleEnglishOutlinesById } from '@/config/outlines/simpleEnglish'
 
 const activeOutlineId = computed(() => {
@@ -243,7 +255,13 @@ const activeOutlineId = computed(() => {
 })
 
 const addedOutlineItems = ref(new Set())
+```
 
+```vue
+<TextEditor :key="activeOutlineId" />
+```
+
+```js
 async function onOutlineSelected(outlineId) {
   if (outlineId === activeOutlineId.value) {
     settingsDialogOpen.value = false
@@ -259,7 +277,6 @@ async function onOutlineSelected(outlineId) {
     return
   }
 
-  resetEditorContent(getEditor())
   addedOutlineItems.value = new Set()
   initialView.value = 'outline'
   settingsDialogOpen.value = false
@@ -315,6 +332,7 @@ git commit -m "Reset editor when switching outlines"
 ### Task 3: Preserve stable outline keys and compute exact section ranges
 
 **Files:**
+
 - Create: `src/extensions/sectionHeading.js`
 - Create: `src/extensions/sectionDeleteControls.js`
 - Modify: `src/utils/outlineWikitext.js`
@@ -463,6 +481,7 @@ git commit -m "Preserve outline section identity"
 ### Task 4: Render and operate the accessible section trash button
 
 **Files:**
+
 - Modify: `src/extensions/sectionDeleteControls.js`
 - Modify: `src/components/TextEditor.vue`
 - Modify: `src/views/EditorView.vue`
@@ -626,6 +645,7 @@ git commit -m "Add accessible outline section deletion"
 ### Task 5: Verify behavior, craft, and local runtime
 
 **Files:**
+
 - Modify only if a focused verification exposes a defect in files already in scope.
 
 - [ ] **Step 1: Run the complete automated suite**

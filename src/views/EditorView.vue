@@ -17,6 +17,7 @@
     >
       <div class="editor-main" @click="isRailOpen && (isRailOpen = false)">
         <TextEditor
+          :key="activeOutlineId"
           :show-outline-entry="!isToolbarOutlineVariant"
           :show-placeholder="isToolbarOutlineVariant"
           :suppress-auto-focus="isToolbarOutlineVariant"
@@ -82,7 +83,6 @@ import SourceContextSheet from '@/components/SourceContextSheet.vue'
 import { useEditorSettings } from '@/composables/useEditorSettings'
 import { useEditorInstance } from '@/composables/useEditorInstance'
 import { useCursorRect } from '@/composables/useCursorRect'
-import { resetEditorContent } from '@/utils/resetEditorContent'
 import { simpleEnglishOutlinesById } from '@/config/outlines/simpleEnglish'
 
 const route = useRoute()
@@ -160,7 +160,6 @@ async function onOutlineSelected(outlineId) {
     return
   }
 
-  resetEditorContent(getEditor())
   addedOutlineItems.value = new Set()
   initialView.value = 'outline'
   settingsDialogOpen.value = false
