@@ -281,4 +281,13 @@ onBeforeUnmount(() => {
   min-height: 0;
   padding: 0;
 }
+
+/* Opening the sheet puts focus on its close button so it can be reached by
+   keyboard. Touch does not need to see that ring, so it is shown only when
+   focus arrives from the keyboard. */
+.cdx-popover--bottom-sheet .cdx-button:focus:not(:focus-visible) {
+  border-color: transparent;
+  box-shadow: none;
+  outline: 0;
+}
 </style>
