@@ -10,17 +10,11 @@
 
     <main class="hub__content">
       <div class="hub__list">
-        <router-link
-          v-for="proto in prototypes"
-          :key="proto.key"
-          :to="proto.to"
-          class="hub__card"
-        >
+        <router-link v-for="proto in prototypes" :key="proto.key" :to="proto.to" class="hub__card">
           <span class="hub__card-label">{{ proto.label }}</span>
           <span class="hub__card-description">{{ proto.description }}</span>
         </router-link>
       </div>
-
     </main>
   </div>
 </template>
@@ -31,9 +25,9 @@
 const prototypes = [
   {
     key: 'ag-in-ve',
-    label: 'Visual editor with article guidance',
-    description: 'Mobile-first · suggested sections, guidance, and checks inside the editor.',
-    to: { name: 'editor', query: { lang: 'en', variant: 'toolbar-outline' } },
+    label: 'Pre-editor Article Guidance journey',
+    description: 'Demonstrates the article red-link journey before entering the editor.',
+    to: { name: 'article' },
   },
 ]
 </script>
@@ -84,7 +78,9 @@ const prototypes = [
   border-radius: var(--border-radius-base);
   text-decoration: none;
   color: var(--color-base);
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
 }
 
 .hub__card:hover {
@@ -131,5 +127,4 @@ const prototypes = [
   color: var(--color-subtle);
   line-height: var(--line-height-xx-small);
 }
-
 </style>
