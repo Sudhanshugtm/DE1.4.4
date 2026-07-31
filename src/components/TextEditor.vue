@@ -684,30 +684,23 @@ defineExpose({ editor })
   vertical-align: super;
 }
 
-/* Fields hint at what they are asking for. The two tints sit close together
-   on purpose: enough to notice a difference, not enough to read as two
-   separate kinds of thing. */
-.text-editor :deep(.scaffold-field) {
-  border-radius: 2px;
-  padding: 0 1px;
-}
-
-/* A single value: something to pick or recall. */
+/* Fields carry no fill of their own: the brackets already say they are
+   waiting. What differs is only how present the text is — a value to pick
+   sits closer to the article, words to write stay further back. */
 .text-editor :deep(.scaffold-field--pick) {
-  background-color: var(--background-color-progressive-subtle, #e8eeff);
-  color: var(--color-base);
+  color: var(--color-subtle, #54595d);
 }
 
-/* Words of the editor's own. */
 .text-editor :deep(.scaffold-field--write) {
-  background-color: var(--background-color-neutral-subtle, #f8f9fa);
-  color: var(--color-subtle);
+  color: var(--color-placeholder, #72777d);
 }
 
-/* A field a check is asking about, marked in the article itself. */
+/* A field a check is asking about. This one is meant to be seen, since the
+   card is asking the editor to act on it. */
 .text-editor :deep(.scaffold-field--flagged) {
   background-color: var(--background-color-warning-subtle, #fdf2d5);
   box-shadow: 0 0 0 1px var(--border-color-warning, #edab49);
+  border-radius: 2px;
   color: var(--color-base);
 }
 
