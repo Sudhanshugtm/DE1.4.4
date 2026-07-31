@@ -14,10 +14,14 @@ Vue 3 + TipTap rich text editor for Wikipedia-style article creation, styled wit
 
 ## Architecture
 
+Current direction: a mobile-first prototype of Article Guidance inside the Visual
+Editor. The hub lists one build; the editor opens on an empty canvas and the
+toolbar `+` is the entry point to community guidance.
+
 ```
 src/
   components/       # Vue SFCs (PascalCase)
-  views/            # Page-level layouts (single route: EditorView)
+  views/            # Page-level layouts (hub, article, editor, outline-lab)
   composables/      # Shared reactive logic (useEditorSettings, useEditorInstance, useTextPositionReporter)
   config/           # Static data & defaults (articleSections, editorSettings, verifiedFacts)
   extensions/       # Custom TipTap extensions (annotationHighlight)
@@ -28,15 +32,19 @@ src/
 
 ## Key Files
 
-- `src/views/EditorView.vue` — Main layout: toolbar + editor + rail/popover orchestration
-- `src/components/TextEditor.vue` — TipTap editor with floating action button
-- `src/components/EditorRail.vue` — Slide-in side panel with tabs (outline, facts, citations)
-- `src/components/OutlinePopover.vue` — Alternative popover-based outline UI
-- `src/components/OutlineAccordionList.vue` — Section list with insert-on-click cards
+- `src/views/HubView.vue` — Lists the prototype builds (currently one)
+- `src/views/EditorView.vue` — Main layout: toolbar + editor + panel/sheet orchestration
+- `src/components/TextEditor.vue` — TipTap editor; owns the Source-prompt click handler
+- `src/components/OutlinePopover.vue` — Bottom sheet holding suggested sections / facts / references
+- `src/components/OutlineStructureList.vue` — Suggested sections, rendered from a community outline
+- `src/components/OutlineSelector.vue` — Outline (topic type) picker; `showIntro` prop hides its heading
+- `src/components/SourceContextSheet.vue` — Citation-needed context item for Source prompts
 - `src/components/VerifiedFactsList.vue` — Wikidata facts panel
-- `src/components/CdxToolbar.vue` — Top toolbar (formatting, cite, publish)
-- `src/components/SettingsDialog.vue` — UI settings modal
-- `src/components/CiteDialog.vue` — Citation dialog with tabs
+- `src/components/CdxToolbar.vue` — Top toolbar (formatting, outline entry, publish)
+- `src/components/SettingsDialog.vue` — Prototype settings: article outline switcher
+- `src/components/CiteDialog.vue` — Citation dialog with tabs; emits `citation-created`
+- `src/config/outlines/simpleEnglish.js` — All Simple English outlines (structure + sources)
+- `src/utils/outlineWikitext.js` — Outline wikitext → editor HTML (emits Source prompts)
 - `src/composables/useEditorInstance.js` — Global TipTap editor ref, shared across components
 - `src/composables/useEditorSettings.js` — Settings ↔ URL query param sync
 - `src/config/editorSettings.js` — Default settings + display labels
@@ -80,19 +88,33 @@ EditorView uses a sliding panel pattern:
 
 ## Settings System
 
-Settings persist in URL query params only (no localStorage/DB).
+State lives in URL query params only (no localStorage/DB), so any state is shareable
+as a link.
 
-Default structure (`src/config/editorSettings.js`):
-```js
-{ entryPoint: { style: 'quiet' }, outline: { location: 'rail', persistence: 'close' } }
-```
+`SettingsDialog` now carries only the **article outline** switcher: it writes
+`?outline=<id>` and the panel reads it, defaulting to `person`. In the real flow the
+topic type is known before the editor opens, so this exists for prototyping only.
 
-To add a new setting:
-1. Add default value + label in `src/config/editorSettings.js`
-2. Add radio/control in `SettingsDialog.vue`
-3. Consume via `useEditorSettings()` composable in target component
+`src/config/editorSettings.js` and `useEditorSettings()` still back the remaining
+defaults (`outline.location`, `outline.persistence`, `entryPoint.autoFocus`) which are
+now set in code rather than exposed as UI. To surface a setting again: add its label in
+`editorSettings.js`, add a control in `SettingsDialog.vue`, consume via
+`useEditorSettings()`.
 
-Flow: User changes setting → `updateSettings()` → `router.replace({ query })` → URL updates → `settings` computed re-evaluates → components re-render.
+## Behaviour borrowed from Visual Editor
+
+Interactions mirror how real VE behaves, so the prototype stays a preview of the same
+system rather than a lookalike:
+
+- **Source prompts** (rendered from `{{Citation needed}}` in an outline) behave like
+  `MWCitationNeededContextItem`: tap → context item titled "Citation needed" with a
+  single progressive "Add a citation" action → cite dialog → the created citation
+  **replaces** the prompt (VE opens Citoid with `replace: true`).
+- **Panels** follow `ve.ui.MobileContext`: a bottom sheet with a close button.
+
+When adding a behaviour, check the installed extension first
+(`extensions/VisualEditor`, `extensions/Cite`, `extensions/Citoid`) and copy the
+production strings rather than inventing new ones.
 
 ## Content Insertion Pattern
 
