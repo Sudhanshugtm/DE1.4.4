@@ -50,13 +50,14 @@
     <OutlinePopover
       v-if="effectiveOutlineLocation === 'popover'"
       v-model:open="isPopoverOpen"
+      v-model:added-items="addedOutlineItems"
       :initial-view="initialView"
       :selectable-outlines="isToolbarOutlineVariant"
       @content-inserted="onContentInserted"
       @open-cite-discover="onOpenCiteDiscover"
     />
     <SourceContextSheet v-model:open="sourceContextOpen" @add-citation="onAddCitationFromSource" />
-    <SettingsDialog v-model:open="settingsDialogOpen" />
+    <SettingsDialog v-model:open="settingsDialogOpen" @outline-selected="onOutlineSelected" />
     <CiteDialog
       v-model:open="citeDialogOpen"
       :initial-tab="citeDialogInitialTab"
@@ -67,7 +68,7 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { isNavigationFailure, useRoute, useRouter } from 'vue-router'
 import { CdxIcon } from '@wikimedia/codex'
 import { cdxIconAdd } from '@wikimedia/codex-icons'
 import TextEditor from '@/components/TextEditor.vue'
@@ -80,6 +81,8 @@ import SourceContextSheet from '@/components/SourceContextSheet.vue'
 import { useEditorSettings } from '@/composables/useEditorSettings'
 import { useEditorInstance } from '@/composables/useEditorInstance'
 import { useCursorRect } from '@/composables/useCursorRect'
+import { resetEditorContent } from '@/utils/resetEditorContent'
+import { simpleEnglishOutlinesById } from '@/config/outlines/simpleEnglish'
 
 const route = useRoute()
 const router = useRouter()
@@ -91,6 +94,12 @@ const effectiveOutlineLocation = computed(() =>
 )
 const outlinePersistence = computed(() => settings.value.outline.persistence)
 const entryPointStyle = computed(() => settings.value.entryPoint.style)
+const activeOutlineId = computed(() => {
+  const outlineId = route.query.outline
+  return typeof outlineId === 'string' && Object.hasOwn(simpleEnglishOutlinesById, outlineId)
+    ? outlineId
+    : 'person'
+})
 
 // Force entry point
 const { getEditor } = useEditorInstance()
@@ -125,9 +134,32 @@ const settingsDialogOpen = ref(false)
 const citeDialogOpen = ref(false)
 const citeDialogInitialTab = ref('automatic')
 const initialView = ref(null)
+const addedOutlineItems = ref(new Set())
 const sourceContextOpen = ref(false)
 const pendingSourceRange = ref(null)
 const nextCitationNumber = ref(1)
+
+async function onOutlineSelected(outlineId) {
+  if (outlineId === activeOutlineId.value) {
+    settingsDialogOpen.value = false
+    return
+  }
+
+  try {
+    const failure = await router.replace({
+      query: { ...route.query, outline: outlineId },
+    })
+    if (isNavigationFailure(failure)) return
+  } catch {
+    return
+  }
+
+  resetEditorContent(getEditor())
+  addedOutlineItems.value = new Set()
+  initialView.value = 'outline'
+  settingsDialogOpen.value = false
+  isPopoverOpen.value = true
+}
 
 function onForceButtonClick() {
   getEditor()?.commands.blur()
@@ -196,10 +228,7 @@ function onCitationCreated() {
   editor
     .chain()
     .focus()
-    .insertContentAt(
-      range,
-      `<sup class="citation-reference">[${nextCitationNumber.value}]</sup>`,
-    )
+    .insertContentAt(range, `<sup class="citation-reference">[${nextCitationNumber.value}]</sup>`)
     .run()
 
   nextCitationNumber.value += 1

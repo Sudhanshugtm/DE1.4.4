@@ -20,7 +20,7 @@
       <template v-if="selectableOutlines">
         <OutlineStructureList
           v-show="selectedView === 'outline'"
-          v-model:added-items="addedOutlineItems"
+          v-model:added-items="addedItems"
           :outline="selectedOutline"
           @content-inserted="$emit('content-inserted')"
         />
@@ -69,10 +69,14 @@ const props = defineProps({
   },
 })
 const open = defineModel('open', { type: Boolean, default: false })
+const addedItems = defineModel('addedItems', {
+  type: Set,
+  required: true,
+})
 const route = useRoute()
 const anchorRef = ref(null)
 const selectedView = ref('outline')
-const addedOutlineItems = ref(new Set())
+const pendingOutlineScrollReset = ref(false)
 // Default topic type for the prototype. Switching outlines lives in Settings,
 // mirroring the real flow where the topic is known before the editor opens.
 const DEFAULT_OUTLINE_ID = 'person'
@@ -153,23 +157,34 @@ function detachObserver() {
   bodyEl = null
 }
 
-async function resetBodyScroll() {
-  if (bodyEl) {
-    await nextTick()
-    bodyEl.scrollTop = 0
-    bodyEl.classList.remove('is-scrolled')
-    checkScrollable()
+function resetBodyScroll() {
+  if (!bodyEl) return false
+  bodyEl.scrollTop = 0
+  bodyEl.classList.remove('is-scrolled')
+  checkScrollable()
+  return true
+}
+
+function applyPendingOutlineScrollReset() {
+  if (!pendingOutlineScrollReset.value || !bodyEl) return
+  if (resetBodyScroll()) {
+    pendingOutlineScrollReset.value = false
   }
 }
 
 watch(selectedView, resetBodyScroll)
-watch(selectedOutline, resetBodyScroll)
+watch(selectedOutline, () => {
+  selectedView.value = 'outline'
+  pendingOutlineScrollReset.value = true
+  applyPendingOutlineScrollReset()
+})
 
 watch(open, async (isOpen) => {
   if (isOpen) {
     await nextTick()
     await nextTick()
     attachObserver()
+    applyPendingOutlineScrollReset()
   } else {
     detachObserver()
   }
