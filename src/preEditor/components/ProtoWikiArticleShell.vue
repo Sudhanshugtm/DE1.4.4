@@ -50,11 +50,6 @@
           <p class="proto-wiki__article-description">{{ article.description.text }}</p>
         </header>
 
-        <aside class="proto-wiki__research-note" aria-label="Research prototype instructions">
-          <strong>{{ article.researchNote.label }}</strong>
-          <span>{{ article.researchNote.text }}</span>
-        </aside>
-
         <section
           v-for="(section, sectionIndex) in article.sections"
           :key="`${section.heading}-${sectionIndex}`"
@@ -226,22 +221,9 @@ function activateMissingLink(event, journeyKey) {
   margin-top: var(--spacing-100);
 }
 
-.proto-wiki__research-note {
-  display: grid;
-  gap: var(--spacing-25);
-  margin-top: var(--spacing-100);
-  padding: var(--spacing-100);
-  border: var(--border-subtle);
-  border-left: var(--border-width-thick) solid var(--border-color-progressive);
-  background: var(--background-color-progressive-subtle);
-  font-size: var(--font-size-small);
-  line-height: var(--line-height-medium);
-}
-
 .proto-wiki__context-link {
   color: var(--color-progressive);
-  text-decoration: underline;
-  text-underline-offset: var(--spacing-12);
+  text-decoration: none;
 }
 
 .proto-wiki__section-heading {
@@ -264,9 +246,7 @@ function activateMissingLink(event, journeyKey) {
 .proto-wiki__missing-link,
 .proto-wiki__missing-link:visited {
   color: var(--color-link-red);
-  text-decoration: var(--text-decoration-underline);
-  text-decoration-thickness: from-font;
-  text-underline-offset: var(--spacing-12);
+  text-decoration: none;
 }
 
 .proto-wiki__missing-link:visited {
@@ -275,6 +255,8 @@ function activateMissingLink(event, journeyKey) {
 
 .proto-wiki__missing-link:hover {
   color: var(--color-link-red--hover);
+  text-decoration: var(--text-decoration-underline);
+  text-underline-offset: var(--spacing-12);
 }
 
 .proto-wiki__missing-link:visited:hover {
@@ -291,6 +273,8 @@ function activateMissingLink(event, journeyKey) {
 
 .proto-wiki__missing-link:focus {
   color: var(--color-link-red--focus);
+  text-decoration: var(--text-decoration-underline);
+  text-underline-offset: var(--spacing-12);
 }
 
 .proto-wiki__missing-link:focus-visible {
