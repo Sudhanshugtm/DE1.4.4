@@ -71,9 +71,9 @@ import { cdxIconAdd, cdxIconSettings } from '@wikimedia/codex-icons'
 import { useEditor, EditorContent } from '@tiptap/vue-3'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
-import Superscript from '@tiptap/extension-superscript'
 import { AnnotationHighlight } from '../extensions/annotationHighlight'
 import { PlaceholderChip } from '../extensions/placeholderChip'
+import { SourceSuperscript } from '../extensions/sourceSuperscript'
 import { useEditorSettings } from '../composables/useEditorSettings'
 import { useEditorInstance } from '../composables/useEditorInstance'
 import { useCursorRect } from '../composables/useCursorRect'
@@ -135,7 +135,7 @@ const editor = useEditor({
     Placeholder.configure({
       placeholder: 'Start writing or tap here to continue...',
     }),
-    Superscript,
+    SourceSuperscript,
     AnnotationHighlight,
     PlaceholderChip,
   ],
@@ -591,6 +591,13 @@ defineExpose({ editor })
   padding-bottom: var(--spacing-50);
   margin: var(--spacing-50) 0 0 0;
   line-height: var(--line-height-medium);
+}
+
+.text-editor :deep(.ProseMirror sup.outline-source-prompt) {
+  color: var(--color-progressive);
+  font-size: var(--font-size-x-small);
+  line-height: 0;
+  vertical-align: super;
 }
 
 .text-editor :deep(.annotation-highlight) {

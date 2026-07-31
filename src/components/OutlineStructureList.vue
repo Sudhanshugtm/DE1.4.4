@@ -43,6 +43,7 @@ import { CdxAccordion } from '@wikimedia/codex'
 import { cdxIconAdd, cdxIconCheck } from '@wikimedia/codex-icons'
 import { useEditorInstance } from '../composables/useEditorInstance'
 import { getOutlineItemDescription } from '../config/outlines/sectionDescriptions.js'
+import { insertOutlineContent } from '../utils/outlineInsertion.js'
 import {
   isReferencesSection,
   outlineItemToEditorHtml,
@@ -116,7 +117,7 @@ function onAdd(item) {
   const content = outlineItemToEditorHtml(item, { isLead: item.isLead })
   if (!content) return
 
-  const inserted = editor.chain().focus('end').insertContent(content).run()
+  const inserted = insertOutlineContent(editor, content)
   if (!inserted) return
 
   addedItems.value = new Set([...addedItems.value, item.key])
@@ -191,7 +192,7 @@ function onAdd(item) {
 }
 
 .outline-structure__preview :deep(.outline-source-prompt) {
-  color: var(--color-subtle);
+  color: var(--color-progressive);
 }
 
 .outline-structure__preview :deep(sup.outline-source-prompt) {
