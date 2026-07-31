@@ -5,14 +5,8 @@
   <template v-if="checks.length">
     <!-- Gutter: a marker beside each stretch of text a check is about. -->
     <div class="edit-check__gutter" aria-hidden="true">
-      <span
-        v-for="marker in markers"
-        :key="marker.key"
-        class="edit-check__marker edit-check__marker--active"
-        :style="{ top: `${marker.top}px` }"
-      >
+      <span v-if="marker" class="edit-check__marker" :style="{ top: `${marker.top}px` }">
         <CdxIcon :icon="markerIcon" class="edit-check__marker-icon" />
-        <span v-if="marker.count > 1" class="edit-check__marker-count">{{ marker.count }}</span>
       </span>
     </div>
 
@@ -89,41 +83,23 @@ const markerIcon = computed(() =>
   current.value.type === 'suggestion' ? cdxIconLightbulb : cdxIconAlert,
 )
 
-// Markers stack per line, so several fields in one paragraph share a marker
-// and carry a count, the way clustered checks do in the editor.
-const markers = ref([])
+// One check, one marker: it sits beside the first field the check is about.
+const marker = ref(null)
 
 function positionMarkers() {
   const editor = getEditor()
-  const fields = current.value?.fields
+  const firstField = current.value?.fields?.[0]
 
-  if (!editor || !fields?.length) {
-    markers.value = []
+  if (!editor || !firstField) {
+    marker.value = null
     return
   }
 
-  // Fields sharing a paragraph share one marker, which carries their count.
-  const paragraphs = new Map()
-
-  fields.forEach((field) => {
-    let coords
-    try {
-      coords = editor.view.coordsAtPos(field.from)
-    } catch {
-      return
-    }
-
-    const paragraphStart = editor.state.doc.resolve(field.from).start()
-    const existing = paragraphs.get(paragraphStart)
-
-    if (existing) {
-      existing.count += 1
-    } else {
-      paragraphs.set(paragraphStart, { key: `p-${paragraphStart}`, top: coords.top, count: 1 })
-    }
-  })
-
-  markers.value = [...paragraphs.values()]
+  try {
+    marker.value = { top: editor.view.coordsAtPos(firstField.from).top }
+  } catch {
+    marker.value = null
+  }
 }
 
 let frame = null
@@ -167,10 +143,6 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 0;
-  background: none;
-  cursor: pointer;
-  pointer-events: auto;
 }
 
 /* A bar ties the marker back to the line it is about. */
@@ -182,30 +154,10 @@ onBeforeUnmount(() => {
   bottom: -2px;
   width: 2px;
   background-color: var(--color-icon-warning, #ab7f2a);
-  opacity: 0;
-}
-
-.edit-check__marker--active::before {
-  opacity: 1;
 }
 
 .edit-check__marker-icon {
   color: var(--color-icon-warning, #ab7f2a);
-}
-
-.edit-check__marker-count {
-  position: absolute;
-  right: 2px;
-  bottom: 0;
-  min-width: 14px;
-  height: 14px;
-  padding: 0 3px;
-  border-radius: var(--border-radius-base);
-  background-color: var(--background-color-progressive, #36c);
-  color: var(--color-inverted, #fff);
-  font-size: 10px;
-  line-height: 14px;
-  text-align: center;
 }
 
 .edit-check__card {
