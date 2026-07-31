@@ -113,4 +113,25 @@ function onCreate() {
   color: var(--color-base);
   margin: 0;
 }
+
+/* On a phone the citation flow takes the screen, the way the Citoid
+   inspector does in the mobile editor, rather than floating over the
+   article as a card. */
+@media screen and (max-width: 640px) {
+  .cite-dialog :deep(.cdx-dialog) {
+    width: 100%;
+    max-width: none;
+    height: 100dvh;
+    max-height: none;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .cite-dialog :deep(.cdx-dialog__body) {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+  }
+}
 </style>
