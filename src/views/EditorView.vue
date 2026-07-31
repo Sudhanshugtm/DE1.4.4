@@ -29,6 +29,7 @@
           @open-source-context="onOpenSourceContext"
           @outline-sections-changed="onOutlineSectionsChanged"
           @authored="hasAuthoredText = true"
+          @editor-focused="onEditorFocused"
           @pasted="onPasted"
         />
       </div>
@@ -81,7 +82,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, nextTick, watch } from 'vue'
 import { isNavigationFailure, useRoute, useRouter } from 'vue-router'
 import { CdxIcon } from '@wikimedia/codex'
 import { cdxIconAdd } from '@wikimedia/codex-icons'
@@ -108,7 +109,6 @@ const outlineLocation = computed(() => settings.value.outline.location)
 const effectiveOutlineLocation = computed(() =>
   isToolbarOutlineVariant.value ? 'popover' : outlineLocation.value,
 )
-const outlinePersistence = computed(() => settings.value.outline.persistence)
 const entryPointStyle = computed(() => settings.value.entryPoint.style)
 const activeOutlineId = computed(() => {
   const outlineId = route.query.outline
@@ -398,27 +398,37 @@ function onOpenCiteDiscover() {
   citeDialogOpen.value = true
 }
 
-// Track whether the popover/rail should stay open after content insertion
-const keepOpenAfterInsert = ref(false)
-
-function onContentInserted() {
-  if (outlinePersistence.value === 'close') {
-    isRailOpen.value = false
-    isPopoverOpen.value = false
-  } else {
-    // Set flag so the watcher can re-open the popover if focus-loss closes it
-    keepOpenAfterInsert.value = true
-  }
+// Adding a section hands the editor straight back to writing: the guidance
+// steps aside and the first thing to fill in is selected and waiting, so the
+// keyboard comes up on the article rather than on top of the sheet.
+async function onContentInserted() {
+  isRailOpen.value = false
+  isPopoverOpen.value = false
+  await nextTick()
+  selectFirstFieldToFill()
 }
 
-// When the popover closes due to focus moving to the editor after insertion,
-// re-open it if the keep-open flag is set
-watch(isPopoverOpen, (newVal) => {
-  if (!newVal && keepOpenAfterInsert.value) {
-    keepOpenAfterInsert.value = false
-    isPopoverOpen.value = true
-  }
-})
+function selectFirstFieldToFill() {
+  const editor = getEditor()
+  if (!editor) return
+
+  // Insertion leaves the caret at the start of the new section, so the first
+  // field from there is the one this section is asking for.
+  const caret = editor.state.selection.from
+  const fields = findScaffoldFields(editor.state.doc)
+  const field = fields.find((candidate) => candidate.from >= caret) ?? fields[0]
+
+  const chain = editor.chain().focus()
+  if (field) chain.setTextSelection({ from: field.from, to: field.to })
+  chain.scrollIntoView().run()
+}
+
+// The sheet has no backdrop, so the article behind it stays tappable. Writing
+// is the whole point, so the sheet gives way rather than sitting under the
+// keyboard.
+function onEditorFocused() {
+  isPopoverOpen.value = false
+}
 
 // The panel never auto-opens: the toolbar + (and the editor's entry points)
 // are the only doors. Location/variant changes just reset any open panel.

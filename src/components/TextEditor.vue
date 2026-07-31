@@ -110,6 +110,7 @@ const emit = defineEmits([
   'open-source-context',
   'outline-sections-changed',
   'authored',
+  'editor-focused',
   'pasted',
 ])
 
@@ -226,6 +227,7 @@ const editor = useEditor({
     }
   },
   onFocus() {
+    emit('editor-focused')
     setTimeout(() => updateButtonPosition(), 0)
   },
   onBlur({ event }) {
