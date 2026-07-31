@@ -8,6 +8,10 @@ const CITATION_CLASS = 'citation-reference'
  * A resolved citation keeps its own class so it reads as a reference, not a prompt.
  */
 export const SourceSuperscript = Superscript.extend({
+  // Writing next to a Source prompt is writing the article, not extending the
+  // prompt, so the mark stops at its own boundaries.
+  inclusive: false,
+
   addAttributes() {
     return {
       sourcePrompt: {
