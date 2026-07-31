@@ -101,9 +101,9 @@ The fixture stores sources once and references them from immutable sentence reco
       publisher: 'National Geographic',
       url: 'https://www.nationalgeographic.com/adventure/article/climbing-mount-everest-1'
     },
-    'unesco-rapa-nui': {
-      publisher: 'UNESCO World Heritage Centre',
-      url: 'https://whc.unesco.org/en/list/715'
+    'esa-easter-island': {
+      publisher: 'European Space Agency',
+      url: 'https://www.esa.int/ESA_Multimedia/Images/2019/04/Easter_Island'
     },
     'google-earth-desktop': {
       publisher: 'Google Earth',
@@ -152,7 +152,7 @@ The exact claim-to-source mapping is:
 | `intro-modern-practice` | Modern geographical exploration includes field research and the use of different tools and methods. | `rgs-geographical-exploration` — <https://www.rgs.org/exploration/what-is-geographical-exploration> |
 | `intro-tools` | Maps and satellite images are among the tools used to study places. | `national-geographic-geography` — <https://education.nationalgeographic.org/resource/geography-article/> |
 | `earth-everest` | Mount Everest lies in the Himalayas on the border between Nepal and China. | `national-geographic-everest` — <https://www.nationalgeographic.com/adventure/article/climbing-mount-everest-1> |
-| `earth-easter-island` | Easter Island, also called Rapa Nui, is a Chilean island in the Pacific Ocean. | `unesco-rapa-nui` — <https://whc.unesco.org/en/list/715> |
+| `earth-easter-island` | Easter Island, also called Rapa Nui, is a Chilean island in the Pacific Ocean. | `esa-easter-island` — <https://www.esa.int/ESA_Multimedia/Images/2019/04/Easter_Island> |
 | `earth-google-earth` | Google Earth displays satellite imagery and 3D representations of terrain and buildings. | `google-earth-desktop` — <https://earth.google.com/desktop/> |
 | `space-mars` | Mars has been explored by robotic orbiters, landers, and rovers. | `nasa-mars-exploration` — <https://science.nasa.gov/planetary-science/programs/mars-exploration/> |
 | `space-armstrong` | Neil Armstrong became the first person to set foot on the Moon on 20 July 1969. | `nasa-neil-armstrong` — <https://www.nasa.gov/people/neil-a-armstrong/> |
@@ -386,7 +386,7 @@ At mobile, compact/tablet, and desktop widths:
 
 1. The research note and the short Exploration article are readable without horizontal scrolling.
 2. Eight red links and blue context text have the approved visual and semantic treatment.
-3. Every red link exposes its own journey, title, and accessible name in its `href`.
+3. Every red link includes its own journey and title in its `href`, and separately exposes its approved accessible name.
 4. Keyboard Enter on every red link opens its matching Subject result.
 5. Blue context items have no link role or tab stop.
 6. Automated accessibility checks verify text contrast, distinct accessible names, visible keyboard focus, and focus on the setup heading after navigation.
