@@ -2,15 +2,46 @@
 
 import { Editor } from '@tiptap/core'
 import StarterKit from '@tiptap/starter-kit'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
 import SectionHeading from '../src/extensions/sectionHeading.js'
-import { findSectionRange, getOutlineSectionKeys } from '../src/extensions/sectionDeleteControls.js'
+import * as sectionDeleteControls from '../src/extensions/sectionDeleteControls.js'
+
+const { findSectionRange, getOutlineSectionKeys } = sectionDeleteControls
+const SectionDeleteControls = sectionDeleteControls.default
 
 const editors = []
+const originalGetClientRects = Range.prototype.getClientRects
+const originalScrollBy = window.scrollBy
+
+beforeAll(() => {
+  window.scrollBy = () => {}
+  Range.prototype.getClientRects = () => [
+    {
+      top: 0,
+      bottom: 1,
+      left: 0,
+      right: 0,
+      width: 0,
+      height: 1,
+    },
+  ]
+})
+
+afterAll(() => {
+  window.scrollBy = originalScrollBy
+  Range.prototype.getClientRects = originalGetClientRects
+})
 
 function createEditor(content) {
+  const element = document.createElement('div')
+  document.body.append(element)
   const editor = new Editor({
-    extensions: [StarterKit.configure({ heading: false }), SectionHeading],
+    element,
+    extensions: [
+      StarterKit.configure({ heading: false }),
+      SectionHeading.configure({ levels: [2, 3, 4] }),
+      ...(SectionDeleteControls ? [SectionDeleteControls] : []),
+    ],
     content,
   })
   editors.push(editor)
@@ -19,7 +50,11 @@ function createEditor(content) {
 }
 
 afterEach(() => {
-  editors.splice(0).forEach((editor) => editor.destroy())
+  editors.splice(0).forEach((editor) => {
+    const element = editor.options.element
+    editor.destroy()
+    element.remove()
+  })
 })
 
 describe('outline section ranges', () => {
@@ -106,5 +141,128 @@ describe('outline section ranges', () => {
       from: heading[0],
       to: editor.state.doc.content.size,
     })
+  })
+})
+
+describe('section delete controls', () => {
+  it('adds a delete control only to keyed top-level H2 sections', () => {
+    const editor = createEditor(`
+      <h2 data-outline-item-key="city:history">History</h2>
+      <p>History text</p>
+      <h2>Manual section</h2>
+    `)
+
+    const controls = editor.view.dom.querySelectorAll('.section-delete-control')
+
+    expect(controls).toHaveLength(1)
+    expect(controls[0].closest('h2')?.dataset.outlineItemKey).toBe('city:history')
+    expect(editor.view.dom.querySelector('h2:not([data-outline-item-key]) button')).toBeNull()
+  })
+
+  it('renders an accessible native button physically inside its heading', () => {
+    const editor = createEditor(`
+      <h2 data-outline-item-key="city:history">History</h2>
+      <p>History text</p>
+    `)
+
+    const control = editor.view.dom.querySelector('.section-delete-control')
+
+    expect(control).toBeInstanceOf(HTMLButtonElement)
+    expect(control.type).toBe('button')
+    expect(control.contentEditable).toBe('false')
+    expect(control.getAttribute('contenteditable')).toBe('false')
+    expect(control.getAttribute('aria-label')).toBe('Delete History section')
+    expect(control.parentElement?.tagName).toBe('H2')
+    expect(control.querySelector('svg')).toMatchObject({
+      ariaHidden: 'true',
+    })
+    expect(control.querySelector('svg')?.getAttribute('viewBox')).toBe('0 0 20 20')
+  })
+
+  it('keeps the widget out of serialized content and preserves the keyed attribute', () => {
+    const editor = createEditor(`
+      <h2 data-outline-item-key="city:history">History</h2>
+      <p>History text</p>
+    `)
+
+    expect(editor.view.dom.querySelector('.section-delete-control')).not.toBeNull()
+    expect(editor.getHTML()).not.toContain('section-delete-control')
+    expect(editor.getHTML()).not.toContain('<button')
+    expect(editor.getHTML()).toContain('<h2 data-outline-item-key="city:history">History</h2>')
+
+    editor.commands.setContent(editor.getHTML())
+
+    expect(getOutlineSectionKeys(editor.state.doc)).toEqual(new Set(['city:history']))
+    expect(editor.getHTML()).toContain('<h2 data-outline-item-key="city:history">History</h2>')
+  })
+
+  it('deletes the keyed H2 and all nested content before the next H2', () => {
+    const editor = createEditor(`
+      <p>Lead text</p>
+      <h2 data-outline-item-key="city:history">History</h2>
+      <p>User-written history</p>
+      <h3>Early history</h3>
+      <p>Nested details</p>
+      <ul><li>Timeline item</li></ul>
+      <h2 data-outline-item-key="city:geography">Geography</h2>
+      <p>Geography text</p>
+    `)
+
+    editor.view.dom
+      .querySelector('[aria-label="Delete History section"]')
+      .dispatchEvent(new MouseEvent('click', { bubbles: true }))
+
+    expect(editor.getText()).toContain('Lead text')
+    expect(editor.getText()).not.toContain('History')
+    expect(editor.getText()).not.toContain('User-written history')
+    expect(editor.getText()).not.toContain('Early history')
+    expect(editor.getText()).not.toContain('Nested details')
+    expect(editor.getText()).not.toContain('Timeline item')
+    expect(editor.getText()).toContain('Geography')
+    expect(editor.getText()).toContain('Geography text')
+    expect(getOutlineSectionKeys(editor.state.doc)).toEqual(new Set(['city:geography']))
+  })
+
+  it('returns focus to the editor after deleting a section', () => {
+    const editor = createEditor(`
+      <h2 data-outline-item-key="city:history">History</h2>
+      <p>History text</p>
+      <h2 data-outline-item-key="city:geography">Geography</h2>
+    `)
+    const control = editor.view.dom.querySelector('.section-delete-control')
+    control.focus()
+
+    control.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+
+    expect(document.activeElement).toBe(editor.view.dom)
+  })
+
+  it('restores and removes the deleted section and key through undo and redo', () => {
+    const editor = createEditor(`
+      <p>Lead text</p>
+      <h2 data-outline-item-key="city:history">History</h2>
+      <p>History text</p>
+      <h2 data-outline-item-key="city:geography">Geography</h2>
+      <p>Geography text</p>
+    `)
+
+    editor.view.dom
+      .querySelector('[aria-label="Delete History section"]')
+      .dispatchEvent(new MouseEvent('click', { bubbles: true }))
+
+    expect(getOutlineSectionKeys(editor.state.doc)).toEqual(new Set(['city:geography']))
+
+    editor.commands.undo()
+
+    expect(editor.getText()).toContain('History')
+    expect(editor.getText()).toContain('History text')
+    expect(getOutlineSectionKeys(editor.state.doc)).toEqual(
+      new Set(['city:history', 'city:geography']),
+    )
+
+    editor.commands.redo()
+
+    expect(editor.getText()).not.toContain('History')
+    expect(getOutlineSectionKeys(editor.state.doc)).toEqual(new Set(['city:geography']))
   })
 })

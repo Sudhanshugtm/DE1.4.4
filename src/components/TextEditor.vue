@@ -44,7 +44,10 @@
       </CdxButton>
 
       <!-- Style 3: Floating placeholder (initial state only) -->
-      <span v-else-if="entryPointStyle === 'floating' && !hasInteracted" class="codex-floating-text">
+      <span
+        v-else-if="entryPointStyle === 'floating' && !hasInteracted"
+        class="codex-floating-text"
+      >
         Tap here to continue...
       </span>
 
@@ -73,6 +76,8 @@ import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import { AnnotationHighlight } from '../extensions/annotationHighlight'
 import { PlaceholderChip } from '../extensions/placeholderChip'
+import SectionDeleteControls, { getOutlineSectionKeys } from '../extensions/sectionDeleteControls'
+import SectionHeading from '../extensions/sectionHeading'
 import { SourceSuperscript } from '../extensions/sourceSuperscript'
 import { useEditorSettings } from '../composables/useEditorSettings'
 import { useEditorInstance } from '../composables/useEditorInstance'
@@ -95,7 +100,12 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['open-outline', 'open-settings', 'open-source-context'])
+const emit = defineEmits([
+  'open-outline',
+  'open-settings',
+  'open-source-context',
+  'outline-sections-changed',
+])
 
 const { settings } = useEditorSettings()
 const { setEditor } = useEditorInstance()
@@ -129,9 +139,11 @@ const editorContentRef = ref(null)
 const editor = useEditor({
   extensions: [
     StarterKit.configure({
-      heading: { levels: [2, 3, 4] },
+      heading: false,
       link: { openOnClick: false },
     }),
+    SectionHeading.configure({ levels: [2, 3, 4] }),
+    SectionDeleteControls,
     Placeholder.configure({
       placeholder: 'Start writing or tap + to add suggested sections',
     }),
@@ -157,8 +169,9 @@ const editor = useEditor({
       updateButtonPosition()
     }
   },
-  onTransaction({ transaction }) {
+  onTransaction({ editor: currentEditor, transaction }) {
     if (transaction.docChanged) {
+      emit('outline-sections-changed', getOutlineSectionKeys(currentEditor.state.doc))
       if (isPlaceholderInitialState.value) {
         hasInteracted.value = true
       }
@@ -499,6 +512,7 @@ onMounted(() => {
   // Register the editor instance globally
   if (editor.value) {
     setEditor(editor.value)
+    emit('outline-sections-changed', getOutlineSectionKeys(editor.value.state.doc))
     if (import.meta.env.DEV) window.__editor = editor.value
   }
 
@@ -582,6 +596,45 @@ defineExpose({ editor })
   border-bottom: 1px var(--border-style-base) var(--border-color-muted, #dadde3);
   margin: 0 0 var(--spacing-50) 0;
   padding: var(--spacing-50) 0;
+}
+
+.text-editor :deep(.ProseMirror h2[data-outline-item-key]) {
+  position: relative;
+  padding-inline-end: 44px;
+}
+
+.text-editor :deep(.section-delete-control) {
+  position: absolute;
+  inset-inline-end: 0;
+  top: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 12px;
+  border: 0;
+  background: transparent;
+  color: currentColor;
+  transform: translateY(-50%);
+  cursor: pointer;
+}
+
+.text-editor :deep(.section-delete-control svg) {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+}
+
+.text-editor :deep(.section-delete-control:focus-visible) {
+  outline: var(--border-width-thick) var(--border-style-base)
+    var(--outline-color-progressive--focus);
+}
+
+@media (hover: hover) {
+  .text-editor :deep(.section-delete-control:hover) {
+    background-color: var(--background-color-interactive-subtle--hover);
+  }
 }
 
 .text-editor :deep(.ProseMirror h3) {
@@ -683,5 +736,4 @@ defineExpose({ editor })
   color: var(--color-subtle);
   cursor: pointer;
 }
-
 </style>

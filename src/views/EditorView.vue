@@ -23,6 +23,7 @@
           @open-outline="onOpenOutline"
           @open-settings="settingsDialogOpen = true"
           @open-source-context="onOpenSourceContext"
+          @outline-sections-changed="onOutlineSectionsChanged"
         />
       </div>
       <div v-if="!isToolbarOutlineVariant" class="editor-rail-column">
@@ -138,6 +139,11 @@ const addedOutlineItems = ref(new Set())
 const sourceContextOpen = ref(false)
 const pendingSourceRange = ref(null)
 const nextCitationNumber = ref(1)
+
+function onOutlineSectionsChanged(sectionKeys) {
+  const leadKeys = [...addedOutlineItems.value].filter((key) => key.endsWith(':lead'))
+  addedOutlineItems.value = new Set([...leadKeys, ...sectionKeys])
+}
 
 async function onOutlineSelected(outlineId) {
   if (outlineId === activeOutlineId.value) {

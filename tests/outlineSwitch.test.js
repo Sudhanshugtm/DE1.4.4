@@ -4,10 +4,12 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { nextTick } from 'vue'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import TextEditor from '../src/components/TextEditor.vue'
 
 const mocks = vi.hoisted(() => ({
   getEditor: vi.fn(),
   resetEditorContent: vi.fn(),
+  setEditor: vi.fn(),
 }))
 
 vi.mock('@/components/CdxToolbar.vue', () => ({
@@ -18,7 +20,10 @@ vi.mock('@/components/CdxToolbar.vue', () => ({
 }))
 
 vi.mock('@/composables/useEditorInstance', () => ({
-  useEditorInstance: () => ({ getEditor: mocks.getEditor }),
+  useEditorInstance: () => ({
+    getEditor: mocks.getEditor,
+    setEditor: mocks.setEditor,
+  }),
 }))
 
 vi.mock('@/utils/resetEditorContent', () => ({
@@ -30,7 +35,7 @@ import EditorView from '../src/views/EditorView.vue'
 const stubs = {
   TextEditor: {
     name: 'TextEditor',
-    emits: ['open-settings'],
+    emits: ['open-settings', 'outline-sections-changed'],
     template: '<button class="open-settings" @click="$emit(\'open-settings\')" />',
   },
   SettingsDialog: {
@@ -62,14 +67,16 @@ function createTestRouter() {
   })
 }
 
-async function mountEditor(query = {}) {
+async function mountEditor(query = {}, useRealTextEditor = false) {
   router = createTestRouter()
   await router.push({ name: 'editor', query })
   await router.isReady()
+  const activeStubs = { ...stubs }
+  if (useRealTextEditor) delete activeStubs.TextEditor
   wrapper = mount(EditorView, {
     global: {
       plugins: [router],
-      stubs,
+      stubs: activeStubs,
     },
   })
   await nextTick()
@@ -97,9 +104,45 @@ afterEach(() => {
   vi.restoreAllMocks()
   mocks.getEditor.mockReset()
   mocks.resetEditorContent.mockReset()
+  mocks.setEditor.mockReset()
 })
 
 describe('outline switching', () => {
+  it('coordinates document-derived delete, undo, and redo Sets while preserving lead keys', async () => {
+    await mountEditor({ variant: 'toolbar-outline', outline: 'person' }, true)
+    const textEditor = wrapper.findComponent(TextEditor)
+    const editor = textEditor.vm.editor
+
+    outlinePopover().vm.$emit(
+      'update:addedItems',
+      new Set(['person:lead', 'person:history', 'person:career']),
+    )
+    editor.commands.setContent(`
+      <p>Lead text</p>
+      <h2 data-outline-item-key="person:history">History</h2>
+      <p>History text</p>
+      <h2 data-outline-item-key="person:career">Career</h2>
+      <p>Career text</p>
+    `)
+    await nextTick()
+
+    await textEditor.find('[aria-label="Delete History section"]').trigger('click')
+
+    expect(outlinePopover().props('addedItems')).toEqual(new Set(['person:lead', 'person:career']))
+
+    editor.commands.undo()
+    await nextTick()
+
+    expect(outlinePopover().props('addedItems')).toEqual(
+      new Set(['person:lead', 'person:history', 'person:career']),
+    )
+
+    editor.commands.redo()
+    await nextTick()
+
+    expect(outlinePopover().props('addedItems')).toEqual(new Set(['person:lead', 'person:career']))
+  })
+
   it('switches outline, resets editor, closes settings, and opens outline sheet', async () => {
     const editor = { id: 'editor' }
     mocks.getEditor.mockReturnValue(editor)
