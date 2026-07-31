@@ -232,7 +232,6 @@ onBeforeUnmount(() => {
 }
 
 .outline-popover-body.is-scrollable {
-  border-bottom: 1px solid var(--border-color-subtle, #c8ccd1);
   padding-bottom: var(--spacing-100);
 }
 

@@ -37,10 +37,6 @@
         ></div>
       </CdxAccordion>
     </div>
-
-    <a class="outline-structure__source" :href="outline.sourceUrl" target="_blank" rel="noopener">
-      View community outline
-    </a>
   </section>
 </template>
 
@@ -220,9 +216,4 @@ function onAdd(item) {
   vertical-align: super;
 }
 
-.outline-structure__source {
-  align-self: flex-start;
-  margin: var(--spacing-100) 0;
-  font-size: var(--font-size-small);
-}
 </style>
