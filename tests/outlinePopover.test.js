@@ -42,6 +42,7 @@ async function mountPopover() {
   await router.push({ name: 'editor', query: { outline: 'person' } })
   await router.isReady()
   wrapper = mount(OutlinePopover, {
+    attachTo: document.body,
     props: {
       open: true,
       selectableOutlines: true,

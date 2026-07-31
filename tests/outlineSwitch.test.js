@@ -85,6 +85,14 @@ function outlinePopover() {
   return wrapper.findComponent({ name: 'OutlinePopover' })
 }
 
+function markerCapableEditor() {
+  return {
+    id: 'editor',
+    state: { selection: { from: 0 } },
+    view: { coordsAtPos: () => ({ top: 0 }) },
+  }
+}
+
 async function openSettings() {
   wrapper.findComponent({ name: 'TextEditor' }).vm.$emit('open-settings')
   await nextTick()
@@ -188,7 +196,7 @@ describe('outline switching', () => {
   })
 
   it('selecting the active outline closes settings without resetting or reopening', async () => {
-    mocks.getEditor.mockReturnValue({ id: 'editor' })
+    mocks.getEditor.mockReturnValue(markerCapableEditor())
     await mountEditor({ variant: 'toolbar-outline', outline: 'person' })
 
     outlinePopover().vm.$emit('update:open', false)
@@ -202,7 +210,7 @@ describe('outline switching', () => {
   })
 
   it('an aborted navigation preserves editor and sheet state and leaves settings open', async () => {
-    mocks.getEditor.mockReturnValue({ id: 'editor' })
+    mocks.getEditor.mockReturnValue(markerCapableEditor())
     await mountEditor({ variant: 'toolbar-outline', outline: 'person' })
 
     outlinePopover().vm.$emit('update:open', false)
@@ -225,7 +233,7 @@ describe('outline switching', () => {
   })
 
   it('a rejected navigation preserves editor and sheet state and leaves settings open', async () => {
-    mocks.getEditor.mockReturnValue({ id: 'editor' })
+    mocks.getEditor.mockReturnValue(markerCapableEditor())
     await mountEditor({ variant: 'toolbar-outline', outline: 'person' })
 
     outlinePopover().vm.$emit('update:open', false)
