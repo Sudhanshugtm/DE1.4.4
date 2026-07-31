@@ -22,9 +22,6 @@ test('person journey fixture provides an immutable Ritu Karidhal journey', () =>
   assert.equal(Object.isFrozen(personJourney), true)
   assert.equal(Object.isFrozen(personJourney.article.sections), true)
   assert.equal(Object.isFrozen(personJourney.guidance.bullets), true)
-})
-
-test('person journey fixture preserves the approved article sections and missing link', () => {
   assert.deepEqual(personJourney.article, {
     title: 'Women in the Indian space programme',
     description: 'From Wikipedia, the free encyclopedia',
