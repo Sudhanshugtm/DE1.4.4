@@ -42,3 +42,6 @@ __screenshots__/
 PROTOTYPE_BRIEF.md
 NARRATIVE_SUMMARY.md
 Guided Article Creation Brief.md
+
+# Local isolated development worktrees
+.worktrees/
