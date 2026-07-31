@@ -31,8 +31,9 @@
         v-if="showOutlineEntry"
         class="cdx-toolbar__btn cdx-toolbar__btn--outline"
         weight="quiet"
-        aria-label="Open article outline"
-        @click="emit('open-outline')"
+        aria-label="Insert"
+        :aria-expanded="insertMenuOpen"
+        @click.stop="insertMenuOpen = !insertMenuOpen"
       >
         <CdxIcon :icon="cdxIconAdd" />
         <!-- Marks where the suggestions went once the sheet is dismissed. -->
@@ -59,6 +60,30 @@
         <CdxIcon :icon="cdxIconNext" />
       </CdxButton>
     </div>
+
+    <!-- Insert menu, matching the tool list the + opens in production. -->
+    <div v-if="insertMenuOpen" class="cdx-toolbar__insert-menu" role="menu" @click.stop>
+      <button
+        class="cdx-toolbar__insert-item cdx-toolbar__insert-item--guidance"
+        role="menuitem"
+        type="button"
+        @click="onInsertSuggestedSections"
+      >
+        <CdxIcon :icon="cdxIconListBullet" />
+        <span>Suggested sections</span>
+      </button>
+      <div class="cdx-toolbar__insert-separator" role="separator"></div>
+      <button
+        v-for="tool in nativeInsertTools"
+        :key="tool.label"
+        class="cdx-toolbar__insert-item"
+        role="menuitem"
+        type="button"
+      >
+        <CdxIcon :icon="tool.icon" />
+        <span>{{ tool.label }}</span>
+      </button>
+    </div>
   </div>
 </template>
 
@@ -79,6 +104,7 @@ defineProps({
 })
 
 const emit = defineEmits(['cite', 'close', 'open-outline'])
+import { onMounted, onBeforeUnmount, ref } from 'vue'
 import { CdxButton, CdxIcon } from '@wikimedia/codex'
 import {
   cdxIconClose,
@@ -90,7 +116,33 @@ import {
   cdxIconEdit,
   cdxIconExpand,
   cdxIconNext,
+  cdxIconListBullet,
+  cdxIconPuzzle,
+  cdxIconTable,
 } from '@wikimedia/codex-icons'
+
+const insertMenuOpen = ref(false)
+
+// The tools a wiki lists in its mobile insert menu. Inert here: this prototype
+// is about what article guidance adds to the menu, not the tools themselves.
+const nativeInsertTools = [
+  { label: 'Citation', icon: cdxIconQuotes },
+  { label: 'Template', icon: cdxIconPuzzle },
+  { label: 'Table', icon: cdxIconTable },
+  { label: 'More', icon: cdxIconExpand },
+]
+
+function onInsertSuggestedSections() {
+  insertMenuOpen.value = false
+  emit('open-outline')
+}
+
+function closeInsertMenu() {
+  insertMenuOpen.value = false
+}
+
+onMounted(() => document.addEventListener('click', closeInsertMenu))
+onBeforeUnmount(() => document.removeEventListener('click', closeInsertMenu))
 </script>
 
 <style scoped>
@@ -149,6 +201,50 @@ import {
   flex: 0 0 44px;
   width: 44px;
   height: 100%;
+}
+
+/* Insert menu — drops from the toolbar as a tool list, the way the mobile
+   insert group opens in production. */
+.cdx-toolbar__insert-menu {
+  position: absolute;
+  top: 48px;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--background-color-base, #fff);
+  border-bottom: 1px solid var(--border-color-subtle, #c8ccd1);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
+}
+
+.cdx-toolbar__insert-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-100, 16px);
+  min-height: 48px;
+  padding: var(--spacing-50, 8px) var(--spacing-100, 16px);
+  border: 0;
+  background: var(--background-color-transparent);
+  color: var(--color-base);
+  font-family: inherit;
+  font-size: var(--font-size-medium);
+  text-align: start;
+  cursor: pointer;
+}
+
+.cdx-toolbar__insert-item:hover {
+  background-color: var(--background-color-interactive-subtle);
+}
+
+.cdx-toolbar__insert-item--guidance {
+  font-weight: var(--font-weight-bold);
+}
+
+.cdx-toolbar__insert-separator {
+  height: 1px;
+  margin: var(--spacing-25, 4px) 0;
+  background-color: var(--border-color-subtle, #c8ccd1);
 }
 
 /* Where the suggestions live once the sheet is closed. Geometry and timing
