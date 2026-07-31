@@ -23,6 +23,7 @@
 
       <div class="edit-check__body">
         <p class="edit-check__message">{{ current.message }}</p>
+        <p v-if="current.prompt" class="edit-check__prompt">{{ current.prompt }}</p>
         <div class="edit-check__actions">
           <CdxButton
             v-for="action in current.actions"
@@ -90,13 +91,17 @@ function positionMarkers() {
   const editor = getEditor()
   const firstField = current.value?.fields?.[0]
 
-  if (!editor || !firstField) {
+  if (!editor) {
     marker.value = null
     return
   }
 
+  // A check about a place in the article points at it; one about the edit
+  // itself sits where the editor is working.
+  const position = firstField ? firstField.from : editor.state.selection.from
+
   try {
-    marker.value = { top: editor.view.coordsAtPos(firstField.from).top }
+    marker.value = { top: editor.view.coordsAtPos(position).top }
   } catch {
     marker.value = null
   }
@@ -199,6 +204,13 @@ onBeforeUnmount(() => {
 
 .edit-check__message {
   margin: 0;
+  font-size: var(--font-size-medium);
+  line-height: var(--line-height-medium);
+}
+
+.edit-check__prompt {
+  margin: 0;
+  font-weight: var(--font-weight-bold);
   font-size: var(--font-size-medium);
   line-height: var(--line-height-medium);
 }

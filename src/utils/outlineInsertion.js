@@ -31,14 +31,42 @@ function findCursorMarker(doc) {
 }
 
 /**
- * Append an outline item and leave the caret at its first scaffold text.
+ * Where the references section begins, if the article already has one.
+ * Sections added afterwards belong above it, since references close an article.
+ */
+function findReferencesStart(doc) {
+  let position = null
+
+  doc.forEach((node, offset) => {
+    if (position !== null) return
+    const key = node.attrs?.outlineItemKey
+    if (node.type.name === 'heading' && typeof key === 'string' && key.endsWith(':references')) {
+      position = offset
+    }
+  })
+
+  return position
+}
+
+/**
+ * Add an outline item and leave the caret at its first scaffold text.
  * Heading-only items receive an empty paragraph so the caret remains editable.
  */
-export function insertOutlineContent(editor, content) {
+export function insertOutlineContent(editor, content, { keepAboveReferences = true } = {}) {
+  const referencesStart = keepAboveReferences ? findReferencesStart(editor.state.doc) : null
+
   return editor
     .chain()
-    .focus('end')
-    .insertContent(addCursorMarker(content))
+    .focus()
+    .command(({ commands }) =>
+      referencesStart === null
+        ? commands.focus('end')
+        : commands.setTextSelection(referencesStart),
+    )
+    .insertContentAt(
+      referencesStart === null ? editor.state.doc.content.size : referencesStart,
+      addCursorMarker(content),
+    )
     .command(({ tr }) => {
       // Mark this as the outline arriving, so it is not mistaken for the
       // editor having written something.

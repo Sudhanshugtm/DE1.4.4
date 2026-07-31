@@ -80,6 +80,9 @@ import SectionDeleteControls, { getOutlineSectionKeys } from '../extensions/sect
 import SectionHeading from '../extensions/sectionHeading'
 import { SourceSuperscript } from '../extensions/sourceSuperscript'
 import { ScaffoldFieldHighlight } from '../extensions/scaffoldFieldHighlight'
+import { FieldBinding } from '../extensions/fieldBinding'
+import { findScaffoldFields } from '../utils/scaffoldFields'
+import { TextSelection } from '@tiptap/pm/state'
 import { useEditorSettings } from '../composables/useEditorSettings'
 import { useEditorInstance } from '../composables/useEditorInstance'
 import { useCursorRect } from '../composables/useCursorRect'
@@ -107,7 +110,11 @@ const emit = defineEmits([
   'open-source-context',
   'outline-sections-changed',
   'authored',
+  'pasted',
 ])
+
+// Matches the threshold the copyvio check uses before it speaks up.
+const PASTE_CHECK_MINIMUM_CHARACTERS = 50
 
 const { settings } = useEditorSettings()
 const { setEditor } = useEditorInstance()
@@ -152,10 +159,35 @@ const editor = useEditor({
     SourceSuperscript,
     AnnotationHighlight,
     ScaffoldFieldHighlight,
+    FieldBinding,
     PlaceholderChip,
   ],
   editorProps: {
+    // Pasting a substantial amount of text is worth asking about, the way
+    // the copyvio check does. Small pastes are left alone.
+    handlePaste(view, event) {
+      const pasted = event.clipboardData?.getData('text/plain') ?? ''
+      if (pasted.trim().length >= PASTE_CHECK_MINIMUM_CHARACTERS) {
+        emit('pasted', pasted)
+      }
+      return false
+    },
+
     handleClick(view, pos, event) {
+      // Tapping a field takes the whole of it, so writing replaces the field
+      // rather than editing around its brackets.
+      const field = findScaffoldFields(view.state.doc).find(
+        (candidate) => pos >= candidate.from && pos <= candidate.to,
+      )
+      if (field) {
+        view.dispatch(
+          view.state.tr.setSelection(
+            TextSelection.create(view.state.doc, field.from, field.to),
+          ),
+        )
+        return true
+      }
+
       // Tapping a Source prompt opens its context item, the way tapping a
       // citation-needed template does in Visual Editor.
       const marker = event.target.closest?.('.outline-source-prompt')

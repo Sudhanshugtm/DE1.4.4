@@ -28,6 +28,7 @@
           @open-source-context="onOpenSourceContext"
           @outline-sections-changed="onOutlineSectionsChanged"
           @authored="hasAuthoredText = true"
+          @pasted="onPasted"
         />
       </div>
       <div v-if="!isToolbarOutlineVariant" class="editor-rail-column">
@@ -159,6 +160,29 @@ const hasAuthoredText = ref(false)
 const pendingChecks = ref([])
 const activeCheckIndex = ref(0)
 
+// Pasted text is raised as it happens, not held back until publishing:
+// the sooner it is asked about, the less there is to unpick.
+function onPasted() {
+  if (pendingChecks.value.some((check) => check.name === 'paste')) return
+
+  pendingChecks.value = [
+    {
+      name: 'paste',
+      type: 'check',
+      title: 'Pasted content',
+      message:
+        'Please avoid copying text from other sources, even if rephrased or cited. This could be considered copyright violation or plagiarism and may result in your content being removed or your account being blocked.',
+      prompt: 'Did you write this text?',
+      actions: [
+        { name: 'keep', label: 'Yes, keep it' },
+        { name: 'remove', label: 'No, remove it' },
+      ],
+    },
+    ...pendingChecks.value,
+  ]
+  activeCheckIndex.value = 0
+}
+
 function setFieldHighlight(on) {
   const editor = getEditor()
   if (!editor) return
@@ -173,10 +197,15 @@ function onPublish() {
   activeCheckIndex.value = 0
   setFieldHighlight(fields.length > 0)
 
+  // Anything already waiting stays waiting; publishing adds to the list.
+  const carried = pendingChecks.value.filter((check) => check.name !== 'completeSection')
+
   // Unfilled fields are one thing to put right, however many there are.
   pendingChecks.value = fields.length
     ? [
+        ...carried,
         {
+          name: 'completeSection',
           type: 'check',
           title: 'Complete section',
           message:
@@ -188,7 +217,7 @@ function onPublish() {
           fields,
         },
       ]
-    : []
+    : carried
 
   if (!pendingChecks.value.length) {
     // Nothing left to resolve; a real editor would save here.
@@ -205,7 +234,16 @@ const reviewedFieldIndex = ref(0)
 
 function onCheckAction({ action, check }) {
   const editor = getEditor()
-  if (!editor || !check?.fields?.length) return
+  if (!editor) return
+
+  if (check?.name === 'paste') {
+    if (action === 'remove') editor.chain().focus().undo().run()
+    pendingChecks.value = pendingChecks.value.filter((pending) => pending.name !== 'paste')
+    activeCheckIndex.value = 0
+    return
+  }
+
+  if (!check?.fields?.length) return
 
   if (action === 'review') {
     const field = check.fields[reviewedFieldIndex.value % check.fields.length]
@@ -242,7 +280,7 @@ function refreshChecks() {
   }
 
   pendingChecks.value = pendingChecks.value.map((check) =>
-    check.type === 'check' ? { ...check, fields } : check,
+    check.name === 'completeSection' ? { ...check, fields } : check,
   )
 }
 

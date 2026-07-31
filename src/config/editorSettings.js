@@ -10,7 +10,9 @@ export const defaultSettings = {
   },
   outline: {
     location: 'rail', // 'rail' | 'popover'
-    persistence: 'close', // 'keep-open' | 'close'
+    // The sheet stays put after adding, so a few sections can be brought in
+    // without reopening it each time.
+    persistence: 'keep-open', // 'keep-open' | 'close'
   },
 }
 
