@@ -29,12 +29,14 @@
       </CdxButton>
       <CdxButton
         v-if="showOutlineEntry"
-        class="cdx-toolbar__btn"
+        class="cdx-toolbar__btn cdx-toolbar__btn--outline"
         weight="quiet"
         aria-label="Open article outline"
         @click="emit('open-outline')"
       >
         <CdxIcon :icon="cdxIconAdd" />
+        <!-- Marks where the suggestions went once the sheet is dismissed. -->
+        <span v-if="highlightOutlineEntry" class="mw-pulsating-dot" aria-hidden="true"></span>
       </CdxButton>
       <CdxButton
         class="cdx-toolbar__btn cdx-toolbar__btn--dropdown"
@@ -69,6 +71,10 @@ defineProps({
   showCite: {
     type: Boolean,
     default: true,
+  },
+  highlightOutlineEntry: {
+    type: Boolean,
+    default: false,
   },
 })
 
@@ -141,6 +147,73 @@ import {
   flex: 0 0 44px;
   width: 44px;
   height: 100%;
+}
+
+/* Where the suggestions live once the sheet is closed. Geometry and timing
+   follow MediaWiki's own pulsating dot (mediawiki.pulsatingdot). */
+.cdx-toolbar__btn--outline {
+  position: relative;
+}
+
+.mw-pulsating-dot {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  pointer-events: none;
+}
+
+.mw-pulsating-dot::before,
+.mw-pulsating-dot::after {
+  content: '';
+  display: block;
+  position: absolute;
+  border-radius: var(--border-radius-circle, 50%);
+  background-color: var(--background-color-progressive, #36c);
+}
+
+.mw-pulsating-dot::before {
+  width: 36px;
+  height: 36px;
+  top: -18px;
+  left: -18px;
+  opacity: 0;
+  animation: mw-pulsating-dot-pulse 3s ease-out infinite;
+}
+
+.mw-pulsating-dot::after {
+  width: 12px;
+  height: 12px;
+  top: -6px;
+  left: -6px;
+}
+
+@keyframes mw-pulsating-dot-pulse {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  25% {
+    transform: scale(0);
+    opacity: 0.1;
+  }
+  50% {
+    transform: scale(0.1);
+    opacity: 0.3;
+  }
+  75% {
+    transform: scale(0.5);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mw-pulsating-dot::before {
+    animation: none;
+  }
 }
 
 .cdx-toolbar__indicator {

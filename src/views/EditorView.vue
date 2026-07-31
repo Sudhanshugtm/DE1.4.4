@@ -3,6 +3,7 @@
     <CdxToolbar
       :show-outline-entry="isToolbarOutlineVariant"
       :show-cite="!isToolbarOutlineVariant"
+      :highlight-outline-entry="highlightOutlineEntry"
       @open-outline="onOpenOutline"
       @cite="onOpenCiteDefault"
       @close="onClose"
@@ -132,6 +133,22 @@ function onForceButtonClick() {
   getEditor()?.commands.blur()
   onOpenOutline()
 }
+
+// After the sheet is dismissed, the toolbar + carries a pulsating dot so the
+// suggestions are findable again. Opening the sheet from there retires it.
+const hasDismissedSheet = ref(false)
+const hasReopenedSheet = ref(false)
+const highlightOutlineEntry = computed(
+  () => isToolbarOutlineVariant.value && hasDismissedSheet.value && !hasReopenedSheet.value,
+)
+
+watch(isPopoverOpen, (isOpen, wasOpen) => {
+  if (!isOpen && wasOpen) {
+    hasDismissedSheet.value = true
+  } else if (isOpen && hasDismissedSheet.value) {
+    hasReopenedSheet.value = true
+  }
+})
 
 function onOpenOutline() {
   const editor = getEditor()
