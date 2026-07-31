@@ -204,6 +204,32 @@ describe('section delete controls', () => {
     expect(controls[0].getAttribute('aria-label')).toBe('Delete New History section')
   })
 
+  it('uses an untitled fallback for an empty keyed heading', () => {
+    const editor = createEditor(`
+      <h2 data-outline-item-key="city:history"></h2>
+      <p>History text</p>
+    `)
+
+    expect(
+      editor.view.dom.querySelector('.section-delete-control')?.getAttribute('aria-label'),
+    ).toBe('Delete untitled section')
+  })
+
+  it('preserves the editor selection on cancelable pointer activation', () => {
+    const editor = createEditor(`
+      <h2 data-outline-item-key="city:history">History</h2>
+      <p>History text</p>
+    `)
+    const control = editor.view.dom.querySelector('.section-delete-control')
+    const pointerDown = new Event('pointerdown', {
+      bubbles: true,
+      cancelable: true,
+    })
+
+    expect(control.dispatchEvent(pointerDown)).toBe(false)
+    expect(pointerDown.defaultPrevented).toBe(true)
+  })
+
   it('keeps the widget out of serialized content and preserves the keyed attribute', () => {
     const editor = createEditor(`
       <h2 data-outline-item-key="city:history">History</h2>
@@ -246,6 +272,32 @@ describe('section delete controls', () => {
     expect(editor.getText()).toContain('Geography')
     expect(editor.getText()).toContain('Geography text')
     expect(getOutlineSectionKeys(editor.state.doc)).toEqual(new Set(['city:geography']))
+  })
+
+  it('deletes the later section when duplicate outline keys exist', () => {
+    const editor = createEditor(`
+      <h2 data-outline-item-key="city:history">History</h2>
+      <p>First history body</p>
+      <h2 data-outline-item-key="city:history">History</h2>
+      <p>Later history body</p>
+      <h2 data-outline-item-key="city:geography">Geography</h2>
+      <p>Geography body</p>
+    `)
+    const historyControls = editor.view.dom.querySelectorAll(
+      '[aria-label="Delete History section"]',
+    )
+
+    expect(historyControls).toHaveLength(2)
+
+    historyControls[1].dispatchEvent(new MouseEvent('click', { bubbles: true }))
+
+    expect(editor.getText()).toContain('First history body')
+    expect(editor.getText()).not.toContain('Later history body')
+    expect(editor.getText()).toContain('Geography')
+    expect(editor.getText()).toContain('Geography body')
+    expect(editor.view.dom.querySelectorAll('[aria-label="Delete History section"]')).toHaveLength(
+      1,
+    )
   })
 
   it('returns focus to the editor after deleting a section', () => {

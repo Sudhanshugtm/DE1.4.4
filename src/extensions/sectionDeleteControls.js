@@ -42,8 +42,57 @@ export function findSectionRange(doc, key) {
   return { from, to: to ?? doc.content.size }
 }
 
-function deleteSection(view, key) {
-  const range = findSectionRange(view.state.doc, key)
+function findSectionRangeAt(doc, from, key) {
+  let foundHeading = false
+  let foundEnd = false
+  let to = doc.content.size
+
+  doc.forEach((node, offset) => {
+    if (foundEnd) return
+
+    if (!foundHeading) {
+      if (offset === from && isTopLevelH2(node) && node.attrs.outlineItemKey === key) {
+        foundHeading = true
+      }
+      return
+    }
+
+    if (isTopLevelH2(node)) {
+      to = offset
+      foundEnd = true
+    }
+  })
+
+  return foundHeading ? { from, to } : null
+}
+
+function findWidgetSectionRange(doc, getPos, key, headingText) {
+  let widgetPosition
+
+  try {
+    widgetPosition = getPos()
+  } catch {
+    return null
+  }
+
+  if (typeof widgetPosition !== 'number') return null
+
+  const $widgetPosition = doc.resolve(widgetPosition)
+  const heading = $widgetPosition.parent
+  if (
+    $widgetPosition.depth !== 1 ||
+    !isTopLevelH2(heading) ||
+    heading.attrs.outlineItemKey !== key ||
+    heading.textContent.trim() !== headingText
+  ) {
+    return null
+  }
+
+  return findSectionRangeAt(doc, $widgetPosition.before(), key)
+}
+
+function deleteSection(view, getPos, key, headingText) {
+  const range = findWidgetSectionRange(view.state.doc, getPos, key, headingText)
   if (!range) return
 
   const transaction = closeHistory(view.state.tr.delete(range.from, range.to))
@@ -66,34 +115,42 @@ function createTrashIcon() {
   return svg
 }
 
-function createDeleteButton(view, key, headingText) {
+function preserveEditorSelection(event) {
+  if (event.cancelable) event.preventDefault()
+}
+
+function createDeleteButton(view, getPos, key, headingText) {
   const button = document.createElement('button')
   button.type = 'button'
   button.className = 'section-delete-control'
   button.contentEditable = 'false'
   button.setAttribute('contenteditable', 'false')
-  button.setAttribute('aria-label', `Delete ${headingText} section`)
+  button.setAttribute('aria-label', `Delete ${headingText || 'untitled'} section`)
   button.append(createTrashIcon())
-  button.addEventListener('mousedown', (event) => event.preventDefault())
-  button.addEventListener('click', () => deleteSection(view, key))
+  button.addEventListener('pointerdown', preserveEditorSelection)
+  button.addEventListener('mousedown', preserveEditorSelection)
+  button.addEventListener('click', () => deleteSection(view, getPos, key, headingText))
 
   return button
 }
 
 function createSectionDeleteDecorations(doc) {
   const decorations = []
+  const keyOccurrences = new Map()
 
   doc.forEach((node, offset) => {
     if (!isTopLevelH2(node) || !node.attrs.outlineItemKey) return
 
     const key = node.attrs.outlineItemKey
     const headingText = node.textContent.trim()
+    const keyOccurrence = keyOccurrences.get(key) ?? 0
+    keyOccurrences.set(key, keyOccurrence + 1)
     decorations.push(
       Decoration.widget(
         offset + node.nodeSize - 1,
-        (view) => createDeleteButton(view, key, headingText),
+        (view, getPos) => createDeleteButton(view, getPos, key, headingText),
         {
-          key: `section-delete-control:${key}:${headingText}`,
+          key: JSON.stringify(['section-delete-control', key, headingText, keyOccurrence]),
           ignoreSelection: true,
           stopEvent: (event) => event.target.closest?.('.section-delete-control') !== null,
         },
