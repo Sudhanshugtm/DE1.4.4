@@ -13,7 +13,7 @@
 import { useRouter } from 'vue-router'
 
 import ProtoWikiArticleShell from '../components/ProtoWikiArticleShell.vue'
-import { personJourney } from '../data/personJourney.js'
+import { personJourney } from '../data/explorationJourneys.js'
 
 const router = useRouter()
 const articleGuidanceTarget = {

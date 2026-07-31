@@ -1,5 +1,3 @@
-import { personJourney } from '../data/personJourney.js'
-
 const STEPS = Object.freeze({
   SUBJECT: 'subject',
   SOURCES: 'sources',
@@ -11,20 +9,24 @@ const SOURCE_ERRORS = Object.freeze({
   DUPLICATE: 'This source has already been added',
 })
 
-const createFlowState = (fixture, initialTitle = fixture.subject.title) => ({
+const normalizeTitle = (value) =>
+  value.normalize('NFKC').trim().replace(/\s+/gu, ' ').toLocaleLowerCase('en')
+
+const createFlowState = (journey, initialTitle = journey.subject.title) => ({
   step: STEPS.SUBJECT,
+  journeyKey: journey.key,
   titleInput: initialTitle,
   selectedSubject: null,
   sources: [],
-  requiredSourceCount: fixture.sourceRequirements.requiredCount,
+  requiredSourceCount: journey.sourceRequirements.requiredCount,
 })
 
-const findSubject = (fixture, title) => {
+const findSubject = (journey, title) => {
   if (typeof title !== 'string') {
     return null
   }
 
-  return title.trim().toLowerCase() === fixture.subject.title.toLowerCase() ? fixture.subject : null
+  return normalizeTitle(title) === normalizeTitle(journey.subject.title) ? journey.subject : null
 }
 
 const validateSourceUrl = (value, existingSources = []) => {
@@ -71,26 +73,36 @@ const removeSource = (state, url) => ({
   sources: state.sources.filter((source) => source.url !== url),
 })
 
+const hasOwnSelectedSubject = (state) =>
+  Boolean(state.selectedSubject) && state.selectedSubject.journeyKey === state.journeyKey
+
 const canEnterStep = (state, step) => {
   if (step === STEPS.SUBJECT) {
     return true
   }
   if (step === STEPS.SOURCES) {
-    return Boolean(state.selectedSubject)
+    return hasOwnSelectedSubject(state)
   }
   if (step === STEPS.GUIDANCE) {
-    return Boolean(state.selectedSubject) && state.sources.length >= state.requiredSourceCount
+    return hasOwnSelectedSubject(state) && state.sources.length >= state.requiredSourceCount
   }
   return false
 }
 
-const buildEditorQuery = (state, fixture = personJourney) => {
-  if (state.step !== STEPS.GUIDANCE || !canEnterStep(state, STEPS.GUIDANCE)) {
+const buildEditorQuery = (state, journey) => {
+  const hasMatchingJourney =
+    journey && state.journeyKey === journey.key && state.selectedSubject?.journeyKey === journey.key
+
+  if (
+    state.step !== STEPS.GUIDANCE ||
+    !hasMatchingJourney ||
+    !canEnterStep(state, STEPS.GUIDANCE)
+  ) {
     throw new Error('A ready Guidance state is required to build the editor query')
   }
 
   return {
-    ...fixture.handoff,
+    ...journey.handoff,
     title: state.selectedSubject.title,
     articleguidance: '1',
     sourceOrigin: 'redlink',
@@ -106,6 +118,7 @@ export {
   canEnterStep,
   createFlowState,
   findSubject,
+  normalizeTitle,
   removeSource,
   validateSourceUrl,
 }

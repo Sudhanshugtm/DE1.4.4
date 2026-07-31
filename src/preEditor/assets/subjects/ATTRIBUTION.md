@@ -1,0 +1,14 @@
+# Subject thumbnail attribution
+
+Downloaded from Wikimedia Commons on 2026-07-31. The prototype bundles these thumbnails so the research flow does not make live Wikimedia requests.
+
+| Local file                 | Creator                                        | Licence                                                                             | Source page                                                                                   |
+| -------------------------- | ---------------------------------------------- | ----------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `neil-armstrong.jpg`       | Unknown author / NASA image                    | Public domain                                                                       | https://commons.wikimedia.org/wiki/File:Neil_Armstrong_pose.jpg                               |
+| `valentina-tereshkova.jpg` | duma.gov.ru                                    | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0)                            | https://commons.wikimedia.org/wiki/File:1st_meeting_of_8th_State_Duma_07.jpg                  |
+| `chandrayaan-3.png`        | Indian Space Research Organisation             | [GODL-India](https://data.gov.in/sites/default/files/Gazette_Notification_OGDL.pdf) | https://commons.wikimedia.org/wiki/File:Chandrayaan-3_Integrated_Module_in_clean-room_01.webp |
+| `mars.png`                 | Kevin Gill                                     | [CC BY 2.0](https://creativecommons.org/licenses/by/2.0)                            | https://commons.wikimedia.org/wiki/File:Mars_-_August_30_2021_-_Flickr_-_Kevin_M._Gill.png    |
+| `google-earth.png`         | EEIM                                           | Public domain                                                                       | https://commons.wikimedia.org/wiki/File:NASA_World_Wind_-_Google_Earth_bar.png                |
+| `spacex.jpg`               | Bruno Sanchez-Andrade Nuño                     | [CC BY 2.0](https://creativecommons.org/licenses/by/2.0)                            | https://commons.wikimedia.org/wiki/File:Entrance_to_SpaceX_headquarters.jpg                   |
+| `mount-everest.jpg`        | shrimpo1967; derivative by Papa Lima Whiskey 2 | [CC BY-SA 2.0](https://creativecommons.org/licenses/by-sa/2.0)                      | https://commons.wikimedia.org/wiki/File:Mount_Everest_as_seen_from_Drukair2_PLW_edit.jpg      |
+| `easter-island.jpg`        | kallerna                                       | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0)                      | https://commons.wikimedia.org/wiki/File:Easter_Island_5.jpg                                   |

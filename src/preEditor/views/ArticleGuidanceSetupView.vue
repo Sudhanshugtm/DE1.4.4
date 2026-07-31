@@ -175,7 +175,7 @@ import ArticleGuidanceArticleInfo from '../components/ArticleGuidanceArticleInfo
 import ArticleGuidanceShell from '../components/ArticleGuidanceShell.vue'
 import ArticleGuidanceSourceTips from '../components/ArticleGuidanceSourceTips.vue'
 import SourceUrlForm from '../components/SourceUrlForm.vue'
-import { personJourney } from '../data/personJourney.js'
+import { personJourney } from '../data/explorationJourneys.js'
 import {
   STEPS,
   addSource,
