@@ -1,6 +1,6 @@
 <template>
   <section class="outline-selector" aria-labelledby="outline-selector-title">
-    <div class="outline-selector__intro">
+    <div v-if="showIntro" class="outline-selector__intro">
       <h2 id="outline-selector-title">Choose an article outline</h2>
       <p>Select the article type that best matches what you are writing.</p>
     </div>
@@ -33,6 +33,13 @@ import { computed, ref } from 'vue'
 import { CdxIcon, CdxSearchInput } from '@wikimedia/codex'
 import { cdxIconNext } from '@wikimedia/codex-icons'
 import { simpleEnglishOutlines } from '../config/outlines/simpleEnglish.js'
+
+defineProps({
+  showIntro: {
+    type: Boolean,
+    default: true,
+  },
+})
 
 const emit = defineEmits(['select'])
 const searchQuery = ref('')
