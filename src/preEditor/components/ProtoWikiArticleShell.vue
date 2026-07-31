@@ -47,8 +47,13 @@
       <article class="proto-wiki__article">
         <header class="proto-wiki__article-header">
           <h1 class="proto-wiki__article-title">{{ article.title }}</h1>
-          <p class="proto-wiki__article-description">{{ article.description }}</p>
+          <p class="proto-wiki__article-description">{{ article.description.text }}</p>
         </header>
+
+        <aside class="proto-wiki__research-note" aria-label="Research prototype instructions">
+          <strong>{{ article.researchNote.label }}</strong>
+          <span>{{ article.researchNote.text }}</span>
+        </aside>
 
         <section
           v-for="(section, sectionIndex) in article.sections"
@@ -70,17 +75,22 @@
             :key="paragraphIndex"
             class="proto-wiki__paragraph"
           >
-            <template v-for="(segment, segmentIndex) in paragraph" :key="segmentIndex">
-              <a
-                v-if="segment.missingLink"
-                class="proto-wiki__missing-link"
-                :href="missingLinkHref"
-                :aria-label="`${segment.text} — article does not exist`"
-                @click.prevent="emit('activate-missing-link', segment.text)"
-              >
-                {{ segment.text }}
-              </a>
-              <template v-else>{{ segment.text }}</template>
+            <template v-for="(sentence, sentenceIndex) in paragraph.sentences" :key="sentence.id">
+              <template v-for="(segment, segmentIndex) in sentence.segments" :key="segmentIndex">
+                <a
+                  v-if="segment.kind === 'missing'"
+                  class="proto-wiki__missing-link"
+                  :href="missingLinkHrefs[segment.journeyKey]"
+                  :aria-label="`${segment.text} — simulated missing article; opens article-creation guidance`"
+                  @click="activateMissingLink($event, segment.journeyKey)"
+                  >{{ segment.text }}</a
+                >
+                <span v-else-if="segment.kind === 'context'" class="proto-wiki__context-link">{{
+                  segment.text
+                }}</span>
+                <template v-else>{{ segment.text }}</template>
+              </template>
+              <template v-if="sentenceIndex < paragraph.sentences.length - 1">{{ ' ' }}</template>
             </template>
           </p>
         </section>
@@ -102,13 +112,19 @@ defineProps({
     type: Object,
     required: true,
   },
-  missingLinkHref: {
-    type: String,
+  missingLinkHrefs: {
+    type: Object,
     required: true,
   },
 })
 
 const emit = defineEmits(['activate-missing-link'])
+
+function activateMissingLink(event, journeyKey) {
+  if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+  event.preventDefault()
+  emit('activate-missing-link', journeyKey)
+}
 </script>
 
 <style scoped>
@@ -208,6 +224,24 @@ const emit = defineEmits(['activate-missing-link'])
 
 .proto-wiki__section:first-of-type {
   margin-top: var(--spacing-100);
+}
+
+.proto-wiki__research-note {
+  display: grid;
+  gap: var(--spacing-25);
+  margin-top: var(--spacing-100);
+  padding: var(--spacing-100);
+  border: var(--border-subtle);
+  border-left: var(--border-width-thick) solid var(--border-color-progressive);
+  background: var(--background-color-progressive-subtle);
+  font-size: var(--font-size-small);
+  line-height: var(--line-height-medium);
+}
+
+.proto-wiki__context-link {
+  color: var(--color-progressive);
+  text-decoration: underline;
+  text-underline-offset: var(--spacing-12);
 }
 
 .proto-wiki__section-heading {

@@ -39,6 +39,7 @@
           class="subject-result"
           role="button"
           tabindex="0"
+          :thumbnail="{ url: subjectResult.thumbnail.url }"
           :aria-label="`${subjectResult.title} · ${subjectResult.typeLabel} ${subjectResult.description}`"
           @click="selectSubject"
           @keydown.enter.prevent="selectSubject"
@@ -52,7 +53,17 @@
             </span>
           </template>
           <template #description>
-            <span class="subject-result__description">{{ subjectResult.description }}</span>
+            <span class="subject-result__description">
+              {{ subjectResult.description }}
+              <span class="subject-result__wikidata">
+                {{
+                  subjectResult.wikidataRelation === 'related'
+                    ? 'Related Wikidata item'
+                    : 'Wikidata item'
+                }}
+                · {{ subjectResult.wikidataItemId }}
+              </span>
+            </span>
           </template>
         </CdxCard>
 
@@ -64,8 +75,8 @@
 
     <section v-else-if="currentStep === STEPS.SOURCES" class="article-guidance-stage">
       <ArticleGuidanceArticleInfo
-        :title="personJourney.subject.title"
-        :type-label="personJourney.subject.typeLabel"
+        :title="activeJourney.subject.title"
+        :type-label="activeJourney.subject.typeLabel"
         @edit="editArticleTitle"
       />
 
@@ -90,8 +101,8 @@
         </div>
 
         <ArticleGuidanceSourceTips
-          :type-label="personJourney.subject.typeLabel"
-          :recommended="personJourney.sourceRequirements.recommended"
+          :type-label="activeJourney.subject.typeLabel"
+          :recommended="sourceRecommendations"
         />
 
         <div class="article-guidance-actions article-guidance-actions--sources">
@@ -124,18 +135,18 @@
 
     <section v-else-if="currentStep === STEPS.GUIDANCE" class="article-guidance-stage">
       <ArticleGuidanceArticleInfo
-        :title="personJourney.subject.title"
-        :type-label="personJourney.subject.typeLabel"
+        :title="activeJourney.subject.title"
+        :type-label="activeJourney.subject.typeLabel"
         @edit="editArticleTitle"
       />
 
       <h4 class="article-guidance-guidance__heading">
-        {{ personJourney.guidance.heading }}
+        {{ activeGuidance.guidanceHeading }}
       </h4>
       <div class="article-guidance-guidance__card">
-        <p class="article-guidance-guidance__intro">{{ personJourney.guidance.intro }}</p>
+        <p class="article-guidance-guidance__intro">{{ activeGuidance.guidanceIntro }}</p>
         <ul class="article-guidance-list">
-          <li v-for="bullet in personJourney.guidance.bullets" :key="bullet">{{ bullet }}</li>
+          <li v-for="bullet in activeGuidance.guidanceBullets" :key="bullet">{{ bullet }}</li>
         </ul>
       </div>
 
@@ -171,7 +182,11 @@ import ArticleGuidanceArticleInfo from '../components/ArticleGuidanceArticleInfo
 import ArticleGuidanceShell from '../components/ArticleGuidanceShell.vue'
 import ArticleGuidanceSourceTips from '../components/ArticleGuidanceSourceTips.vue'
 import SourceUrlForm from '../components/SourceUrlForm.vue'
-import { personJourney } from '../data/explorationJourneys.js'
+import {
+  guidanceProfilesByOutline,
+  journeysByKey,
+  sourceProfilesByOutline,
+} from '../data/explorationJourneys.js'
 import {
   STEPS,
   addSource,
@@ -181,20 +196,26 @@ import {
   findSubject,
   removeSource,
 } from '../flow/preEditorFlow.js'
+import { buildSetupQuery, resolveSetupRoute } from '../flow/setupRoute.js'
 
 const route = useRoute()
 const router = useRouter()
-const initialTitle =
-  typeof route.query.title === 'string' ? route.query.title : personJourney.subject.title
-const flowState = ref(createFlowState(personJourney, initialTitle))
+const defaultJourney = journeysByKey['person-neil-armstrong']
+const activeJourney = ref(defaultJourney)
+const flowState = ref(createFlowState(defaultJourney))
 const sourceUrl = ref('')
 const sourceError = ref('')
 const shellRef = ref(null)
-const allowedSteps = new Set(Object.values(STEPS))
 
-const currentStep = computed(() => (typeof route.query.step === 'string' ? route.query.step : ''))
+const currentStep = computed(() => flowState.value.step)
 const currentHeading = computed(() => 'New article')
-const subjectResult = computed(() => findSubject(personJourney, flowState.value.titleInput))
+const subjectResult = computed(() => findSubject(activeJourney.value, flowState.value.titleInput))
+const activeGuidance = computed(
+  () => guidanceProfilesByOutline[activeJourney.value.guidanceProfileKey],
+)
+const sourceRecommendations = computed(() => [
+  sourceProfilesByOutline[activeJourney.value.sourceRequirements.profileKey].sourceTip,
+])
 const showNoResults = computed(
   () => flowState.value.titleInput.trim().length > 0 && !subjectResult.value,
 )
@@ -204,7 +225,7 @@ const sourcesComplete = computed(
 const sourceHelperText = computed(() => {
   const sourceCount = flowState.value.sources.length
   if (sourceCount === 0) {
-    return `${personJourney.subject.typeLabel} articles on this wiki require sources.`
+    return `${activeJourney.value.subject.typeLabel} articles on this wiki require sources.`
   }
   if (sourceCount < flowState.value.requiredSourceCount) {
     return `${sourceCount} of ${flowState.value.requiredSourceCount} sources added.`
@@ -212,37 +233,10 @@ const sourceHelperText = computed(() => {
   return 'You can add sources while you write.'
 })
 
-function preservedSetupQuery(step) {
-  const query = {
-    step,
-    title: typeof route.query.title === 'string' ? route.query.title : flowState.value.titleInput,
-  }
-
-  if (typeof route.query.source === 'string') {
-    query.source = route.query.source
-  }
-  if (typeof route.query.variant === 'string') {
-    query.variant = route.query.variant
-  }
-
-  return query
-}
-
-function replaceWithSubject() {
-  return router.replace({
-    name: 'article-guidance',
-    query: preservedSetupQuery(STEPS.SUBJECT),
-  })
-}
-
 function pushStep(step) {
   return router.push({
     name: 'article-guidance',
-    query: {
-      ...route.query,
-      step,
-      title: flowState.value.titleInput,
-    },
+    query: buildSetupQuery(activeJourney.value, step, flowState.value.titleInput),
   })
 }
 
@@ -330,25 +324,37 @@ function startWriting() {
   flowState.value = { ...flowState.value, step: STEPS.GUIDANCE }
   router.push({
     name: 'editor',
-    query: buildEditorQuery(flowState.value, personJourney),
+    query: buildEditorQuery(flowState.value, activeJourney.value),
   })
 }
 
 watch(
-  () => route.query.step,
-  async (routeStep) => {
-    const requestedStep = typeof routeStep === 'string' ? routeStep : ''
-
-    if (!allowedSteps.has(requestedStep)) {
-      await replaceWithSubject()
-      return
-    }
-    if (!canEnterStep(flowState.value, requestedStep)) {
-      await replaceWithSubject()
+  () => route.fullPath,
+  async () => {
+    const resolution = resolveSetupRoute(route.query, flowState.value)
+    if (resolution.kind === 'article') {
+      await router.replace({ name: 'article' })
       return
     }
 
-    flowState.value = { ...flowState.value, step: requestedStep }
+    if (resolution.resetFlow || activeJourney.value.key !== resolution.journey.key) {
+      activeJourney.value = resolution.journey
+      flowState.value = createFlowState(resolution.journey, resolution.titleInput)
+      sourceUrl.value = ''
+      sourceError.value = ''
+    }
+
+    if (resolution.needsReplace) {
+      await router.replace({ name: 'article-guidance', query: resolution.canonicalQuery })
+      return
+    }
+
+    activeJourney.value = resolution.journey
+    flowState.value = {
+      ...flowState.value,
+      step: resolution.step,
+      titleInput: resolution.titleInput,
+    }
     await nextTick()
     shellRef.value?.focusHeading()
   },
@@ -452,6 +458,12 @@ watch(
   margin: 0;
   font-size: var(--font-size-small);
   line-height: var(--line-height-small);
+}
+
+.subject-result__wikidata {
+  display: block;
+  margin-top: var(--spacing-25);
+  color: var(--color-placeholder);
 }
 
 .subject-result__description,

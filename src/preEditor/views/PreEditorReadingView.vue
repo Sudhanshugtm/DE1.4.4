@@ -3,8 +3,8 @@
 
 <template>
   <ProtoWikiArticleShell
-    :article="personJourney.article"
-    :missing-link-href="articleGuidanceHref"
+    :article="explorationArticle"
+    :missing-link-hrefs="articleGuidanceHrefs"
     @activate-missing-link="openArticleGuidance"
   />
 </template>
@@ -13,21 +13,19 @@
 import { useRouter } from 'vue-router'
 
 import ProtoWikiArticleShell from '../components/ProtoWikiArticleShell.vue'
-import { personJourney } from '../data/explorationJourneys.js'
+import { explorationArticle, journeysByKey } from '../data/explorationJourneys.js'
+import { buildSetupQuery } from '../flow/setupRoute.js'
 
 const router = useRouter()
-const articleGuidanceTarget = {
+const targetFor = (journeyKey) => ({
   name: 'article-guidance',
-  query: {
-    step: 'subject',
-    title: personJourney.subject.title,
-    source: 'redlink',
-    variant: personJourney.handoff.variant,
-  },
-}
-const articleGuidanceHref = router.resolve(articleGuidanceTarget).href
+  query: buildSetupQuery(journeysByKey[journeyKey]),
+})
+const articleGuidanceHrefs = Object.fromEntries(
+  Object.keys(journeysByKey).map((key) => [key, router.resolve(targetFor(key)).href]),
+)
 
-function openArticleGuidance() {
-  router.push(articleGuidanceTarget)
+function openArticleGuidance(journeyKey) {
+  router.push(targetFor(journeyKey))
 }
 </script>

@@ -13,7 +13,7 @@
 ## File structure
 
 - Rename `src/preEditor/data/personJourney.js` to `src/preEditor/data/explorationJourneys.js`, then replace its single-person fixture with the frozen catalogue.
-- Create `src/preEditor/assets/subjects/`: eight validated 240px Commons thumbnail snapshots.
+- Create `src/preEditor/assets/subjects/`: eight validated 250px Commons thumbnail snapshots.
 - Create `src/preEditor/assets/subjects/ATTRIBUTION.md`: exact creator, licence, and source-page metadata.
 - Create `src/preEditor/flow/setupRoute.js`: setup-query parsing and canonicalization only.
 - Modify `src/preEditor/flow/preEditorFlow.js`: journey-bound state, normalized matching, and guarded handoff.
@@ -177,14 +177,14 @@ Expected: FAIL on the absent catalogue exports, not on module loading or syntax.
 Create `src/preEditor/assets/subjects/`, then run these exact commands individually:
 
 ```bash
-curl -L --fail --silent --show-error 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0d/Neil_Armstrong_pose.jpg/240px-Neil_Armstrong_pose.jpg' --output src/preEditor/assets/subjects/neil-armstrong.jpg
-curl -L --fail --silent --show-error 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/96/1st_meeting_of_8th_State_Duma_07.jpg/240px-1st_meeting_of_8th_State_Duma_07.jpg' --output src/preEditor/assets/subjects/valentina-tereshkova.jpg
-curl -L --fail --silent --show-error 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d7/Chandrayaan-3_Integrated_Module_in_clean-room_01.webp/240px-Chandrayaan-3_Integrated_Module_in_clean-room_01.webp.png' --output src/preEditor/assets/subjects/chandrayaan-3.png
-curl -L --fail --silent --show-error 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0c/Mars_-_August_30_2021_-_Flickr_-_Kevin_M._Gill.png/240px-Mars_-_August_30_2021_-_Flickr_-_Kevin_M._Gill.png' --output src/preEditor/assets/subjects/mars.png
-curl -L --fail --silent --show-error 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6b/NASA_World_Wind_-_Google_Earth_bar.png/240px-NASA_World_Wind_-_Google_Earth_bar.png' --output src/preEditor/assets/subjects/google-earth.png
-curl -L --fail --silent --show-error 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/86/Entrance_to_SpaceX_headquarters.jpg/240px-Entrance_to_SpaceX_headquarters.jpg' --output src/preEditor/assets/subjects/spacex.jpg
-curl -L --fail --silent --show-error 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d1/Mount_Everest_as_seen_from_Drukair2_PLW_edit.jpg/240px-Mount_Everest_as_seen_from_Drukair2_PLW_edit.jpg' --output src/preEditor/assets/subjects/mount-everest.jpg
-curl -L --fail --silent --show-error 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8e/Easter_Island_5.jpg/240px-Easter_Island_5.jpg' --output src/preEditor/assets/subjects/easter-island.jpg
+curl -L --fail --silent --show-error -A 'ArticleGuidancePrototype/1.0' 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0d/Neil_Armstrong_pose.jpg/250px-Neil_Armstrong_pose.jpg' --output src/preEditor/assets/subjects/neil-armstrong.jpg
+curl -L --fail --silent --show-error -A 'ArticleGuidancePrototype/1.0' 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/96/1st_meeting_of_8th_State_Duma_07.jpg/250px-1st_meeting_of_8th_State_Duma_07.jpg' --output src/preEditor/assets/subjects/valentina-tereshkova.jpg
+curl -L --fail --silent --show-error -A 'ArticleGuidancePrototype/1.0' 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d7/Chandrayaan-3_Integrated_Module_in_clean-room_01.webp/250px-Chandrayaan-3_Integrated_Module_in_clean-room_01.webp.png' --output src/preEditor/assets/subjects/chandrayaan-3.png
+curl -L --fail --silent --show-error -A 'ArticleGuidancePrototype/1.0' 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0c/Mars_-_August_30_2021_-_Flickr_-_Kevin_M._Gill.png/250px-Mars_-_August_30_2021_-_Flickr_-_Kevin_M._Gill.png' --output src/preEditor/assets/subjects/mars.png
+curl -L --fail --silent --show-error -A 'ArticleGuidancePrototype/1.0' 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6b/NASA_World_Wind_-_Google_Earth_bar.png/250px-NASA_World_Wind_-_Google_Earth_bar.png' --output src/preEditor/assets/subjects/google-earth.png
+curl -L --fail --silent --show-error -A 'ArticleGuidancePrototype/1.0' 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/86/Entrance_to_SpaceX_headquarters.jpg/250px-Entrance_to_SpaceX_headquarters.jpg' --output src/preEditor/assets/subjects/spacex.jpg
+curl -L --fail --silent --show-error -A 'ArticleGuidancePrototype/1.0' 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d1/Mount_Everest_as_seen_from_Drukair2_PLW_edit.jpg/250px-Mount_Everest_as_seen_from_Drukair2_PLW_edit.jpg' --output src/preEditor/assets/subjects/mount-everest.jpg
+curl -L --fail --silent --show-error -A 'ArticleGuidancePrototype/1.0' 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8e/Easter_Island_5.jpg/250px-Easter_Island_5.jpg' --output src/preEditor/assets/subjects/easter-island.jpg
 ```
 
 - [ ] **Step 6: Verify every downloaded file before using it**
@@ -193,14 +193,14 @@ Run `file --mime-type src/preEditor/assets/subjects/*.{jpg,png}` and `sips -g pi
 
 | Local file | MIME | Width × height |
 |---|---|---|
-| `neil-armstrong.jpg` | `image/jpeg` | 240 × 300 |
-| `valentina-tereshkova.jpg` | `image/jpeg` | 240 × 163 |
-| `chandrayaan-3.png` | `image/png` | 240 × 360 |
-| `mars.png` | `image/png` | 240 × 240 |
-| `google-earth.png` | `image/png` | 240 × 156 |
-| `spacex.jpg` | `image/jpeg` | 240 × 360 |
-| `mount-everest.jpg` | `image/jpeg` | 240 × 130 |
-| `easter-island.jpg` | `image/jpeg` | 240 × 160 |
+| `neil-armstrong.jpg` | `image/jpeg` | 250 × 312 |
+| `valentina-tereshkova.jpg` | `image/jpeg` | 250 × 170 |
+| `chandrayaan-3.png` | `image/png` | 250 × 375 |
+| `mars.png` | `image/png` | 250 × 250 |
+| `google-earth.png` | `image/png` | 250 × 163 |
+| `spacex.jpg` | `image/jpeg` | 250 × 375 |
+| `mount-everest.jpg` | `image/jpeg` | 250 × 136 |
+| `easter-island.jpg` | `image/jpeg` | 250 × 167 |
 
 Any MIME, decode, or dimension mismatch stops implementation; do not commit the response body.
 
