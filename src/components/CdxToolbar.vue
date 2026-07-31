@@ -109,7 +109,9 @@ import {
   flex: 1;
   display: flex;
   min-width: 0;
-  overflow: clip;
+  /* Clip the tools horizontally, but let the pulsating dot hang below the bar. */
+  overflow-x: clip;
+  overflow-y: visible;
 }
 
 .cdx-toolbar__rhs {
@@ -153,12 +155,14 @@ import {
    follow MediaWiki's own pulsating dot (mediawiki.pulsatingdot). */
 .cdx-toolbar__btn--outline {
   position: relative;
+  /* Codex buttons clip their contents; the dot needs to sit below the bar. */
+  overflow: visible;
 }
 
 .mw-pulsating-dot {
   position: absolute;
-  top: 14px;
-  right: 14px;
+  bottom: -10px;
+  left: 50%;
   pointer-events: none;
 }
 
