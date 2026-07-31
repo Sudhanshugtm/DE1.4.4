@@ -46,10 +46,12 @@
       </CdxButton>
     </div>
     <div class="cdx-toolbar__rhs">
+      <!-- Publishing stays out of reach until the article has something in it. -->
       <CdxButton
         class="cdx-toolbar__btn cdx-toolbar__btn--publish"
         action="progressive"
         weight="primary"
+        :disabled="true"
         aria-label="Publish"
       >
         <CdxIcon :icon="cdxIconNext" />

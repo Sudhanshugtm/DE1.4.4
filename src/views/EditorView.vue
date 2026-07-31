@@ -117,7 +117,9 @@ const forceButtonStyle = computed(() => {
 })
 
 const isRailOpen = ref(false)
-const isPopoverOpen = ref(false)
+// The sheet greets the editor on arrival, so the guidance is seen rather than
+// waited for. The toolbar + reopens it once dismissed.
+const isPopoverOpen = ref(isToolbarOutlineVariant.value)
 const settingsDialogOpen = ref(false)
 const citeDialogOpen = ref(false)
 const citeDialogInitialTab = ref('automatic')
