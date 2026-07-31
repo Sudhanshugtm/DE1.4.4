@@ -5,13 +5,15 @@ import test from 'node:test'
 import { chromium } from 'playwright'
 
 const BASE_URL = process.env.PRE_EDITOR_BASE_URL ?? 'http://127.0.0.1:5174'
+const BASE = new URL(BASE_URL)
+const APP_BASE_PATHNAME = BASE.pathname === '/' ? '' : BASE.pathname.replace(/\/$/, '')
 
 test('article omits the research notice and uses colour without persistent underlines', async () => {
   const browser = await chromium.launch({ headless: true })
   const page = await browser.newPage()
 
   try {
-    await page.goto(new URL('/article', BASE_URL).href)
+    await page.goto(new URL(`${APP_BASE_PATHNAME}/article`, BASE.origin).href)
 
     assert.equal(await page.getByText('Research prototype', { exact: true }).count(), 0)
 
