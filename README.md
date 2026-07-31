@@ -47,9 +47,9 @@ on a phone at `http://<your-ip>:5173`.
 
 ## Where this sits
 
-This is one part of the article creation journey. Reading, the red link, and the
-pre-editor guidance flow are prototyped separately; this repository starts where
-those hand over.
+This repository covers the complete prototype journey: reading the Exploration
+article, choosing a simulated red link, completing pre-editor guidance, and entering
+the editor with the matching outline.
 
 Built with Vue 3, TipTap and [Codex](https://doc.wikimedia.org/codex/latest/),
 kept at the version MediaWiki ships so behaviour here matches behaviour there.
