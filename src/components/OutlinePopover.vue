@@ -1,6 +1,12 @@
 <template>
   <div ref="anchorRef" class="outline-popover-anchor"></div>
-  <CdxPopover v-model:open="open" :anchor="anchorRef" placement="top-start" :render-in-place="true">
+  <CdxPopover
+    v-model:open="open"
+    :anchor="anchorRef"
+    placement="top-start"
+    :use-bottom-sheet="true"
+    :hide-backdrop="true"
+  >
     <div class="outline-popover-header">
       <span class="outline-popover-header__title">
         <CdxIcon :icon="currentItem.icon" size="small" />
@@ -20,7 +26,7 @@
       <template v-if="selectableOutlines">
         <OutlineStructureList
           v-show="selectedView === 'outline'"
-          v-model:added-items="addedOutlineItems"
+          v-model:added-items="addedItems"
           :outline="selectedOutline"
           @content-inserted="$emit('content-inserted')"
         />
@@ -69,10 +75,14 @@ const props = defineProps({
   },
 })
 const open = defineModel('open', { type: Boolean, default: false })
+const addedItems = defineModel('addedItems', {
+  type: Set,
+  required: true,
+})
 const route = useRoute()
 const anchorRef = ref(null)
 const selectedView = ref('outline')
-const addedOutlineItems = ref(new Set())
+const pendingOutlineScrollReset = ref(false)
 // Default topic type for the prototype. Switching outlines lives in Settings,
 // mirroring the real flow where the topic is known before the editor opens.
 const DEFAULT_OUTLINE_ID = 'person'
@@ -153,23 +163,34 @@ function detachObserver() {
   bodyEl = null
 }
 
-async function resetBodyScroll() {
-  if (bodyEl) {
-    await nextTick()
-    bodyEl.scrollTop = 0
-    bodyEl.classList.remove('is-scrolled')
-    checkScrollable()
+function resetBodyScroll() {
+  if (!bodyEl) return false
+  bodyEl.scrollTop = 0
+  bodyEl.classList.remove('is-scrolled')
+  checkScrollable()
+  return true
+}
+
+function applyPendingOutlineScrollReset() {
+  if (!pendingOutlineScrollReset.value || !bodyEl) return
+  if (resetBodyScroll()) {
+    pendingOutlineScrollReset.value = false
   }
 }
 
 watch(selectedView, resetBodyScroll)
-watch(selectedOutline, resetBodyScroll)
+watch(selectedOutline, () => {
+  selectedView.value = 'outline'
+  pendingOutlineScrollReset.value = true
+  applyPendingOutlineScrollReset()
+})
 
 watch(open, async (isOpen) => {
   if (isOpen) {
     await nextTick()
     await nextTick()
     attachObserver()
+    applyPendingOutlineScrollReset()
   } else {
     detachObserver()
   }
@@ -239,45 +260,34 @@ onBeforeUnmount(() => {
   border-top: 1px solid var(--border-color-subtle, #c8ccd1);
 }
 
-.outline-popover-anchor + :deep(.cdx-popover .cdx-popover__body) {
+.outline-popover-body :deep(.cdx-accordion__content) {
+  font-family: var(--font-family-system-sans);
+}
+</style>
+
+<!-- Codex places and sizes the bottom sheet itself; these are the two things
+     the design asks for on top of that. The popover is rendered outside this
+     component, so the rules cannot be scoped. -->
+<style>
+.cdx-popover--bottom-sheet {
+  max-height: 50dvh;
+  background-color: var(--background-color-neutral-subtle, #f8f9fa);
+}
+
+.cdx-popover--bottom-sheet .cdx-popover__body {
   display: flex;
   flex-direction: column;
   flex: 1;
   min-height: 0;
+  padding: 0;
 }
 
-/* The sheet is anchored to the viewport, not to an element, so the popover's
-   pointer would only show up as a stray shape against its edge. */
-.outline-popover-anchor + :deep(.cdx-popover .cdx-popover__arrow) {
-  display: none;
-}
-
-.outline-popover-anchor + :deep(.cdx-popover) {
-  min-height: 50vh !important;
-  max-height: 50vh !important;
-  min-height: 50dvh !important;
-  max-height: 50dvh !important;
-  display: flex;
-  flex-direction: column;
-  position: fixed !important;
-  bottom: 0 !important;
-  left: 0 !important;
-  top: auto !important;
-  width: 100% !important;
-  max-width: 100% !important;
-  transform: none !important;
-  background-color: var(--background-color-neutral-subtle, #f8f9fa) !important;
-  border-radius: var(--border-radius-sharp, 0) !important;
-  border-start-start-radius: var(--border-radius-medium, 8px) !important;
-  border-start-end-radius: var(--border-radius-medium, 8px) !important;
-  border: none !important;
-  border-top: 1px solid var(--border-color-base, #a2a9b1) !important;
-  padding: 0 0 env(safe-area-inset-bottom, 0) !important;
-  box-sizing: border-box;
-  overflow: hidden;
-}
-
-.outline-popover-body :deep(.cdx-accordion__content) {
-  font-family: var(--font-family-system-sans);
+/* Opening the sheet puts focus on its close button so it can be reached by
+   keyboard. Touch does not need to see that ring, so it is shown only when
+   focus arrives from the keyboard. */
+.cdx-popover--bottom-sheet .cdx-button:focus:not(:focus-visible) {
+  border-color: transparent;
+  box-shadow: none;
+  outline: 0;
 }
 </style>

@@ -16,15 +16,15 @@
 
 <script setup>
 import { computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { CdxDialog, CdxLabel } from '@wikimedia/codex'
 import OutlineSelector from './OutlineSelector.vue'
 import { simpleEnglishOutlinesById } from '../config/outlines/simpleEnglish.js'
 
 const open = defineModel('open', { type: Boolean, default: false })
+const emit = defineEmits(['outline-selected'])
 
 const route = useRoute()
-const router = useRouter()
 
 const currentOutlineLabel = computed(() => {
   const outlineId = route.query.outline
@@ -36,8 +36,7 @@ const currentOutlineLabel = computed(() => {
 })
 
 function onSelectOutline(outlineId) {
-  router.replace({ query: { ...route.query, outline: outlineId } })
-  open.value = false
+  emit('outline-selected', outlineId)
 }
 </script>
 

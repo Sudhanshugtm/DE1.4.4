@@ -44,7 +44,10 @@
       </CdxButton>
 
       <!-- Style 3: Floating placeholder (initial state only) -->
-      <span v-else-if="entryPointStyle === 'floating' && !hasInteracted" class="codex-floating-text">
+      <span
+        v-else-if="entryPointStyle === 'floating' && !hasInteracted"
+        class="codex-floating-text"
+      >
         Tap here to continue...
       </span>
 
@@ -73,7 +76,13 @@ import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import { AnnotationHighlight } from '../extensions/annotationHighlight'
 import { PlaceholderChip } from '../extensions/placeholderChip'
+import SectionDeleteControls, { getOutlineSectionKeys } from '../extensions/sectionDeleteControls'
+import SectionHeading from '../extensions/sectionHeading'
 import { SourceSuperscript } from '../extensions/sourceSuperscript'
+import { ScaffoldFieldHighlight } from '../extensions/scaffoldFieldHighlight'
+import { FieldBinding } from '../extensions/fieldBinding'
+import { findScaffoldFields } from '../utils/scaffoldFields'
+import { TextSelection } from '@tiptap/pm/state'
 import { useEditorSettings } from '../composables/useEditorSettings'
 import { useEditorInstance } from '../composables/useEditorInstance'
 import { useCursorRect } from '../composables/useCursorRect'
@@ -95,7 +104,18 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['open-outline', 'open-settings', 'open-source-context'])
+const emit = defineEmits([
+  'open-outline',
+  'open-settings',
+  'open-source-context',
+  'outline-sections-changed',
+  'authored',
+  'editor-focused',
+  'pasted',
+])
+
+// Matches the threshold the copyvio check uses before it speaks up.
+const PASTE_CHECK_MINIMUM_CHARACTERS = 50
 
 const { settings } = useEditorSettings()
 const { setEditor } = useEditorInstance()
@@ -129,18 +149,46 @@ const editorContentRef = ref(null)
 const editor = useEditor({
   extensions: [
     StarterKit.configure({
-      heading: { levels: [2, 3, 4] },
+      heading: false,
       link: { openOnClick: false },
     }),
+    SectionHeading.configure({ levels: [2, 3, 4] }),
+    SectionDeleteControls,
     Placeholder.configure({
       placeholder: 'Start writing or tap + to add suggested sections',
     }),
     SourceSuperscript,
     AnnotationHighlight,
+    ScaffoldFieldHighlight,
+    FieldBinding,
     PlaceholderChip,
   ],
   editorProps: {
+    // Pasting a substantial amount of text is worth asking about, the way
+    // the copyvio check does. Small pastes are left alone.
+    handlePaste(view, event) {
+      const pasted = event.clipboardData?.getData('text/plain') ?? ''
+      if (pasted.trim().length >= PASTE_CHECK_MINIMUM_CHARACTERS) {
+        emit('pasted', pasted)
+      }
+      return false
+    },
+
     handleClick(view, pos, event) {
+      // Tapping a field takes the whole of it, so writing replaces the field
+      // rather than editing around its brackets.
+      const field = findScaffoldFields(view.state.doc).find(
+        (candidate) => pos >= candidate.from && pos <= candidate.to,
+      )
+      if (field) {
+        view.dispatch(
+          view.state.tr.setSelection(
+            TextSelection.create(view.state.doc, field.from, field.to),
+          ),
+        )
+        return true
+      }
+
       // Tapping a Source prompt opens its context item, the way tapping a
       // citation-needed template does in Visual Editor.
       const marker = event.target.closest?.('.outline-source-prompt')
@@ -157,8 +205,15 @@ const editor = useEditor({
       updateButtonPosition()
     }
   },
-  onTransaction({ transaction }) {
+  onTransaction({ editor: currentEditor, transaction }) {
     if (transaction.docChanged) {
+      emit('outline-sections-changed', getOutlineSectionKeys(currentEditor.state.doc))
+      // Inserting an outline is the community writing, not the editor, and
+      // the editor's own setup runs before anyone has typed. Only edits made
+      // while writing count as having written something.
+      if (!transaction.getMeta('outlineInsertion') && currentEditor.isFocused) {
+        emit('authored')
+      }
       if (isPlaceholderInitialState.value) {
         hasInteracted.value = true
       }
@@ -172,6 +227,7 @@ const editor = useEditor({
     }
   },
   onFocus() {
+    emit('editor-focused')
     setTimeout(() => updateButtonPosition(), 0)
   },
   onBlur({ event }) {
@@ -499,6 +555,7 @@ onMounted(() => {
   // Register the editor instance globally
   if (editor.value) {
     setEditor(editor.value)
+    emit('outline-sections-changed', getOutlineSectionKeys(editor.value.state.doc))
     if (import.meta.env.DEV) window.__editor = editor.value
   }
 
@@ -552,10 +609,25 @@ defineExpose({ editor })
 
 .text-editor :deep(.ProseMirror) {
   flex: 1;
+  display: flex;
+  flex-direction: column;
   padding: var(--spacing-100);
   background-color: var(--background-color-base);
   outline: none;
   overflow-y: auto;
+}
+
+/* The column is only there to seat the references section; nothing in the
+   article gives up height for it. */
+.text-editor :deep(.ProseMirror > *) {
+  flex-shrink: 0;
+}
+
+/* References closes an article, so it sits at the foot of the page rather
+   than under whatever was written last, where it reads as the next thing to
+   fill in. It rejoins the text once there is enough to push it there. */
+.text-editor :deep(.ProseMirror h2[data-outline-item-key$='references']) {
+  margin-top: auto;
 }
 
 /* Placeholder */
@@ -582,6 +654,45 @@ defineExpose({ editor })
   border-bottom: 1px var(--border-style-base) var(--border-color-muted, #dadde3);
   margin: 0 0 var(--spacing-50) 0;
   padding: var(--spacing-50) 0;
+}
+
+.text-editor :deep(.ProseMirror h2[data-outline-item-key]) {
+  position: relative;
+  padding-inline-end: 44px;
+}
+
+.text-editor :deep(.section-delete-control) {
+  position: absolute;
+  inset-inline-end: 0;
+  top: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 12px;
+  border: 0;
+  background: transparent;
+  color: currentColor;
+  transform: translateY(-50%);
+  cursor: pointer;
+}
+
+.text-editor :deep(.section-delete-control svg) {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+}
+
+.text-editor :deep(.section-delete-control:focus-visible) {
+  outline: var(--border-width-thick) var(--border-style-base)
+    var(--outline-color-progressive--focus);
+}
+
+@media (hover: hover) {
+  .text-editor :deep(.section-delete-control:hover) {
+    background-color: var(--background-color-interactive-subtle--hover);
+  }
 }
 
 .text-editor :deep(.ProseMirror h3) {
@@ -620,6 +731,26 @@ defineExpose({ editor })
   font-size: var(--font-size-x-small);
   line-height: 0;
   vertical-align: super;
+}
+
+/* Fields carry no fill of their own: the brackets already say they are
+   waiting. What differs is only how present the text is — a value to pick
+   sits closer to the article, words to write stay further back. */
+.text-editor :deep(.scaffold-field--pick) {
+  color: var(--color-subtle, #54595d);
+}
+
+.text-editor :deep(.scaffold-field--write) {
+  color: var(--color-placeholder, #72777d);
+}
+
+/* A field a check is asking about. This one is meant to be seen, since the
+   card is asking the editor to act on it. */
+.text-editor :deep(.scaffold-field--flagged) {
+  background-color: var(--background-color-warning-subtle, #fdf2d5);
+  box-shadow: 0 0 0 1px var(--border-color-warning, #edab49);
+  border-radius: 2px;
+  color: var(--color-base);
 }
 
 .text-editor :deep(.annotation-highlight) {
@@ -683,5 +814,4 @@ defineExpose({ editor })
   color: var(--color-subtle);
   cursor: pointer;
 }
-
 </style>

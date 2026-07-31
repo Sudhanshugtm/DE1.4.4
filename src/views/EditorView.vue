@@ -4,9 +4,12 @@
       :show-outline-entry="isToolbarOutlineVariant"
       :show-cite="!isToolbarOutlineVariant"
       :highlight-outline-entry="highlightOutlineEntry"
+      :can-publish="hasAuthoredText"
       @open-outline="onOpenOutline"
+      @insert-menu-opened="hasOpenedInsertMenu = true"
       @cite="onOpenCiteDefault"
       @close="onClose"
+      @publish="onPublish"
     />
     <div
       class="editor-wrapper"
@@ -17,12 +20,17 @@
     >
       <div class="editor-main" @click="isRailOpen && (isRailOpen = false)">
         <TextEditor
+          :key="activeOutlineId"
           :show-outline-entry="!isToolbarOutlineVariant"
           :show-placeholder="isToolbarOutlineVariant"
           :suppress-auto-focus="isToolbarOutlineVariant"
           @open-outline="onOpenOutline"
           @open-settings="settingsDialogOpen = true"
           @open-source-context="onOpenSourceContext"
+          @outline-sections-changed="onOutlineSectionsChanged"
+          @authored="hasAuthoredText = true"
+          @editor-focused="onEditorFocused"
+          @pasted="onPasted"
         />
       </div>
       <div v-if="!isToolbarOutlineVariant" class="editor-rail-column">
@@ -50,13 +58,21 @@
     <OutlinePopover
       v-if="effectiveOutlineLocation === 'popover'"
       v-model:open="isPopoverOpen"
+      v-model:added-items="addedOutlineItems"
       :initial-view="initialView"
       :selectable-outlines="isToolbarOutlineVariant"
       @content-inserted="onContentInserted"
       @open-cite-discover="onOpenCiteDiscover"
     />
+    <EditCheckRail
+      :checks="pendingChecks"
+      :index="activeCheckIndex"
+      @act="onCheckAction"
+      @dismiss="onDismissChecks"
+      @navigate="onNavigateChecks"
+    />
     <SourceContextSheet v-model:open="sourceContextOpen" @add-citation="onAddCitationFromSource" />
-    <SettingsDialog v-model:open="settingsDialogOpen" />
+    <SettingsDialog v-model:open="settingsDialogOpen" @outline-selected="onOutlineSelected" />
     <CiteDialog
       v-model:open="citeDialogOpen"
       :initial-tab="citeDialogInitialTab"
@@ -66,8 +82,8 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { ref, computed, nextTick, watch } from 'vue'
+import { isNavigationFailure, useRoute, useRouter } from 'vue-router'
 import { CdxIcon } from '@wikimedia/codex'
 import { cdxIconAdd } from '@wikimedia/codex-icons'
 import TextEditor from '@/components/TextEditor.vue'
@@ -77,9 +93,13 @@ import SettingsDialog from '@/components/SettingsDialog.vue'
 import CiteDialog from '@/components/CiteDialog.vue'
 import OutlinePopover from '@/components/OutlinePopover.vue'
 import SourceContextSheet from '@/components/SourceContextSheet.vue'
+import EditCheckRail from '@/components/EditCheckRail.vue'
+import { findScaffoldFields } from '@/utils/scaffoldFields'
+import { scaffoldFieldHighlightKey } from '@/extensions/scaffoldFieldHighlight'
 import { useEditorSettings } from '@/composables/useEditorSettings'
 import { useEditorInstance } from '@/composables/useEditorInstance'
 import { useCursorRect } from '@/composables/useCursorRect'
+import { simpleEnglishOutlinesById } from '@/config/outlines/simpleEnglish'
 
 const route = useRoute()
 const router = useRouter()
@@ -89,8 +109,13 @@ const outlineLocation = computed(() => settings.value.outline.location)
 const effectiveOutlineLocation = computed(() =>
   isToolbarOutlineVariant.value ? 'popover' : outlineLocation.value,
 )
-const outlinePersistence = computed(() => settings.value.outline.persistence)
 const entryPointStyle = computed(() => settings.value.entryPoint.style)
+const activeOutlineId = computed(() => {
+  const outlineId = route.query.outline
+  return typeof outlineId === 'string' && Object.hasOwn(simpleEnglishOutlinesById, outlineId)
+    ? outlineId
+    : 'person'
+})
 
 // Force entry point
 const { getEditor } = useEditorInstance()
@@ -125,9 +150,176 @@ const settingsDialogOpen = ref(false)
 const citeDialogOpen = ref(false)
 const citeDialogInitialTab = ref('automatic')
 const initialView = ref(null)
+const addedOutlineItems = ref(new Set())
 const sourceContextOpen = ref(false)
 const pendingSourceRange = ref(null)
 const nextCitationNumber = ref(1)
+
+// Publishing opens up once the editor has written something of their own.
+// The scaffold they still have to resolve is raised at the publish moment.
+const hasAuthoredText = ref(false)
+const pendingChecks = ref([])
+const activeCheckIndex = ref(0)
+
+// Pasted text is raised as it happens, not held back until publishing:
+// the sooner it is asked about, the less there is to unpick.
+function onPasted() {
+  if (pendingChecks.value.some((check) => check.name === 'paste')) return
+
+  pendingChecks.value = [
+    {
+      name: 'paste',
+      type: 'check',
+      title: 'Pasted content',
+      message:
+        'Please avoid copying text from other sources, even if rephrased or cited. This could be considered copyright violation or plagiarism and may result in your content being removed or your account being blocked.',
+      prompt: 'Did you write this text?',
+      actions: [
+        { name: 'keep', label: 'Yes, keep it' },
+        { name: 'remove', label: 'No, remove it' },
+      ],
+    },
+    ...pendingChecks.value,
+  ]
+  activeCheckIndex.value = 0
+}
+
+function setFieldHighlight(on) {
+  const editor = getEditor()
+  if (!editor) return
+  editor.view.dispatch(editor.state.tr.setMeta(scaffoldFieldHighlightKey, on))
+}
+
+function onPublish() {
+  const editor = getEditor()
+  if (!editor) return
+
+  const fields = findScaffoldFields(editor.state.doc)
+  activeCheckIndex.value = 0
+  setFieldHighlight(fields.length > 0)
+
+  // Anything already waiting stays waiting; publishing adds to the list.
+  const carried = pendingChecks.value.filter((check) => check.name !== 'completeSection')
+
+  // Unfilled fields are one thing to put right, however many there are.
+  pendingChecks.value = fields.length
+    ? [
+        ...carried,
+        {
+          name: 'completeSection',
+          type: 'check',
+          title: 'Complete section',
+          message:
+            'Fields in templates cannot be empty. Before publishing, replace them with real content, or delete them.',
+          actions: [
+            { name: 'review', label: 'Review' },
+            { name: 'delete', label: 'Delete' },
+          ],
+          fields,
+        },
+      ]
+    : carried
+
+  if (!pendingChecks.value.length) {
+    // Nothing left to resolve; a real editor would save here.
+    window.alert('Published')
+  }
+}
+
+function onNavigateChecks(nextIndex) {
+  activeCheckIndex.value = Math.max(0, Math.min(nextIndex, pendingChecks.value.length - 1))
+}
+
+// Review walks the fields one at a time; Delete clears the ones still empty.
+const reviewedFieldIndex = ref(0)
+
+function onCheckAction({ action, check }) {
+  const editor = getEditor()
+  if (!editor) return
+
+  if (check?.name === 'paste') {
+    if (action === 'remove') editor.chain().focus().undo().run()
+    pendingChecks.value = pendingChecks.value.filter((pending) => pending.name !== 'paste')
+    activeCheckIndex.value = 0
+    return
+  }
+
+  if (!check?.fields?.length) return
+
+  if (action === 'review') {
+    const field = check.fields[reviewedFieldIndex.value % check.fields.length]
+    reviewedFieldIndex.value += 1
+    editor
+      .chain()
+      .focus()
+      .setTextSelection({ from: field.from, to: field.to })
+      .scrollIntoView()
+      .run()
+    return
+  }
+
+  // Delete from the end so earlier positions stay valid.
+  const chain = editor.chain().focus()
+  ;[...check.fields].reverse().forEach((field) => {
+    chain.deleteRange({ from: field.from, to: field.to })
+  })
+  chain.run()
+
+  refreshChecks()
+}
+
+// The document moved, so the fields still empty are found again.
+function refreshChecks() {
+  const editor = getEditor()
+  const fields = editor ? findScaffoldFields(editor.state.doc) : []
+  reviewedFieldIndex.value = 0
+
+  if (!fields.length) {
+    pendingChecks.value = []
+    setFieldHighlight(false)
+    return
+  }
+
+  pendingChecks.value = pendingChecks.value.map((check) =>
+    check.name === 'completeSection' ? { ...check, fields } : check,
+  )
+}
+
+function onDismissChecks() {
+  pendingChecks.value = []
+  setFieldHighlight(false)
+}
+
+function onOutlineSectionsChanged(sectionKeys) {
+  const leadKeys = [...addedOutlineItems.value].filter((key) => key.endsWith(':lead'))
+  addedOutlineItems.value = new Set([...leadKeys, ...sectionKeys])
+}
+
+async function onOutlineSelected(outlineId) {
+  if (outlineId === activeOutlineId.value) {
+    settingsDialogOpen.value = false
+    return
+  }
+
+  try {
+    const failure = await router.replace({
+      query: { ...route.query, outline: outlineId },
+    })
+    if (isNavigationFailure(failure)) return
+  } catch {
+    return
+  }
+
+  // A different outline is a different article, so the editor starts clean:
+  // the previous article's text, checks and progress all go with it.
+  addedOutlineItems.value = new Set()
+  pendingChecks.value = []
+  activeCheckIndex.value = 0
+  hasAuthoredText.value = false
+  initialView.value = 'outline'
+  settingsDialogOpen.value = false
+  isPopoverOpen.value = true
+}
 
 function onForceButtonClick() {
   getEditor()?.commands.blur()
@@ -135,19 +327,25 @@ function onForceButtonClick() {
 }
 
 // After the sheet is dismissed, the toolbar + carries a pulsating dot so the
-// suggestions are findable again. Opening the sheet from there retires it.
+// suggestions are findable again.
 const hasDismissedSheet = ref(false)
-const hasReopenedSheet = ref(false)
+// Opening the insert menu even once means the editor knows where guidance
+// lives, so the dot has nothing left to say — including after they switch to
+// another outline.
+const hasOpenedInsertMenu = ref(false)
+// Only ever one thing asking to be looked at. With an empty article the + is
+// the only move, so the dot points at it; once a section is in, the caret
+// waiting in the text is the thing to see.
 const highlightOutlineEntry = computed(
-  () => isToolbarOutlineVariant.value && hasDismissedSheet.value && !hasReopenedSheet.value,
+  () =>
+    isToolbarOutlineVariant.value &&
+    hasDismissedSheet.value &&
+    !hasOpenedInsertMenu.value &&
+    addedOutlineItems.value.size === 0,
 )
 
 watch(isPopoverOpen, (isOpen, wasOpen) => {
-  if (!isOpen && wasOpen) {
-    hasDismissedSheet.value = true
-  } else if (isOpen && hasDismissedSheet.value) {
-    hasReopenedSheet.value = true
-  }
+  if (!isOpen && wasOpen) hasDismissedSheet.value = true
 })
 
 function onOpenOutline() {
@@ -196,10 +394,7 @@ function onCitationCreated() {
   editor
     .chain()
     .focus()
-    .insertContentAt(
-      range,
-      `<sup class="citation-reference">[${nextCitationNumber.value}]</sup>`,
-    )
+    .insertContentAt(range, `<sup class="citation-reference">[${nextCitationNumber.value}]</sup>`)
     .run()
 
   nextCitationNumber.value += 1
@@ -210,27 +405,39 @@ function onOpenCiteDiscover() {
   citeDialogOpen.value = true
 }
 
-// Track whether the popover/rail should stay open after content insertion
-const keepOpenAfterInsert = ref(false)
-
-function onContentInserted() {
-  if (outlinePersistence.value === 'close') {
-    isRailOpen.value = false
-    isPopoverOpen.value = false
-  } else {
-    // Set flag so the watcher can re-open the popover if focus-loss closes it
-    keepOpenAfterInsert.value = true
-  }
+// Adding a section hands the editor straight back to writing: the guidance
+// steps aside and the caret waits at the first thing to fill in, so the
+// keyboard comes up on the article rather than on top of the sheet.
+async function onContentInserted() {
+  isRailOpen.value = false
+  isPopoverOpen.value = false
+  await nextTick()
+  placeCursorAtFirstField()
 }
 
-// When the popover closes due to focus moving to the editor after insertion,
-// re-open it if the keep-open flag is set
-watch(isPopoverOpen, (newVal) => {
-  if (!newVal && keepOpenAfterInsert.value) {
-    keepOpenAfterInsert.value = false
-    isPopoverOpen.value = true
-  }
-})
+function placeCursorAtFirstField() {
+  const editor = getEditor()
+  if (!editor) return
+
+  // Insertion leaves the caret at the start of the new section, so the first
+  // field from there is the one this section is asking for.
+  const caret = editor.state.selection.from
+  const fields = findScaffoldFields(editor.state.doc)
+  const field = fields.find((candidate) => candidate.from >= caret) ?? fields[0]
+
+  // A caret, not a selection: arriving with text already selected reads as
+  // something having been picked up, and brings grab handles with it.
+  const chain = editor.chain().focus()
+  if (field) chain.setTextSelection(field.from)
+  chain.scrollIntoView().run()
+}
+
+// The sheet has no backdrop, so the article behind it stays tappable. Writing
+// is the whole point, so the sheet gives way rather than sitting under the
+// keyboard.
+function onEditorFocused() {
+  isPopoverOpen.value = false
+}
 
 // The panel never auto-opens: the toolbar + (and the editor's entry points)
 // are the only doors. Location/variant changes just reset any open panel.

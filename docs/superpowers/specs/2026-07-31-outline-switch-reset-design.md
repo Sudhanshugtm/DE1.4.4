@@ -162,13 +162,17 @@ The added-item set is a required controlled `addedItems` model supplied by `Edit
 `OutlinePopover` passes both its value and `update:added-items` events between EditorView and
 `OutlineStructureList`; it does not inspect the editor document or mutate the set independently.
 
-### `resetEditorContent.js`
+### Fresh editor session
 
-This focused utility receives a TipTap editor, creates an empty top-level document from its
-schema, creates a fresh ProseMirror `EditorState` from that document and the editor's existing
-plugins, and passes the new state to `editor.view.updateState()`. Its sole responsibility is
-starting an outline with an empty document and empty plugin history without remounting the Vue
-editor component.
+`EditorView` keys `TextEditor` by the active outline ID. A successful outline route change
+therefore destroys the previous TipTap instance and mounts a fresh empty one, including fresh
+plugin and Undo/Redo state.
+
+This boundary is intentional. TipTap's Vue editor wrapper owns a debounced reactive
+`EditorState` in addition to ProseMirror's view state. Replacing only `editor.view.state` makes
+the DOM look empty but leaves later editor commands reading the old reactive document. A keyed
+remount resets both layers through their public lifecycle and prevents the first insertion for
+the new outline from restoring old content.
 
 ### `outlineWikitext.js`
 

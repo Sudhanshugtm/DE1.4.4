@@ -127,7 +127,22 @@ function onAdd(item) {
   const inserted = insertOutlineContent(editor, content)
   if (!inserted) return
 
-  addedItems.value = new Set([...addedItems.value, item.key])
+  const added = new Set([...addedItems.value, item.key])
+
+  // Every article ends with its references, so the section comes along with
+  // the first one added rather than being remembered later.
+  const references = outlineItems.value.find((candidate) => isReferencesSection(candidate))
+  if (references && !added.has(references.key) && !isReferencesSection(item)) {
+    const referencesContent = outlineItemToEditorHtml(references, { isLead: false })
+    if (
+      referencesContent &&
+      insertOutlineContent(editor, referencesContent, { keepAboveReferences: false })
+    ) {
+      added.add(references.key)
+    }
+  }
+
+  addedItems.value = added
   emit('content-inserted')
 }
 </script>

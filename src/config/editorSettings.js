@@ -10,7 +10,6 @@ export const defaultSettings = {
   },
   outline: {
     location: 'rail', // 'rail' | 'popover'
-    persistence: 'close', // 'keep-open' | 'close'
   },
 }
 
@@ -33,9 +32,4 @@ export const autoFocusLabels = {
 export const outlineLocationLabels = {
   rail: 'Side panel',
   popover: 'Popover',
-}
-
-export const outlinePersistenceLabels = {
-  'keep-open': 'Keep open after adding content',
-  close: 'Close after adding content',
 }

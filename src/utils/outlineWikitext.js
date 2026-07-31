@@ -142,7 +142,7 @@ export function outlineItemToEditorHtml(item, { isLead = false } = {}) {
     return outlineWikitextToHtml(item.content)
   }
 
-  const heading = `<h2>${escapeHtml(item.title || '')}</h2>`
+  const heading = `<h2 data-outline-item-key="${escapeHtml(item.key || '')}">${escapeHtml(item.title || '')}</h2>`
   if (isReferencesSection(item)) return heading
 
   return `${heading}${outlineWikitextToHtml(item.content)}`

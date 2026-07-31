@@ -55,13 +55,14 @@
       </CdxButton>
     </div>
     <div class="cdx-toolbar__rhs">
-      <!-- Publishing stays out of reach until the article has something in it. -->
+      <!-- Publishing stays out of reach until the editor has written something. -->
       <CdxButton
         class="cdx-toolbar__btn cdx-toolbar__btn--publish"
         action="progressive"
         weight="primary"
-        :disabled="true"
+        :disabled="!canPublish"
         aria-label="Publish"
+        @click="emit('publish')"
       >
         <CdxIcon :icon="cdxIconNext" />
       </CdxButton>
@@ -95,10 +96,27 @@
           <CdxIcon :icon="tool.icon" size="small" />
           <span>{{ tool.label }}</span>
         </button>
+        <button
+          v-for="tool in moreInsertTools"
+          v-show="moreExpanded"
+          :key="tool.label"
+          class="cdx-toolbar__insert-item"
+          role="menuitem"
+          type="button"
+        >
+          <CdxIcon :icon="tool.icon" size="small" />
+          <span>{{ tool.label }}</span>
+        </button>
       </div>
-      <button class="cdx-toolbar__insert-item" role="menuitem" type="button">
-        <CdxIcon :icon="cdxIconExpand" size="small" />
-        <span>More</span>
+      <button
+        class="cdx-toolbar__insert-item cdx-toolbar__insert-item--more"
+        role="menuitem"
+        type="button"
+        :aria-expanded="moreExpanded"
+        @click.stop="toggleMoreTools"
+      >
+        <CdxIcon :icon="moreExpanded ? cdxIconCollapse : cdxIconExpand" size="small" />
+        <span>{{ moreExpanded ? 'Fewer' : 'More' }}</span>
       </button>
     </div>
   </div>
@@ -118,9 +136,13 @@ defineProps({
     type: Boolean,
     default: false,
   },
+  canPublish: {
+    type: Boolean,
+    default: false,
+  },
 })
 
-const emit = defineEmits(['cite', 'close', 'open-outline'])
+const emit = defineEmits(['cite', 'close', 'open-outline', 'publish', 'insert-menu-opened'])
 import { onMounted, onBeforeUnmount, ref } from 'vue'
 import { CdxButton, CdxIcon } from '@wikimedia/codex'
 import {
@@ -132,13 +154,22 @@ import {
   cdxIconAdd,
   cdxIconEdit,
   cdxIconExpand,
+  cdxIconCollapse,
   cdxIconNext,
   cdxIconListBullet,
   cdxIconImage,
+  cdxIconImageGallery,
   cdxIconTable,
+  cdxIconPuzzle,
+  cdxIconSpeechBubbleAdd,
+  cdxIconMathematics,
+  cdxIconReferences,
+  cdxIconSpecialCharacter,
+  cdxIconCode,
 } from '@wikimedia/codex-icons'
 
 const insertMenuOpen = ref(false)
+const moreExpanded = ref(false)
 const insertButtonRef = ref(null)
 const insertMenuLeft = ref('0px')
 
@@ -149,10 +180,23 @@ const nativeInsertTools = [
   { label: 'Table', icon: cdxIconTable },
 ]
 
+// Secondary insert tools, hidden until More expands — same pattern as VE's
+// mobile insert ListToolGroup.
+const moreInsertTools = [
+  { label: 'Template', icon: cdxIconPuzzle },
+  { label: 'Comment', icon: cdxIconSpeechBubbleAdd },
+  { label: 'Gallery', icon: cdxIconImageGallery },
+  { label: 'Formula', icon: cdxIconMathematics },
+  { label: 'References list', icon: cdxIconReferences },
+  { label: 'Special character', icon: cdxIconSpecialCharacter },
+  { label: 'Code block', icon: cdxIconCode },
+]
+
 const INSERT_MENU_WIDTH = 200
 
 function toggleInsertMenu() {
   if (!insertMenuOpen.value) {
+    emit('insert-menu-opened')
     // The menu hangs to the left of the button that opened it, so it stays
     // clear of the screen edge and reads as belonging to that button.
     const button = insertButtonRef.value?.$el
@@ -160,17 +204,24 @@ function toggleInsertMenu() {
       const alignedToButtonEnd = button.offsetLeft + button.offsetWidth - INSERT_MENU_WIDTH
       insertMenuLeft.value = `${Math.max(0, alignedToButtonEnd)}px`
     }
+    moreExpanded.value = false
   }
   insertMenuOpen.value = !insertMenuOpen.value
 }
 
+function toggleMoreTools() {
+  moreExpanded.value = !moreExpanded.value
+}
+
 function onInsertSuggestedSections() {
   insertMenuOpen.value = false
+  moreExpanded.value = false
   emit('open-outline')
 }
 
 function closeInsertMenu() {
   insertMenuOpen.value = false
+  moreExpanded.value = false
 }
 
 onMounted(() => document.addEventListener('click', closeInsertMenu))
