@@ -1,4 +1,4 @@
-import personJourney from '../data/personJourney.js'
+import { personJourney } from '../data/personJourney.js'
 
 const STEPS = Object.freeze({
   SUBJECT: 'subject',
@@ -11,38 +11,36 @@ const SOURCE_ERRORS = Object.freeze({
   DUPLICATE: 'This source has already been added',
 })
 
-const createFlowState = (fixture = personJourney) => ({
+const createFlowState = (fixture, initialTitle = fixture.subject.title) => ({
   step: STEPS.SUBJECT,
-  titleInput: '',
+  titleInput: initialTitle,
   selectedSubject: null,
   sources: [],
   requiredSourceCount: fixture.sourceRequirements.requiredCount,
 })
 
-const findSubject = (title, fixture = personJourney) => {
+const findSubject = (fixture, title) => {
   if (typeof title !== 'string') {
     return null
   }
 
-  return title.trim().toLocaleLowerCase() === fixture.subject.title.toLocaleLowerCase()
-    ? fixture.subject
-    : null
+  return title.trim().toLowerCase() === fixture.subject.title.toLowerCase() ? fixture.subject : null
 }
 
 const validateSourceUrl = (value, existingSources = []) => {
   if (typeof value !== 'string' || !value.trim()) {
-    return { error: SOURCE_ERRORS.INVALID }
+    return { valid: false, error: SOURCE_ERRORS.INVALID }
   }
 
   let parsedUrl
   try {
     parsedUrl = new URL(value.trim())
-  } catch (error) {
-    return { error: SOURCE_ERRORS.INVALID }
+  } catch {
+    return { valid: false, error: SOURCE_ERRORS.INVALID }
   }
 
   if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
-    return { error: SOURCE_ERRORS.INVALID }
+    return { valid: false, error: SOURCE_ERRORS.INVALID }
   }
 
   const url = parsedUrl.href
@@ -50,21 +48,21 @@ const validateSourceUrl = (value, existingSources = []) => {
     (source) => (typeof source === 'string' ? source : source.url) === url,
   )
   if (duplicate) {
-    return { error: SOURCE_ERRORS.DUPLICATE }
+    return { valid: false, error: SOURCE_ERRORS.DUPLICATE }
   }
 
-  return { url, hostname: parsedUrl.hostname }
+  return { valid: true, source: { url, domain: parsedUrl.hostname } }
 }
 
 const addSource = (state, value) => {
-  const source = validateSourceUrl(value, state.sources)
-  if (source.error) {
-    return { state, error: source.error }
+  const result = validateSourceUrl(value, state.sources)
+  if (!result.valid) {
+    return { state, error: result.error }
   }
 
   return {
-    state: { ...state, sources: [...state.sources, source] },
-    error: null,
+    state: { ...state, sources: [...state.sources, result.source] },
+    error: '',
   }
 }
 

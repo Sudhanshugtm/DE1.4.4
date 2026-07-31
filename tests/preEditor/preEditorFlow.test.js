@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import personJourney from '../../src/preEditor/data/personJourney.js'
+import { personJourney } from '../../src/preEditor/data/personJourney.js'
 import {
   SOURCE_ERRORS,
   STEPS,
@@ -24,33 +24,76 @@ test('person journey fixture provides an immutable Ritu Karidhal journey', () =>
   assert.equal(Object.isFrozen(personJourney.guidance.bullets), true)
 })
 
+test('person journey fixture preserves the approved article sections and missing link', () => {
+  assert.deepEqual(personJourney.article, {
+    title: 'Women in the Indian space programme',
+    description: 'From Wikipedia, the free encyclopedia',
+    sections: [
+      {
+        heading: '',
+        paragraphs: [
+          [
+            {
+              text: "Women have worked across science, engineering, mission operations, and administration in India's space programme. Their roles became especially visible through the Mars Orbiter Mission and later lunar missions.",
+              missingLink: false,
+            },
+          ],
+        ],
+      },
+      {
+        heading: 'Notable contributors',
+        paragraphs: [
+          [
+            {
+              text: 'Mission teams have included engineers such as Muthayya Vanitha, Nandini Harinath, and ',
+              missingLink: false,
+            },
+            { text: 'Ritu Karidhal', missingLink: true },
+            {
+              text: ', who took leadership roles on major projects. Their work spans navigation, spacecraft operations, communications, and mission planning.',
+              missingLink: false,
+            },
+          ],
+        ],
+      },
+    ],
+  })
+})
+
 test('findSubject matches a trimmed case-insensitive Ritu Karidhal title', () => {
-  assert.equal(findSubject('  rItU kArIdHaL  '), personJourney.subject)
-  assert.equal(findSubject('Another person'), null)
-  assert.equal(findSubject(''), null)
+  assert.equal(findSubject(personJourney, '  rItU kArIdHaL  '), personJourney.subject)
+  assert.equal(findSubject(personJourney, 'Another person'), null)
+  assert.equal(findSubject(personJourney, ''), null)
 })
 
 test('validateSourceUrl only accepts normalized HTTP(S) URLs', () => {
-  assert.deepEqual(validateSourceUrl('example.com'), { error: SOURCE_ERRORS.INVALID })
-  assert.deepEqual(validateSourceUrl('ftp://example.com/file'), { error: SOURCE_ERRORS.INVALID })
+  assert.deepEqual(validateSourceUrl('example.com'), {
+    valid: false,
+    error: SOURCE_ERRORS.INVALID,
+  })
+  assert.deepEqual(validateSourceUrl('ftp://example.com/file'), {
+    valid: false,
+    error: SOURCE_ERRORS.INVALID,
+  })
   assert.deepEqual(validateSourceUrl(' HTTPS://EXAMPLE.COM/Report '), {
-    url: 'https://example.com/Report',
-    hostname: 'example.com',
+    valid: true,
+    source: { url: 'https://example.com/Report', domain: 'example.com' },
   })
   assert.deepEqual(validateSourceUrl('http://example.org/path'), {
-    url: 'http://example.org/path',
-    hostname: 'example.org',
+    valid: true,
+    source: { url: 'http://example.org/path', domain: 'example.org' },
   })
 })
 
 test('validateSourceUrl rejects normalized duplicate sources', () => {
   assert.deepEqual(validateSourceUrl('HTTPS://EXAMPLE.COM/one', ['https://example.com/one']), {
+    valid: false,
     error: SOURCE_ERRORS.DUPLICATE,
   })
 })
 
 test('source changes are immutable and a removed source can be added again', () => {
-  const state = createFlowState()
+  const state = createFlowState(personJourney)
   const added = addSource(state, 'https://example.com/one')
   const removed = removeSource(added.state, 'https://example.com/one')
   const readded = addSource(removed, 'https://example.com/one')
@@ -63,7 +106,7 @@ test('source changes are immutable and a removed source can be added again', () 
     ['https://example.com/one'],
   )
   assert.deepEqual(removed.sources, [])
-  assert.equal(readded.error, null)
+  assert.equal(readded.error, '')
   assert.deepEqual(
     readded.state.sources.map((source) => source.url),
     ['https://example.com/one'],
@@ -71,13 +114,15 @@ test('source changes are immutable and a removed source can be added again', () 
 })
 
 test('canEnterStep requires a subject and then the required sources', () => {
-  const initial = createFlowState()
+  const initial = createFlowState(personJourney)
+  assert.equal(initial.titleInput, 'Ritu Karidhal')
+  assert.equal(createFlowState(personJourney, 'Draft title').titleInput, 'Draft title')
   const subjectReady = { ...initial, selectedSubject: personJourney.subject }
   const sourceReady = {
     ...subjectReady,
     sources: [
-      { url: 'https://example.com/one', hostname: 'example.com' },
-      { url: 'https://example.org/two', hostname: 'example.org' },
+      { url: 'https://example.com/one', domain: 'example.com' },
+      { url: 'https://example.org/two', domain: 'example.org' },
     ],
   }
 
@@ -90,12 +135,12 @@ test('canEnterStep requires a subject and then the required sources', () => {
 
 test('canEnterStep allows backward navigation from a ready Guidance state', () => {
   const state = {
-    ...createFlowState(),
+    ...createFlowState(personJourney),
     step: STEPS.GUIDANCE,
     selectedSubject: personJourney.subject,
     sources: [
-      { url: 'https://example.com/one', hostname: 'example.com' },
-      { url: 'https://example.org/two', hostname: 'example.org' },
+      { url: 'https://example.com/one', domain: 'example.com' },
+      { url: 'https://example.org/two', domain: 'example.org' },
     ],
   }
 
@@ -105,12 +150,12 @@ test('canEnterStep allows backward navigation from a ready Guidance state', () =
 
 test('buildEditorQuery maps a ready Guidance state to the editor handoff', () => {
   const state = {
-    ...createFlowState(),
+    ...createFlowState(personJourney),
     step: STEPS.GUIDANCE,
     selectedSubject: personJourney.subject,
     sources: [
-      { url: 'https://example.com/one', hostname: 'example.com' },
-      { url: 'https://example.org/two', hostname: 'example.org' },
+      { url: 'https://example.com/one', domain: 'example.com' },
+      { url: 'https://example.org/two', domain: 'example.org' },
     ],
   }
 

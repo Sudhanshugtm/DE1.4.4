@@ -11,16 +11,32 @@ const personJourney = {
   article: {
     title: 'Women in the Indian space programme',
     description: 'From Wikipedia, the free encyclopedia',
-    lead: "Women have worked across science, engineering, mission operations, and administration in India's space programme. Their roles became especially visible through the Mars Orbiter Mission and later lunar missions.",
     sections: [
       {
+        heading: '',
+        paragraphs: [
+          [
+            {
+              text: "Women have worked across science, engineering, mission operations, and administration in India's space programme. Their roles became especially visible through the Mars Orbiter Mission and later lunar missions.",
+              missingLink: false,
+            },
+          ],
+        ],
+      },
+      {
         heading: 'Notable contributors',
-        paragraph: [
-          { text: 'Among the notable contributors is ' },
-          { text: 'Ritu Karidhal', missingLink: true },
-          {
-            text: ', who took leadership roles on major projects. Their work spans navigation, spacecraft operations, communications, and mission planning.',
-          },
+        paragraphs: [
+          [
+            {
+              text: 'Mission teams have included engineers such as Muthayya Vanitha, Nandini Harinath, and ',
+              missingLink: false,
+            },
+            { text: 'Ritu Karidhal', missingLink: true },
+            {
+              text: ', who took leadership roles on major projects. Their work spans navigation, spacecraft operations, communications, and mission planning.',
+              missingLink: false,
+            },
+          ],
         ],
       },
     ],
@@ -64,5 +80,6 @@ const personJourney = {
   },
 }
 
-export { deepFreeze }
-export default deepFreeze(personJourney)
+deepFreeze(personJourney)
+
+export { personJourney }
