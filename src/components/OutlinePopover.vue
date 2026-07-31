@@ -246,6 +246,12 @@ onBeforeUnmount(() => {
   min-height: 0;
 }
 
+/* The sheet is anchored to the viewport, not to an element, so the popover's
+   pointer would only show up as a stray shape against its edge. */
+.outline-popover-anchor + :deep(.cdx-popover .cdx-popover__arrow) {
+  display: none;
+}
+
 .outline-popover-anchor + :deep(.cdx-popover) {
   min-height: 50vh !important;
   max-height: 50vh !important;
