@@ -2,22 +2,20 @@
   <div ref="anchorRef" class="outline-popover-anchor"></div>
   <CdxPopover v-model:open="open" :anchor="anchorRef" placement="top-start" :render-in-place="true">
     <div class="outline-popover-header">
-      <div class="outline-popover-header__menu">
-        <CdxMenuButton v-model:selected="selectedView" :menu-items="menuItems">
-          <CdxIcon :icon="currentItem.icon" />
-          {{ currentItem.label }}
-        </CdxMenuButton>
-        <p
-          v-if="selectableOutlines && selectedView === 'outline'"
-          class="outline-popover-header__attribution"
-        >
-          From Simple English Wikipedia editors
-        </p>
-      </div>
+      <span class="outline-popover-header__title">
+        <CdxIcon :icon="currentItem.icon" size="small" />
+        {{ currentItem.label }}
+      </span>
       <CdxButton weight="quiet" aria-label="Close" @click="open = false">
         <CdxIcon :icon="cdxIconClose" />
       </CdxButton>
     </div>
+    <p
+      v-if="selectableOutlines && selectedView === 'outline'"
+      class="outline-popover-header__attribution"
+    >
+      {{ currentItem.description }}
+    </p>
     <div class="outline-popover-body">
       <template v-if="selectableOutlines">
         <OutlineStructureList
@@ -46,7 +44,7 @@
 <script setup>
 import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute } from 'vue-router'
-import { CdxPopover, CdxMenuButton, CdxButton, CdxIcon } from '@wikimedia/codex'
+import { CdxPopover, CdxButton, CdxIcon } from '@wikimedia/codex'
 import {
   cdxIconListBullet,
   cdxIconCheckAll,
@@ -197,30 +195,29 @@ onBeforeUnmount(() => {
 
 .outline-popover-header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  padding: var(--spacing-100, 16px);
+  gap: var(--spacing-50, 8px);
+  padding: var(--spacing-50, 8px) var(--spacing-100, 16px);
 }
 
-.outline-popover-header__menu {
+.outline-popover-header__title {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-50, 8px);
   min-width: 0;
+  color: var(--color-base);
+  font-size: var(--font-size-large);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-large);
 }
 
 .outline-popover-header__attribution {
-  margin: var(--spacing-25, 4px) 0 0;
+  margin: 0;
+  padding: 0 var(--spacing-100, 16px) var(--spacing-50, 8px);
   color: var(--color-subtle);
-  font-size: var(--font-size-x-small);
-  line-height: var(--line-height-x-small);
-}
-
-.outline-popover-header :deep(.cdx-menu-button__menu) {
-  min-width: 256px;
-}
-
-.outline-popover-header :deep(.cdx-menu-button > .cdx-button.cdx-button--weight-quiet) {
-  border-color: var(--border-color-interactive);
-  background-color: var(--background-color-interactive-subtle);
-  font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-small);
+  line-height: var(--line-height-small);
 }
 
 .outline-popover-body {
@@ -264,11 +261,15 @@ onBeforeUnmount(() => {
   width: 100% !important;
   max-width: 100% !important;
   transform: none !important;
-  border-radius: 0 !important;
+  background-color: var(--background-color-neutral-subtle, #f8f9fa) !important;
+  border-radius: var(--border-radius-sharp, 0) !important;
+  border-start-start-radius: var(--border-radius-medium, 8px) !important;
+  border-start-end-radius: var(--border-radius-medium, 8px) !important;
   border: none !important;
   border-top: 1px solid var(--border-color-base, #a2a9b1) !important;
   padding: 0 0 env(safe-area-inset-bottom, 0) !important;
   box-sizing: border-box;
+  overflow: hidden;
 }
 
 .outline-popover-body :deep(.cdx-accordion__content) {

@@ -18,7 +18,14 @@
         @update:model-value="(value) => onAccordionUpdate(item, value)"
         @action-button-click="onAdd(item)"
       >
-        <template #title>{{ item.title }}</template>
+        <template #title>
+          <span class="outline-structure__title">
+            {{ item.title }}
+            <CdxInfoChip v-if="item.required" class="outline-structure__chip">
+              Required section
+            </CdxInfoChip>
+          </span>
+        </template>
         <template #description>
           <span class="outline-structure__description">{{ item.description }}</span>
         </template>
@@ -39,7 +46,7 @@
 
 <script setup>
 import { computed, ref, watch } from 'vue'
-import { CdxAccordion } from '@wikimedia/codex'
+import { CdxAccordion, CdxInfoChip } from '@wikimedia/codex'
 import { cdxIconAdd, cdxIconCheck } from '@wikimedia/codex-icons'
 import { useEditorInstance } from '../composables/useEditorInstance'
 import { getOutlineItemDescription } from '../config/outlines/sectionDescriptions.js'
@@ -70,6 +77,9 @@ const outlineItems = computed(() => {
     key: `${props.outline.id}:lead`,
     title: props.outline.lead?.title || 'Introduction',
     isLead: true,
+    // An article cannot be published without its lead, so it is always
+    // required. Other sections opt in through the outline itself.
+    required: true,
     previewHtml: outlineWikitextToHtml(props.outline.lead?.content || ''),
   }
   lead.description = getOutlineItemDescription(lead, props.outline)
@@ -78,6 +88,7 @@ const outlineItems = computed(() => {
     ...section,
     key: `${props.outline.id}:${section.id}`,
     isLead: false,
+    required: Boolean(section.required),
     description: getOutlineItemDescription(section, props.outline),
     previewHtml: isReferencesSection(section) ? '' : outlineWikitextToHtml(section.content || ''),
   }))
@@ -139,15 +150,23 @@ function onAdd(item) {
   min-width: 0;
 }
 
+.outline-structure__title {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--spacing-50);
+}
+
+.outline-structure__chip {
+  font-weight: var(--font-weight-normal);
+}
+
 .outline-structure__description {
   display: block;
   max-width: 100%;
-  overflow: hidden;
   color: var(--color-subtle);
-  font-size: var(--font-size-small);
-  line-height: var(--line-height-small);
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  font-size: var(--font-size-medium);
+  line-height: var(--line-height-medium);
 }
 
 .outline-structure__accordion--empty :deep(> summary::before) {
