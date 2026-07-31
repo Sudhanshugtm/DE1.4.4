@@ -364,6 +364,9 @@ function onOpenCiteDefault() {
 // ── Source prompt → citation, mirroring the citation-needed flow in VE ──
 
 function onOpenSourceContext(range) {
+  // The claim is being asked about, not written in. If the keyboard was
+  // already up it steps aside, so the context item is not left behind it.
+  getEditor()?.commands.blur()
   pendingSourceRange.value = range
   sourceContextOpen.value = true
 }
@@ -423,11 +426,12 @@ function placeCursorAtFirstField() {
   chain.scrollIntoView().run()
 }
 
-// The sheet has no backdrop, so the article behind it stays tappable. Writing
-// is the whole point, so the sheet gives way rather than sitting under the
-// keyboard.
+// Neither sheet has a backdrop, so the article behind them stays tappable.
+// Writing is the whole point, so they give way rather than sitting under the
+// keyboard where they cannot be seen.
 function onEditorFocused() {
   isPopoverOpen.value = false
+  sourceContextOpen.value = false
 }
 
 // The panel never auto-opens: the toolbar + (and the editor's entry points)

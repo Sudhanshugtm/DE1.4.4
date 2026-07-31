@@ -164,6 +164,19 @@ const editor = useEditor({
     PlaceholderChip,
   ],
   editorProps: {
+    handleDOMEvents: {
+      // A Source prompt asks about a claim; it is not a place to write. The
+      // editor does not take focus from it, so the keyboard never comes up
+      // over the context item that answers it.
+      mousedown(view, event) {
+        const marker = event.target.closest?.('.outline-source-prompt')
+        if (!marker) return false
+        event.preventDefault()
+        openSourceContext(view, marker)
+        return true
+      },
+    },
+
     // Pasting a substantial amount of text is worth asking about, the way
     // the copyvio check does. Small pastes are left alone.
     handlePaste(view, event) {
@@ -175,6 +188,10 @@ const editor = useEditor({
     },
 
     handleClick(view, pos, event) {
+      // The prompt was already answered on mousedown. It is checked before
+      // the fields so that one sitting against a field still wins the tap.
+      if (event.target.closest?.('.outline-source-prompt')) return true
+
       // Tapping a field takes the whole of it, so writing replaces the field
       // rather than editing around its brackets.
       const field = findScaffoldFields(view.state.doc).find(
@@ -187,15 +204,7 @@ const editor = useEditor({
         return true
       }
 
-      // Tapping a Source prompt opens its context item, the way tapping a
-      // citation-needed template does in Visual Editor.
-      const marker = event.target.closest?.('.outline-source-prompt')
-      if (!marker) return false
-      // Resolve the marker's own range from the DOM so the whole prompt is
-      // replaced when a citation is created, not just the clicked offset.
-      const from = view.posAtDOM(marker, 0)
-      emit('open-source-context', { from, to: from + marker.textContent.length })
-      return true
+      return false
     },
   },
   onSelectionUpdate() {
@@ -517,6 +526,13 @@ function onScroll() {
   if (isButtonVisible.value || useForceMode.value) {
     updateButtonPosition()
   }
+}
+
+// Resolve the prompt's own range from the DOM so the whole of it is replaced
+// when a citation is created, not just the offset that was tapped.
+function openSourceContext(view, marker) {
+  const from = view.posAtDOM(marker, 0)
+  emit('open-source-context', { from, to: from + marker.textContent.length })
 }
 
 function onCodexButtonClick() {
