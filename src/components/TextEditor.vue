@@ -684,11 +684,31 @@ defineExpose({ editor })
   vertical-align: super;
 }
 
+/* Fields hint at what they are asking for. The two tints sit close together
+   on purpose: enough to notice a difference, not enough to read as two
+   separate kinds of thing. */
+.text-editor :deep(.scaffold-field) {
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
+/* A single value: something to pick or recall. */
+.text-editor :deep(.scaffold-field--pick) {
+  background-color: var(--background-color-progressive-subtle, #e8eeff);
+  color: var(--color-base);
+}
+
+/* Words of the editor's own. */
+.text-editor :deep(.scaffold-field--write) {
+  background-color: var(--background-color-neutral-subtle, #f8f9fa);
+  color: var(--color-subtle);
+}
+
 /* A field a check is asking about, marked in the article itself. */
-.text-editor :deep(.scaffold-field-highlight) {
-  background-color: var(--background-color-warning-subtle, #fef6e7);
+.text-editor :deep(.scaffold-field--flagged) {
+  background-color: var(--background-color-warning-subtle, #fdf2d5);
   box-shadow: 0 0 0 1px var(--border-color-warning, #edab49);
-  border-radius: 1px;
+  color: var(--color-base);
 }
 
 .text-editor :deep(.annotation-highlight) {
