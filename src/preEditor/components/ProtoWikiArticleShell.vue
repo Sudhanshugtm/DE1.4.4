@@ -74,7 +74,7 @@
               <a
                 v-if="segment.missingLink"
                 class="proto-wiki__missing-link"
-                href="/article-guidance?step=subject&title=Ritu+Karidhal&source=redlink&variant=toolbar-outline"
+                :href="missingLinkHref"
                 :aria-label="`${segment.text} — article does not exist`"
                 @click.prevent="emit('activate-missing-link', segment.text)"
               >
@@ -100,6 +100,10 @@ import { cdxIconMenu, cdxIconSearch, cdxIconUserAvatar } from '@wikimedia/codex-
 defineProps({
   article: {
     type: Object,
+    required: true,
+  },
+  missingLinkHref: {
+    type: String,
     required: true,
   },
 })

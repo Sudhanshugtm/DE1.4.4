@@ -4,6 +4,7 @@
 <template>
   <ProtoWikiArticleShell
     :article="personJourney.article"
+    :missing-link-href="articleGuidanceHref"
     @activate-missing-link="openArticleGuidance"
   />
 </template>
@@ -15,16 +16,18 @@ import ProtoWikiArticleShell from '../components/ProtoWikiArticleShell.vue'
 import { personJourney } from '../data/personJourney.js'
 
 const router = useRouter()
+const articleGuidanceTarget = {
+  name: 'article-guidance',
+  query: {
+    step: 'subject',
+    title: personJourney.subject.title,
+    source: 'redlink',
+    variant: personJourney.handoff.variant,
+  },
+}
+const articleGuidanceHref = router.resolve(articleGuidanceTarget).href
 
 function openArticleGuidance() {
-  router.push({
-    name: 'article-guidance',
-    query: {
-      step: 'subject',
-      title: personJourney.subject.title,
-      source: 'redlink',
-      variant: personJourney.handoff.variant,
-    },
-  })
+  router.push(articleGuidanceTarget)
 }
 </script>

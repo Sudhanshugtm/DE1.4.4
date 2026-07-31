@@ -5,6 +5,8 @@ import test from 'node:test'
 import { chromium } from 'playwright'
 
 const BASE_URL = process.env.PRE_EDITOR_BASE_URL ?? 'http://127.0.0.1:5173'
+const BASE = new URL(BASE_URL)
+const APP_BASE_PATHNAME = BASE.pathname === '/' ? '' : BASE.pathname.replace(/\/$/, '')
 const APP_TITLE = '<title>Article creation</title>'
 const SUBJECT_TITLE = 'Ritu Karidhal'
 const RED_LINK_NAME = 'Ritu Karidhal — article does not exist'
@@ -13,13 +15,23 @@ const SOURCE_TWO = 'https://example.org/space-programme'
 
 let browser
 
+function appPath(pathname = '/') {
+  const normalizedPathname = pathname.startsWith('/') ? pathname : `/${pathname}`
+  return `${APP_BASE_PATHNAME}${normalizedPathname}`
+}
+
+function appUrl(pathname = '/') {
+  return new URL(appPath(pathname), BASE.origin).href
+}
+
 async function assertAppIdentity() {
-  const response = await fetch(BASE_URL)
-  assert.equal(response.ok, true, `Expected ${BASE_URL} to return a successful response`)
+  const appRootUrl = appUrl('/')
+  const response = await fetch(appRootUrl)
+  assert.equal(response.ok, true, `Expected ${appRootUrl} to return a successful response`)
   assert.equal(
     (await response.text()).includes(APP_TITLE),
     true,
-    `Expected ${BASE_URL} to contain ${APP_TITLE}`,
+    `Expected ${appRootUrl} to contain ${APP_TITLE}`,
   )
 }
 
@@ -30,14 +42,14 @@ async function assertVisible(locator) {
 
 async function assertStep(page, step) {
   await page.waitForURL(
-    (url) => url.pathname === '/article-guidance' && url.searchParams.get('step') === step,
+    (url) => url.pathname === appPath('/article-guidance') && url.searchParams.get('step') === step,
   )
   assert.equal(new URL(page.url()).searchParams.get('step'), step)
 }
 
 async function assertQueryContract(page, expectedStep) {
   const url = new URL(page.url())
-  assert.equal(url.pathname, '/article-guidance')
+  assert.equal(url.pathname, appPath('/article-guidance'))
   assert.equal(url.searchParams.get('step'), expectedStep)
   assert.equal(url.searchParams.get('title'), SUBJECT_TITLE)
   assert.equal(url.searchParams.get('source'), 'redlink')
@@ -74,7 +86,7 @@ test('red link completes the guarded Article Guidance journey and hands both sou
   page.setDefaultNavigationTimeout(10_000)
 
   try {
-    await page.goto(`${BASE_URL}/article`)
+    await page.goto(appUrl('/article'))
 
     const redLink = page.getByRole('link', { name: RED_LINK_NAME, exact: true })
     await assertVisible(redLink)
@@ -98,6 +110,17 @@ test('red link completes the guarded Article Guidance journey and hands both sou
       tagName: 'A',
       textDecorationLine: 'underline',
     })
+    const redLinkUrl = new URL(await redLink.getAttribute('href'), page.url())
+    assert.equal(redLinkUrl.pathname, appPath('/article-guidance'))
+    assert.deepEqual(
+      [...redLinkUrl.searchParams.entries()],
+      [
+        ['step', 'subject'],
+        ['title', SUBJECT_TITLE],
+        ['source', 'redlink'],
+        ['variant', 'toolbar-outline'],
+      ],
+    )
 
     await redLink.focus()
     await redLink.press('Enter')
@@ -114,7 +137,7 @@ test('red link completes the guarded Article Guidance journey and hands both sou
     await assertVisible(subjectResult)
 
     await page.getByRole('button', { name: 'Back', exact: true }).click()
-    await page.waitForURL((url) => url.pathname === '/article')
+    await page.waitForURL((url) => url.pathname === appPath('/article'))
     await redLink.focus()
     await redLink.press('Enter')
     await assertStep(page, 'subject')
@@ -248,7 +271,7 @@ test('red link completes the guarded Article Guidance journey and hands both sou
     }
 
     await page.getByRole('button', { name: 'Start writing', exact: true }).click()
-    await page.waitForURL((url) => url.pathname === '/editor')
+    await page.waitForURL((url) => url.pathname === appPath('/editor'))
     await assertVisible(page.locator('.editor-page'))
 
     const editorUrl = new URL(page.url())
@@ -284,26 +307,26 @@ test('direct, invalid, and refreshed setup routes replace illegal stages with Su
   const preservedQuery = 'title=Ritu+Karidhal&source=redlink&variant=toolbar-outline'
 
   try {
-    await page.goto(`${BASE_URL}/article-guidance?step=sources&${preservedQuery}`)
+    await page.goto(appUrl(`/article-guidance?step=sources&${preservedQuery}`))
     await assertStep(page, 'subject')
     await assertQueryContract(page, 'subject')
 
-    await page.goto(`${BASE_URL}/article-guidance?step&${preservedQuery}`)
+    await page.goto(appUrl(`/article-guidance?step&${preservedQuery}`))
     await assertStep(page, 'subject')
     await assertQueryContract(page, 'subject')
 
-    await page.goto(`${BASE_URL}/article-guidance?step=sources&step=guidance&${preservedQuery}`)
+    await page.goto(appUrl(`/article-guidance?step=sources&step=guidance&${preservedQuery}`))
     await assertStep(page, 'subject')
     await assertQueryContract(page, 'subject')
 
-    await page.goto(`${BASE_URL}/article-guidance?step=guidance&${preservedQuery}`)
+    await page.goto(appUrl(`/article-guidance?step=guidance&${preservedQuery}`))
     await assertStep(page, 'subject')
     await assertQueryContract(page, 'subject')
 
     await page.getByRole('button', { name: 'Back', exact: true }).click()
-    await page.waitForURL((url) => url.pathname === '/article')
+    await page.waitForURL((url) => url.pathname === appPath('/article'))
 
-    await page.goto(`${BASE_URL}/article-guidance?step=sources&${preservedQuery}`)
+    await page.goto(appUrl(`/article-guidance?step=sources&${preservedQuery}`))
     await assertStep(page, 'subject')
     await selectSubject(page)
 
