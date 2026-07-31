@@ -8,10 +8,91 @@ const BASE_URL = process.env.PRE_EDITOR_BASE_URL ?? 'http://127.0.0.1:5173'
 const BASE = new URL(BASE_URL)
 const APP_BASE_PATHNAME = BASE.pathname === '/' ? '' : BASE.pathname.replace(/\/$/, '')
 const APP_TITLE = '<title>Article creation</title>'
-const SUBJECT_TITLE = 'Ritu Karidhal'
-const RED_LINK_NAME = 'Ritu Karidhal — article does not exist'
-const SOURCE_ONE = 'https://example.com/mission-profile'
-const SOURCE_TWO = 'https://example.org/space-programme'
+const SOURCE_ONE = 'https://example.com/source-one'
+const SOURCE_TWO = 'https://example.org/source-two'
+
+const JOURNEYS = [
+  {
+    key: 'landform-mount-everest',
+    title: 'Mount Everest',
+    type: 'Landform',
+    qid: 'Q513',
+    relation: 'Wikidata item',
+    outline: 'landform',
+    outlineLabel: 'Landform',
+    asset: 'mount-everest',
+  },
+  {
+    key: 'island-easter-island',
+    title: 'Easter Island',
+    type: 'Island',
+    qid: 'Q14452',
+    relation: 'Wikidata item',
+    outline: 'island',
+    outlineLabel: 'Island',
+    asset: 'easter-island',
+  },
+  {
+    key: 'software-google-earth',
+    title: 'Google Earth',
+    type: 'Software',
+    qid: 'Q42274',
+    relation: 'Wikidata item',
+    outline: 'software',
+    outlineLabel: 'Software',
+    asset: 'google-earth',
+  },
+  {
+    key: 'object-mars',
+    title: 'Mars',
+    type: 'Astronomical Object',
+    qid: 'Q111',
+    relation: 'Wikidata item',
+    outline: 'astronomical-object',
+    outlineLabel: 'Astronomical Object',
+    asset: 'mars',
+  },
+  {
+    key: 'person-neil-armstrong',
+    title: 'Neil Armstrong',
+    type: 'Person',
+    qid: 'Q1615',
+    relation: 'Wikidata item',
+    outline: 'person',
+    outlineLabel: 'Person',
+    asset: 'neil-armstrong',
+  },
+  {
+    key: 'person-valentina-tereshkova',
+    title: 'Valentina Tereshkova',
+    type: 'Person',
+    qid: 'Q44371',
+    relation: 'Wikidata item',
+    outline: 'person',
+    outlineLabel: 'Person',
+    asset: 'valentina-tereshkova',
+  },
+  {
+    key: 'event-chandrayaan-3-landing',
+    title: 'Chandrayaan-3 Moon landing',
+    type: 'Recent Event',
+    qid: 'Q65049774',
+    relation: 'Related Wikidata item',
+    outline: 'recent-event',
+    outlineLabel: 'Recent Event',
+    asset: 'chandrayaan-3',
+  },
+  {
+    key: 'company-spacex',
+    title: 'SpaceX',
+    type: 'Company',
+    qid: 'Q193701',
+    relation: 'Wikidata item',
+    outline: 'company',
+    outlineLabel: 'Company',
+    asset: 'spacex',
+  },
+]
 
 let browser
 
@@ -22,6 +103,18 @@ function appPath(pathname = '/') {
 
 function appUrl(pathname = '/') {
   return new URL(appPath(pathname), BASE.origin).href
+}
+
+function setupUrl(journey, step = 'subject') {
+  const url = new URL(appUrl('/article-guidance'))
+  url.search = new URLSearchParams({
+    step,
+    journey: journey.key,
+    title: journey.title,
+    sourceOrigin: 'redlink',
+    variant: 'toolbar-outline',
+  })
+  return url.href
 }
 
 async function assertAppIdentity() {
@@ -40,29 +133,14 @@ async function assertVisible(locator) {
   assert.equal(await locator.isVisible(), true)
 }
 
-async function assertStep(page, step) {
-  await page.waitForURL(
-    (url) => url.pathname === appPath('/article-guidance') && url.searchParams.get('step') === step,
-  )
-  assert.equal(new URL(page.url()).searchParams.get('step'), step)
-}
-
-async function assertQueryContract(page, expectedStep) {
-  const url = new URL(page.url())
-  assert.equal(url.pathname, appPath('/article-guidance'))
-  assert.equal(url.searchParams.get('step'), expectedStep)
-  assert.equal(url.searchParams.get('title'), SUBJECT_TITLE)
-  assert.equal(url.searchParams.get('source'), 'redlink')
-  assert.equal(url.searchParams.get('variant'), 'toolbar-outline')
-}
-
-async function selectSubject(page) {
-  const result = page.getByRole('button', {
-    name: /Ritu Karidhal · Person Indian scientist and aerospace engineer/,
+async function assertStep(page, journey, step) {
+  await page.waitForURL((url) => {
+    return (
+      url.pathname === appPath('/article-guidance') &&
+      url.searchParams.get('journey') === journey.key &&
+      url.searchParams.get('step') === step
+    )
   })
-  await assertVisible(result)
-  await result.click()
-  await assertStep(page, 'sources')
 }
 
 async function addSource(page, source) {
@@ -70,445 +148,191 @@ async function addSource(page, source) {
   await page.getByRole('button', { name: 'Add source', exact: true }).click()
 }
 
+async function newLocalContext(viewport = { width: 1280, height: 900 }) {
+  const context = await browser.newContext({ viewport })
+  const externalRequests = []
+
+  await context.route('**/*', async (route) => {
+    const requestUrl = new URL(route.request().url())
+    if (['http:', 'https:'].includes(requestUrl.protocol) && requestUrl.origin !== BASE.origin) {
+      externalRequests.push(requestUrl.href)
+      await route.abort()
+      return
+    }
+    await route.continue()
+  })
+
+  return { context, externalRequests }
+}
+
 test.before(async () => {
   await assertAppIdentity()
-  browser = await chromium.launch({ headless: true })
+  browser = await chromium.launch({ headless: process.env.PRE_EDITOR_HEADLESS !== 'false' })
 })
 
 test.after(async () => {
   await browser?.close()
 })
 
-test('red link completes the guarded Article Guidance journey and hands both sources to the editor', async () => {
-  const context = await browser.newContext({ viewport: { width: 1280, height: 900 } })
+test('Exploration exposes eight exact red-link setup routes', async () => {
+  const { context, externalRequests } = await newLocalContext({ width: 390, height: 844 })
   const page = await context.newPage()
-  page.setDefaultTimeout(5_000)
-  page.setDefaultNavigationTimeout(10_000)
 
   try {
     await page.goto(appUrl('/article'))
+    await assertVisible(page.getByRole('heading', { level: 1, name: 'Exploration', exact: true }))
 
-    const redLink = page.getByRole('link', { name: RED_LINK_NAME, exact: true })
-    await assertVisible(redLink)
-    await assertVisible(
-      page.getByRole('heading', {
-        level: 1,
-        name: 'Women in the Indian space programme',
+    const redLinks = page.locator('.proto-wiki__missing-link')
+    assert.equal(await redLinks.count(), JOURNEYS.length)
+
+    for (const journey of JOURNEYS) {
+      const link = page.getByRole('link', {
+        name: `${journey.title} — simulated missing article; opens article-creation guidance`,
         exact: true,
-      }),
-    )
-    const redLinkPresentation = await redLink.evaluate((element) => {
-      const style = window.getComputedStyle(element)
-      return {
-        color: style.color,
-        tagName: element.tagName,
-        textDecorationLine: style.textDecorationLine,
-      }
-    })
-    assert.deepEqual(redLinkPresentation, {
-      color: 'rgb(191, 60, 44)',
-      tagName: 'A',
-      textDecorationLine: 'underline',
-    })
-    const redLinkUrl = new URL(await redLink.getAttribute('href'), page.url())
-    assert.equal(redLinkUrl.pathname, appPath('/article-guidance'))
-    assert.deepEqual(
-      [...redLinkUrl.searchParams.entries()],
-      [
-        ['step', 'subject'],
-        ['title', SUBJECT_TITLE],
-        ['source', 'redlink'],
-        ['variant', 'toolbar-outline'],
-      ],
-    )
-
-    await redLink.focus()
-    await redLink.press('Enter')
-    await assertStep(page, 'subject')
-    await assertVisible(page.getByRole('heading', { level: 1, name: 'New article', exact: true }))
-
-    const titleInput = page.getByLabel('Article title', { exact: true })
-    assert.equal(await titleInput.inputValue(), SUBJECT_TITLE)
-    await assertVisible(page.getByRole('heading', { name: 'What is this?', exact: true }))
-
-    const subjectResult = page.getByRole('button', {
-      name: /Ritu Karidhal · Person Indian scientist and aerospace engineer/,
-    })
-    await assertVisible(subjectResult)
-
-    await page.getByRole('button', { name: 'Back', exact: true }).click()
-    await page.waitForURL((url) => url.pathname === appPath('/article'))
-    await redLink.focus()
-    await redLink.press('Enter')
-    await assertStep(page, 'subject')
-
-    await titleInput.fill('Different person')
-    await assertVisible(page.getByText('No subjects found for "Different person"', { exact: true }))
-    assert.equal(await subjectResult.count(), 0)
-    await titleInput.fill(SUBJECT_TITLE)
-    await assertVisible(subjectResult)
-
-    await subjectResult.focus()
-    await subjectResult.press('Enter')
-    await assertStep(page, 'sources')
-
-    await page.goBack()
-    await assertStep(page, 'subject')
-    await titleInput.fill('Different person')
-    await page.goForward()
-    await assertStep(page, 'subject')
-    assert.equal(await titleInput.inputValue(), 'Different person')
-    await assertVisible(page.getByText('No subjects found for "Different person"', { exact: true }))
-
-    await titleInput.fill(SUBJECT_TITLE)
-    await selectSubject(page)
-    await page.goBack()
-    await assertStep(page, 'subject')
-    assert.equal(await titleInput.inputValue(), SUBJECT_TITLE)
-    await page.goForward()
-    await assertStep(page, 'sources')
-
-    const sourcesPageHeading = page.getByRole('heading', {
-      level: 1,
-      name: 'New article',
-      exact: true,
-    })
-    await assertVisible(sourcesPageHeading)
-    assert.equal(
-      await sourcesPageHeading.evaluate((element) => document.activeElement === element),
-      true,
-    )
-    await assertVisible(
-      page.getByRole('heading', {
-        level: 2,
-        name: SUBJECT_TITLE,
-        exact: true,
-      }),
-    )
-    await assertVisible(page.getByRole('button', { name: 'Edit article title', exact: true }))
-    await assertVisible(
-      page.getByRole('heading', {
-        level: 3,
-        name: 'Add sources *',
-        exact: true,
-      }),
-    )
-    await assertVisible(
-      page.getByText('This type of article requires sources before you can continue.', {
-        exact: true,
-      }),
-    )
-    assert.equal(
-      await page.getByText('Paste a link to a source', { exact: true }).count(),
-      0,
-      'The source prompt should be a placeholder, not a visible field label',
-    )
-
-    const sourceInput = page.getByLabel('Paste a link to a source')
-    const addSourceButton = page.getByRole('button', { name: 'Add source', exact: true })
-    const continueButton = page.getByRole('button', { name: 'Continue', exact: true })
-    assert.equal(await continueButton.isDisabled(), true)
-    await assertVisible(
-      page.getByText('Person articles on this wiki require sources.', { exact: true }),
-    )
-
-    await sourceInput.fill('not a valid URL')
-    await addSourceButton.click()
-    await assertVisible(page.getByRole('alert').getByText('Enter a valid URL', { exact: true }))
-    assert.equal(await sourceInput.inputValue(), 'not a valid URL')
-
-    await addSource(page, SOURCE_ONE)
-    assert.equal(await sourceInput.inputValue(), '')
-    assert.equal(await page.getByRole('alert').count(), 0)
-    await assertVisible(page.getByText('1 of 2 sources added.', { exact: true }))
-    await assertVisible(page.getByText('example.com', { exact: true }))
-    const addedSources = page.getByRole('list', { name: 'Added sources', exact: true })
-    await assertVisible(addedSources)
-    await assertVisible(addedSources.getByRole('listitem').filter({ hasText: 'example.com' }))
-    assert.equal(await page.getByText(SOURCE_ONE, { exact: true }).count(), 0)
-    assert.equal(await continueButton.isDisabled(), true)
-
-    await sourceInput.fill('https://EXAMPLE.COM/mission-profile')
-    await addSourceButton.click()
-    await assertVisible(
-      page.getByRole('alert').getByText('This source has already been added', {
-        exact: true,
-      }),
-    )
-    assert.equal(await sourceInput.inputValue(), 'https://EXAMPLE.COM/mission-profile')
-
-    await page.getByRole('button', { name: /Remove.*example\.com/i }).click()
-    await assertVisible(
-      page.getByText('Person articles on this wiki require sources.', { exact: true }),
-    )
-    assert.equal(await continueButton.isDisabled(), true)
-
-    await addSourceButton.click()
-    assert.equal(await sourceInput.inputValue(), '')
-    assert.equal(await page.getByRole('alert').count(), 0)
-    await assertVisible(page.getByText('1 of 2 sources added.', { exact: true }))
-    assert.equal(await continueButton.isDisabled(), true)
-
-    await addSource(page, SOURCE_TWO)
-    await assertVisible(page.getByText('You can add sources while you write.', { exact: true }))
-    await assertVisible(page.getByText('example.org', { exact: true }))
-    assert.equal(await page.getByText(SOURCE_TWO, { exact: true }).count(), 0)
-    assert.equal(await sourceInput.isDisabled(), false)
-    assert.equal(await addSourceButton.isDisabled(), true)
-    assert.equal(await continueButton.isEnabled(), true)
-
-    await continueButton.click()
-    await assertStep(page, 'guidance')
-    const guidancePageHeading = page.getByRole('heading', {
-      level: 1,
-      name: 'New article',
-      exact: true,
-    })
-    await assertVisible(guidancePageHeading)
-    assert.equal(
-      await guidancePageHeading.evaluate((element) => document.activeElement === element),
-      true,
-    )
-    await assertVisible(
-      page.getByRole('heading', {
-        level: 4,
-        name: 'Getting started with this article',
-        exact: true,
-      }),
-    )
-
-    await page.getByRole('button', { name: 'Back', exact: true }).click()
-    await assertStep(page, 'sources')
-    assert.equal(await continueButton.isEnabled(), true)
-    await continueButton.click()
-    await assertStep(page, 'guidance')
-
-    const guidanceCopy = [
-      'Start with who this person is and why they are notable. Use reliable, independent sources that cover the person in depth.',
-      'Write in the third person and keep a neutral tone throughout.',
-      "Don't write about yourself, your family, or your friends.",
-    ]
-    for (const copy of guidanceCopy) {
-      await assertVisible(page.getByText(copy, { exact: true }))
+      })
+      await assertVisible(link)
+      assert.equal(new URL(await link.getAttribute('href'), page.url()).href, setupUrl(journey))
     }
 
-    await page.getByRole('button', { name: 'Start writing', exact: true }).click()
-    await page.waitForURL((url) => url.pathname === appPath('/editor'))
-    await assertVisible(page.locator('.editor-page'))
-
-    const editorUrl = new URL(page.url())
-    assert.deepEqual(
-      {
-        articleguidance: editorUrl.searchParams.get('articleguidance'),
-        lang: editorUrl.searchParams.get('lang'),
-        outline: editorUrl.searchParams.get('outline'),
-        sourceOrigin: editorUrl.searchParams.get('sourceOrigin'),
-        title: editorUrl.searchParams.get('title'),
-        variant: editorUrl.searchParams.get('variant'),
-      },
-      {
-        articleguidance: '1',
-        lang: 'en',
-        outline: 'person',
-        sourceOrigin: 'redlink',
-        title: SUBJECT_TITLE,
-        variant: 'toolbar-outline',
-      },
+    assert.equal(
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+      true,
+      'The mobile article should not overflow horizontally',
     )
-    assert.deepEqual(editorUrl.searchParams.getAll('source'), [SOURCE_ONE, SOURCE_TWO])
+    assert.deepEqual(externalRequests, [])
   } finally {
     await context.close()
   }
 })
 
-test('Article Guidance matches the extension shell and Sources layout at compact and desktop widths', async () => {
-  const context = await browser.newContext({ viewport: { width: 1025, height: 900 } })
+test('every red link completes its pictured setup journey and opens its own outline', async (t) => {
+  for (const [index, journey] of JOURNEYS.entries()) {
+    await t.test(journey.title, async () => {
+      const viewport = index === 0 ? { width: 390, height: 844 } : { width: 1280, height: 900 }
+      const { context, externalRequests } = await newLocalContext(viewport)
+      const page = await context.newPage()
+      page.setDefaultTimeout(7_000)
+      page.setDefaultNavigationTimeout(12_000)
+
+      try {
+        await page.goto(appUrl('/article'))
+        await page
+          .getByRole('link', {
+            name: `${journey.title} — simulated missing article; opens article-creation guidance`,
+            exact: true,
+          })
+          .click()
+        await assertStep(page, journey, 'subject')
+
+        assert.equal(
+          await page.getByLabel('Article title', { exact: true }).inputValue(),
+          journey.title,
+        )
+        const result = page.locator('.subject-result')
+        await assertVisible(result)
+        await assertVisible(result.getByText(journey.title, { exact: true }))
+        await assertVisible(result.getByText(journey.type, { exact: true }))
+        assert.equal(
+          (await result.locator('.subject-result__wikidata').innerText()).trim(),
+          `${journey.relation} · ${journey.qid}`,
+        )
+
+        const thumbnail = result.locator('.cdx-thumbnail__image')
+        await assertVisible(thumbnail)
+        const backgroundImage = await thumbnail.evaluate(
+          (element) => window.getComputedStyle(element).backgroundImage,
+        )
+        const thumbnailUrl = new URL(
+          backgroundImage.match(/^url\(["']?(.*?)["']?\)$/)?.[1],
+          page.url(),
+        )
+        assert.equal(thumbnailUrl.origin, BASE.origin)
+        assert.match(thumbnailUrl.pathname, new RegExp(`/${journey.asset}(?:[-.]|$)`))
+        assert.equal(
+          thumbnailUrl.pathname.startsWith(`${APP_BASE_PATHNAME}/assets/`) ||
+            thumbnailUrl.pathname.startsWith(`${APP_BASE_PATHNAME}/src/preEditor/assets/subjects/`),
+          true,
+          `Expected a bundled thumbnail path, received ${thumbnailUrl.pathname}`,
+        )
+
+        if (index === 0) {
+          await assertVisible(page.locator('.article-guidance-shell__mobile-back'))
+          assert.equal(
+            await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+            true,
+            'The mobile Subject step should not overflow horizontally',
+          )
+        }
+
+        await result.click()
+        await assertStep(page, journey, 'sources')
+        await addSource(page, SOURCE_ONE)
+        await addSource(page, SOURCE_TWO)
+        await page.getByRole('button', { name: 'Continue', exact: true }).click()
+        await assertStep(page, journey, 'guidance')
+        await page.getByRole('button', { name: 'Start writing', exact: true }).click()
+        await page.waitForURL((url) => url.pathname === appPath('/editor'))
+
+        const editorUrl = new URL(page.url())
+        assert.deepEqual(
+          {
+            articleguidance: editorUrl.searchParams.get('articleguidance'),
+            lang: editorUrl.searchParams.get('lang'),
+            outline: editorUrl.searchParams.get('outline'),
+            sourceOrigin: editorUrl.searchParams.get('sourceOrigin'),
+            title: editorUrl.searchParams.get('title'),
+            variant: editorUrl.searchParams.get('variant'),
+          },
+          {
+            articleguidance: '1',
+            lang: 'en',
+            outline: journey.outline,
+            sourceOrigin: 'redlink',
+            title: journey.title,
+            variant: 'toolbar-outline',
+          },
+        )
+        assert.deepEqual(editorUrl.searchParams.getAll('source'), [SOURCE_ONE, SOURCE_TWO])
+        await assertVisible(
+          page.getByRole('region', {
+            name: `${journey.outlineLabel} article outline sections`,
+            exact: true,
+          }),
+        )
+        assert.deepEqual(externalRequests, [])
+      } finally {
+        await context.close()
+      }
+    })
+  }
+})
+
+test('compact setup routes recover illegal stages and a refresh to Subject', async () => {
+  const journey = JOURNEYS.find(({ key }) => key === 'person-neil-armstrong')
+  const { context, externalRequests } = await newLocalContext({ width: 390, height: 844 })
   const page = await context.newPage()
-  page.setDefaultTimeout(5_000)
-  page.setDefaultNavigationTimeout(10_000)
 
   try {
+    await page.goto(setupUrl(journey, 'sources'))
+    await assertStep(page, journey, 'subject')
+    assert.equal(page.url(), setupUrl(journey))
+
+    await page.locator('.subject-result').click()
+    await addSource(page, SOURCE_ONE)
+    await addSource(page, SOURCE_TWO)
+    await page.getByRole('button', { name: 'Continue', exact: true }).click()
+    await assertStep(page, journey, 'guidance')
+    await page.reload()
+    await assertStep(page, journey, 'subject')
+    assert.equal(page.url(), setupUrl(journey))
+
     await page.goto(
       appUrl(
-        '/article-guidance?step=subject&title=Ritu+Karidhal&source=redlink&variant=toolbar-outline',
+        '/article-guidance?step=subject&journey=unknown&title=Unknown&sourceOrigin=redlink&variant=toolbar-outline',
       ),
     )
-
-    const titleInput = page.getByLabel('Article title', { exact: true })
-    await assertVisible(titleInput)
-    assert.equal(
-      await page.getByText('Article title', { exact: true }).count(),
-      0,
-      'The article title prompt should be a placeholder, not a visible field label',
-    )
-    const subjectPresentation = await page.evaluate(() => {
-      const titleInputElement = document.querySelector('#article-title')
-      const resultsHeading = document.querySelector('.article-guidance-stage__subheading')
-      const result = document.querySelector('.subject-result')
-      const titleInputStyle = getComputedStyle(titleInputElement)
-
-      return {
-        inputBorderBottomWidth: titleInputStyle.borderBottomWidth,
-        inputBorderTopWidth: titleInputStyle.borderTopWidth,
-        inputFontFamily: titleInputStyle.fontFamily,
-        inputFontSize: titleInputStyle.fontSize,
-        resultIsCodexCard: result.classList.contains('cdx-card'),
-        resultsHeadingFontSize: getComputedStyle(resultsHeading).fontSize,
-      }
-    })
-    assert.equal(subjectPresentation.inputBorderBottomWidth, '1px')
-    assert.equal(subjectPresentation.inputBorderTopWidth, '0px')
-    assert.match(subjectPresentation.inputFontFamily, /Georgia|Times|Libertine/)
-    assert.equal(subjectPresentation.inputFontSize, '20px')
-    assert.equal(subjectPresentation.resultIsCodexCard, true)
-    assert.equal(subjectPresentation.resultsHeadingFontSize, '20px')
-
-    await selectSubject(page)
-
-    const pageHeading = page.getByRole('heading', {
-      level: 1,
-      name: 'New article',
-      exact: true,
-    })
-    const mobileBack = page.locator('.article-guidance-shell__mobile-back')
-    const tipsAccordion = page.locator('.article-guidance-source-tips__accordion')
-    const tipsPanel = page.locator('.article-guidance-source-tips__panel')
-    const addSourceLabel = page.locator('.source-url-form__add-label')
-
-    await assertVisible(pageHeading)
-    await assertVisible(mobileBack)
-    await assertVisible(tipsAccordion)
-    await assertVisible(tipsAccordion.getByText('Tips for Person articles', { exact: true }))
-    assert.equal(await page.getByText('Tips for person articles', { exact: true }).count(), 0)
-    assert.equal(await tipsPanel.isVisible(), false)
-    assert.equal(await addSourceLabel.isVisible(), false)
-
-    const compactPresentation = await page.evaluate(() => {
-      const shell = document.querySelector('.article-guidance-shell')
-      const header = document.querySelector('.article-guidance-shell__header')
-      const headerInner = document.querySelector('.article-guidance-shell__header-inner')
-      const heading = document.querySelector('.article-guidance-shell__heading')
-      const body = document.querySelector('.article-guidance-shell__body')
-      const content = document.querySelector('.article-guidance-shell__content')
-      const layout = document.querySelector('.article-guidance-sources')
-      const articleTitle = document.querySelector('.article-guidance-subject__title')
-
-      return {
-        articleTitleFontSize: getComputedStyle(articleTitle).fontSize,
-        bodyWidth: body.getBoundingClientRect().width,
-        contentX: content.getBoundingClientRect().x,
-        contentWidth: content.getBoundingClientRect().width,
-        gridColumns: getComputedStyle(layout).gridTemplateColumns,
-        headerHeight: header.getBoundingClientRect().height,
-        headerInnerX: headerInner.getBoundingClientRect().x,
-        headingFontSize: getComputedStyle(heading).fontSize,
-        headingTextAlign: getComputedStyle(heading).textAlign,
-        shellWidth: shell.getBoundingClientRect().width,
-      }
-    })
-    assert.equal(compactPresentation.articleTitleFontSize, '24px')
-    assert.equal(compactPresentation.bodyWidth, 1024)
-    assert.equal(compactPresentation.contentX, 31.25)
-    assert.equal(compactPresentation.contentWidth, 640)
-    assert.equal(compactPresentation.gridColumns, '640px')
-    assert.equal(compactPresentation.headerHeight, 45)
-    assert.equal(compactPresentation.headerInnerX, 0.5)
-    assert.equal(compactPresentation.headingFontSize, '18px')
-    assert.equal(compactPresentation.headingTextAlign, 'center')
-    assert.equal(compactPresentation.shellWidth, 1024)
-
-    await page.setViewportSize({ width: 1280, height: 900 })
-    await assertVisible(tipsPanel)
-    assert.equal(await tipsAccordion.isVisible(), false)
-    assert.equal(await mobileBack.isVisible(), false)
-    await assertVisible(addSourceLabel)
-
-    const sourceInput = page.getByLabel('Paste a link to a source')
-    await sourceInput.focus()
-    const desktopPresentation = await page.evaluate(() => {
-      const shell = document.querySelector('.article-guidance-shell')
-      const heading = document.querySelector('.article-guidance-shell__heading')
-      const body = document.querySelector('.article-guidance-shell__body')
-      const content = document.querySelector('.article-guidance-shell__content')
-      const layout = document.querySelector('.article-guidance-sources')
-      const actions = document.querySelector('.article-guidance-actions--sources')
-      const sourceInputWrapper = document.querySelector('.source-url-form__input')
-      const tipsIcon = document.querySelector(
-        '.article-guidance-source-tips__panel .article-guidance-source-tips__icon',
-      )
-
-      return {
-        actionsJustify: getComputedStyle(actions).justifyContent,
-        bodyWidth: body.getBoundingClientRect().width,
-        contentWidth: content.getBoundingClientRect().width,
-        gridColumns: getComputedStyle(layout).gridTemplateColumns,
-        headingFontFamily: getComputedStyle(heading).fontFamily,
-        headingFontSize: getComputedStyle(heading).fontSize,
-        headingTextAlign: getComputedStyle(heading).textAlign,
-        shellWidth: shell.getBoundingClientRect().width,
-        sourceInputBorderColor: getComputedStyle(sourceInputWrapper).borderColor,
-        tipsIconColor: getComputedStyle(tipsIcon).color,
-      }
-    })
-    assert.equal(desktopPresentation.actionsJustify, 'space-between')
-    assert.equal(desktopPresentation.bodyWidth, 1024)
-    assert.equal(desktopPresentation.contentWidth, 1024)
-    assert.equal(desktopPresentation.gridColumns, '640px 352px')
-    assert.match(desktopPresentation.headingFontFamily, /Georgia|Times|Libertine/)
-    assert.equal(desktopPresentation.headingFontSize, '28px')
-    assert.equal(desktopPresentation.headingTextAlign, 'left')
-    assert.equal(desktopPresentation.shellWidth, 1024)
-    assert.equal(desktopPresentation.sourceInputBorderColor, 'rgb(51, 102, 204)')
-    assert.equal(desktopPresentation.tipsIconColor, 'rgb(32, 33, 34)')
-  } finally {
-    await context.close()
-  }
-})
-
-test('direct, invalid, and refreshed setup routes replace illegal stages with Subject and retain origin queries', async () => {
-  const context = await browser.newContext({ viewport: { width: 390, height: 844 } })
-  const page = await context.newPage()
-  page.setDefaultTimeout(5_000)
-  page.setDefaultNavigationTimeout(10_000)
-  const preservedQuery = 'title=Ritu+Karidhal&source=redlink&variant=toolbar-outline'
-
-  try {
-    await page.goto(appUrl(`/article-guidance?step=sources&${preservedQuery}`))
-    await assertStep(page, 'subject')
-    await assertQueryContract(page, 'subject')
-
-    await page.goto(appUrl(`/article-guidance?step&${preservedQuery}`))
-    await assertStep(page, 'subject')
-    await assertQueryContract(page, 'subject')
-
-    await page.goto(appUrl(`/article-guidance?step=sources&step=guidance&${preservedQuery}`))
-    await assertStep(page, 'subject')
-    await assertQueryContract(page, 'subject')
-
-    await page.goto(appUrl(`/article-guidance?step=guidance&${preservedQuery}`))
-    await assertStep(page, 'subject')
-    await assertQueryContract(page, 'subject')
-
-    await page.getByRole('button', { name: 'Back', exact: true }).click()
     await page.waitForURL((url) => url.pathname === appPath('/article'))
-
-    await page.goto(appUrl(`/article-guidance?step=sources&${preservedQuery}`))
-    await assertStep(page, 'subject')
-    await selectSubject(page)
-
-    await addSource(page, 'https://example.net/one')
-    await addSource(page, 'https://example.edu/two')
-    await page.getByRole('button', { name: 'Continue', exact: true }).click()
-    await assertStep(page, 'guidance')
-    await assertQueryContract(page, 'guidance')
-
-    await page.reload()
-    await assertStep(page, 'subject')
-    await assertQueryContract(page, 'subject')
-    assert.equal(
-      await page.getByLabel('Article title', { exact: true }).inputValue(),
-      SUBJECT_TITLE,
-    )
+    assert.deepEqual(externalRequests, [])
   } finally {
     await context.close()
   }
