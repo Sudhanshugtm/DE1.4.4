@@ -93,7 +93,7 @@ function createSectionDeleteDecorations(doc) {
         offset + node.nodeSize - 1,
         (view) => createDeleteButton(view, key, headingText),
         {
-          key: `section-delete-control:${key}`,
+          key: `section-delete-control:${key}:${headingText}`,
           ignoreSelection: true,
           stopEvent: (event) => event.target.closest?.('.section-delete-control') !== null,
         },

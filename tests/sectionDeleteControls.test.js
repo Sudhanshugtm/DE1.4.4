@@ -179,6 +179,31 @@ describe('section delete controls', () => {
     expect(control.querySelector('svg')?.getAttribute('viewBox')).toBe('0 0 20 20')
   })
 
+  it('updates the accessible label when the editable heading text changes', () => {
+    const editor = createEditor(`
+      <h2 data-outline-item-key="city:history">History</h2>
+      <p>History text</p>
+    `)
+    const headingOffset = 0
+    const heading = editor.state.doc.child(0)
+
+    expect(
+      editor.view.dom.querySelector('.section-delete-control')?.getAttribute('aria-label'),
+    ).toBe('Delete History section')
+
+    editor.commands.insertContentAt(
+      {
+        from: headingOffset + 1,
+        to: headingOffset + 1 + heading.content.size,
+      },
+      'New History',
+    )
+
+    const controls = editor.view.dom.querySelectorAll('.section-delete-control')
+    expect(controls).toHaveLength(1)
+    expect(controls[0].getAttribute('aria-label')).toBe('Delete New History section')
+  })
+
   it('keeps the widget out of serialized content and preserves the keyed attribute', () => {
     const editor = createEditor(`
       <h2 data-outline-item-key="city:history">History</h2>
