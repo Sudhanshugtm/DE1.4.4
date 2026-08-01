@@ -96,6 +96,7 @@ import OutlinePopover from '@/components/OutlinePopover.vue'
 import SourceContextSheet from '@/components/SourceContextSheet.vue'
 import EditCheckRail from '@/components/EditCheckRail.vue'
 import { findIncompleteSentences, findScaffoldFields } from '@/utils/scaffoldFields'
+import { findReferencesList } from '@/extensions/referencesList'
 import { useEditorSettings } from '@/composables/useEditorSettings'
 import { useEditorInstance } from '@/composables/useEditorInstance'
 import { useCursorRect } from '@/composables/useCursorRect'
@@ -334,6 +335,7 @@ async function onOutlineSelected(outlineId) {
   pendingChecks.value = []
   activeCheckIndex.value = 0
   hasAuthoredText.value = false
+  nextCitationNumber.value = 1
   initialView.value = 'outline'
   settingsDialogOpen.value = false
   isPopoverOpen.value = true
@@ -412,7 +414,7 @@ function onAddCitationFromSource() {
 
 // A created citation replaces the Source prompt that asked for it, the way
 // Citoid replaces a citation-needed template rather than sitting beside it.
-function onCitationCreated() {
+function onCitationCreated({ url }) {
   const editor = getEditor()
   const range = pendingSourceRange.value
   pendingSourceRange.value = null
@@ -425,6 +427,47 @@ function onCitationCreated() {
     .run()
 
   nextCitationNumber.value += 1
+  appendReference(url)
+}
+
+// References exists because citations exist: the first one brings the section
+// (always last), and every citation writes its entry under it.
+function appendReference(url) {
+  const editor = getEditor()
+  if (!editor) return
+
+  let listPosition = findReferencesList(editor.state.doc)
+
+  if (listPosition === null) {
+    // Inserted as nodes rather than HTML: an empty ol would otherwise be
+    // claimed by the ordinary list schema and dropped.
+    editor
+      .chain()
+      .insertContentAt(editor.state.doc.content.size, [
+        {
+          type: 'heading',
+          attrs: { level: 2, outlineItemKey: `${activeOutlineId.value}:references` },
+          content: [{ type: 'text', text: 'References' }],
+        },
+        { type: 'referencesList', attrs: { entries: [] } },
+      ])
+      .command(({ tr }) => {
+        // The section arrives as a consequence of citing, not as writing.
+        tr.setMeta('outlineInsertion', true)
+        return true
+      })
+      .run()
+    listPosition = findReferencesList(editor.state.doc)
+  }
+
+  if (listPosition === null) return
+
+  const node = editor.state.doc.nodeAt(listPosition)
+  const transaction = editor.state.tr.setNodeMarkup(listPosition, undefined, {
+    entries: [...node.attrs.entries, { url }],
+  })
+  transaction.setMeta('outlineInsertion', true)
+  editor.view.dispatch(transaction)
 }
 
 function onOpenCiteDiscover() {

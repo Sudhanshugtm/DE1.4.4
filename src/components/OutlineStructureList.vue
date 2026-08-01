@@ -12,7 +12,7 @@
         }"
         separation="none"
         :model-value="accordionStates[item.key]"
-        :action-icon="isAdded(item) ? cdxIconCheck : cdxIconAdd"
+        :action-icon="actionIconFor(item)"
         :action-always-visible="true"
         :action-button-label="isAdded(item) ? `${item.title} added` : `Add ${item.title}`"
         @update:model-value="(value) => onAccordionUpdate(item, value)"
@@ -85,7 +85,11 @@ const outlineItems = computed(() => {
     key: `${props.outline.id}:${section.id}`,
     isLead: false,
     required: Boolean(section.required),
-    description: getOutlineItemDescription(section, props.outline),
+    // References is not added by hand: citations create it. The row stays so
+    // the outline still says articles end with references.
+    description: isReferencesSection(section)
+      ? 'Appears with your first citation.'
+      : getOutlineItemDescription(section, props.outline),
     previewHtml: isReferencesSection(section) ? '' : outlineWikitextToHtml(section.content || ''),
   }))
 
@@ -106,6 +110,13 @@ function isAdded(item) {
   return addedItems.value.has(item.key)
 }
 
+// References carries no Add: it arrives with the first citation, and shows
+// the check once it has.
+function actionIconFor(item) {
+  if (isAdded(item)) return cdxIconCheck
+  return isReferencesSection(item) ? '' : cdxIconAdd
+}
+
 function isItemEmpty(item) {
   return !item.previewHtml
 }
@@ -116,7 +127,7 @@ function onAccordionUpdate(item, value) {
 }
 
 function onAdd(item) {
-  if (isAdded(item)) return
+  if (isAdded(item) || isReferencesSection(item)) return
 
   const editor = getEditor()
   if (!editor) return
@@ -127,22 +138,7 @@ function onAdd(item) {
   const inserted = insertOutlineContent(editor, content)
   if (!inserted) return
 
-  const added = new Set([...addedItems.value, item.key])
-
-  // Every article ends with its references, so the section comes along with
-  // the first one added rather than being remembered later.
-  const references = outlineItems.value.find((candidate) => isReferencesSection(candidate))
-  if (references && !added.has(references.key) && !isReferencesSection(item)) {
-    const referencesContent = outlineItemToEditorHtml(references, { isLead: false })
-    if (
-      referencesContent &&
-      insertOutlineContent(editor, referencesContent, { keepAboveReferences: false })
-    ) {
-      added.add(references.key)
-    }
-  }
-
-  addedItems.value = added
+  addedItems.value = new Set([...addedItems.value, item.key])
   emit('content-inserted')
 }
 </script>
@@ -230,5 +226,4 @@ function onAdd(item) {
   line-height: 0;
   vertical-align: super;
 }
-
 </style>

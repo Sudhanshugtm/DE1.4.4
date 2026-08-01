@@ -81,6 +81,7 @@ import SectionHeading from '../extensions/sectionHeading'
 import { SourceSuperscript } from '../extensions/sourceSuperscript'
 import { ScaffoldFieldHighlight } from '../extensions/scaffoldFieldHighlight'
 import { FieldBinding } from '../extensions/fieldBinding'
+import { ReferencesList } from '../extensions/referencesList'
 import { findScaffoldFields } from '../utils/scaffoldFields'
 import { TextSelection } from '@tiptap/pm/state'
 import { closeHistory } from '@tiptap/pm/history'
@@ -163,6 +164,7 @@ const editor = useEditor({
     ScaffoldFieldHighlight,
     FieldBinding,
     PlaceholderChip,
+    ReferencesList,
   ],
   editorProps: {
     handleDOMEvents: {
@@ -754,6 +756,25 @@ defineExpose({ editor })
   font-size: var(--font-size-x-small);
   line-height: 0;
   vertical-align: super;
+}
+
+/* The list citations write under References. Smaller than the article body,
+   the way a reflist renders, and never a place to type. */
+.text-editor :deep(.ProseMirror ol.references-list) {
+  margin: var(--spacing-50) 0 0;
+  padding-inline-start: var(--spacing-150);
+  font-family: var(--font-family-system-sans);
+  font-size: var(--font-size-small);
+  line-height: var(--line-height-small);
+}
+
+.text-editor :deep(.ProseMirror ol.references-list li) {
+  margin-bottom: var(--spacing-35);
+}
+
+.text-editor :deep(.ProseMirror .references-list__source) {
+  color: var(--color-progressive);
+  overflow-wrap: anywhere;
 }
 
 /* Fields carry no fill of their own: the brackets already say they are

@@ -97,15 +97,16 @@ watch(open, (isOpen) => {
 })
 
 function onCreate() {
-  if (!searchQuery.value.trim()) return
+  const url = searchQuery.value.trim()
+  if (!url) return
   searchQuery.value = ''
   open.value = false
-  emit('citation-created')
+  emit('citation-created', { url })
 }
 
-function onReuseSource() {
+function onReuseSource(source) {
   open.value = false
-  emit('citation-created')
+  emit('citation-created', { url: source.url })
 }
 </script>
 
