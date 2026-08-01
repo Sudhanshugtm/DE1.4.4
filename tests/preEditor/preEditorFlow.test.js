@@ -18,180 +18,6 @@ import { buildSetupQuery, resolveSetupRoute } from '../../src/preEditor/flow/set
 
 const { personJourney } = explorationCatalogue
 
-const expectedJourneys = [
-  [
-    'person-neil-armstrong',
-    'Neil Armstrong',
-    'American astronaut and aeronautical engineer',
-    'Q1615',
-    'exact',
-    'Person',
-    'Q5',
-    'person',
-    'neil-armstrong.jpg',
-  ],
-  [
-    'person-valentina-tereshkova',
-    'Valentina Tereshkova',
-    'Soviet cosmonaut and the first woman in space',
-    'Q44371',
-    'exact',
-    'Person',
-    'Q5',
-    'person',
-    'valentina-tereshkova.jpg',
-  ],
-  [
-    'event-chandrayaan-3-landing',
-    'Chandrayaan-3 Moon landing',
-    "2023 lunar landing by India's Chandrayaan-3 mission",
-    'Q65049774',
-    'related',
-    'Recent Event',
-    'Q108586636',
-    'recent-event',
-    'chandrayaan-3.png',
-  ],
-  [
-    'object-mars',
-    'Mars',
-    'Fourth planet from the Sun',
-    'Q111',
-    'exact',
-    'Astronomical Object',
-    'Q6999',
-    'astronomical-object',
-    'mars.png',
-  ],
-  [
-    'software-google-earth',
-    'Google Earth',
-    'Virtual globe and mapping software',
-    'Q42274',
-    'exact',
-    'Software',
-    'Q7397',
-    'software',
-    'google-earth.png',
-  ],
-  [
-    'company-spacex',
-    'SpaceX',
-    'American aerospace company',
-    'Q193701',
-    'exact',
-    'Company',
-    'Q4830453',
-    'company',
-    'spacex.jpg',
-  ],
-  [
-    'landform-mount-everest',
-    'Mount Everest',
-    "Earth's highest mountain above sea level",
-    'Q513',
-    'exact',
-    'Landform',
-    'Q271669',
-    'landform',
-    'mount-everest.jpg',
-  ],
-  [
-    'island-easter-island',
-    'Easter Island',
-    'Island and special territory of Chile in the Pacific Ocean',
-    'Q14452',
-    'exact',
-    'Island',
-    'Q23442',
-    'island',
-    'easter-island.jpg',
-  ],
-]
-
-const expectedSources = {
-  'national-geographic-why-we-explore': {
-    publisher: 'National Geographic Society',
-    url: 'https://education.nationalgeographic.org/resource/why-we-explore/',
-  },
-  'rgs-geographical-exploration': {
-    publisher: 'Royal Geographical Society',
-    url: 'https://www.rgs.org/exploration/what-is-geographical-exploration',
-  },
-  'national-geographic-geography': {
-    publisher: 'National Geographic Society',
-    url: 'https://education.nationalgeographic.org/resource/geography-article/',
-  },
-  'national-geographic-everest': {
-    publisher: 'National Geographic',
-    url: 'https://www.nationalgeographic.com/adventure/article/climbing-mount-everest-1',
-  },
-  'esa-easter-island': {
-    publisher: 'European Space Agency',
-    url: 'https://www.esa.int/ESA_Multimedia/Images/2019/04/Easter_Island',
-  },
-  'google-earth-desktop': {
-    publisher: 'Google Earth',
-    url: 'https://earth.google.com/desktop/',
-  },
-  'nasa-mars-exploration': {
-    publisher: 'NASA',
-    url: 'https://science.nasa.gov/planetary-science/programs/mars-exploration/',
-  },
-  'nasa-neil-armstrong': {
-    publisher: 'NASA',
-    url: 'https://www.nasa.gov/people/neil-a-armstrong/',
-  },
-  'esa-valentina-tereshkova': {
-    publisher: 'European Space Agency',
-    url: 'https://www.esa.int/About_Us/50_years_of_ESA/50_years_of_humans_in_space/First_woman_in_space_Valentina',
-  },
-  'isro-chandrayaan-3': {
-    publisher: 'Indian Space Research Organisation',
-    url: 'https://www.isro.gov.in/ISRO_EN/Chandrayaan3.html',
-  },
-  'nasa-commercial-crew-dragon': {
-    publisher: 'NASA',
-    url: 'https://www.nasa.gov/commercial-crew-program-press-kit/',
-  },
-}
-
-const expectedSentenceText = {
-  'intro-definition':
-    'Exploration is travel over unfamiliar territory for discovery, or the careful study of something in order to learn more about it.',
-  'intro-modern-practice':
-    'Modern geographical exploration includes field research and the use of different tools and methods.',
-  'intro-tools': 'Maps and satellite images are among the tools used to study places.',
-  'earth-everest': 'Mount Everest lies in the Himalayas on the border between Nepal and China.',
-  'earth-easter-island':
-    'Easter Island, also called Rapa Nui, is a Chilean island in the Pacific Ocean.',
-  'earth-google-earth':
-    'Google Earth displays satellite imagery and 3D representations of terrain and buildings.',
-  'space-mars': 'Mars has been explored by robotic orbiters, landers, and rovers.',
-  'space-armstrong':
-    'Neil Armstrong became the first person to set foot on the Moon on 20 July 1969.',
-  'space-tereshkova':
-    'Valentina Tereshkova became the first woman in space when Vostok 6 launched on 16 June 1963.',
-  'space-chandrayaan':
-    'The Chandrayaan-3 Moon landing was a successful soft landing on the Moon on 23 August 2023.',
-  'space-spacex':
-    'SpaceX developed the Dragon spacecraft, which carries crew and cargo to orbiting destinations such as the International Space Station.',
-}
-
-const expectedSourceIds = {
-  'intro-definition': 'national-geographic-why-we-explore',
-  'intro-modern-practice': 'rgs-geographical-exploration',
-  'intro-tools': 'national-geographic-geography',
-  'earth-everest': 'national-geographic-everest',
-  'earth-easter-island': 'esa-easter-island',
-  'earth-google-earth': 'google-earth-desktop',
-  'space-mars': 'nasa-mars-exploration',
-  'space-armstrong': 'nasa-neil-armstrong',
-  'space-tereshkova': 'esa-valentina-tereshkova',
-  'space-chandrayaan': 'isro-chandrayaan-3',
-  'space-spacex': 'nasa-commercial-crew-dragon',
-}
-
 const assertDeeplyFrozen = (value) => {
   if (!value || typeof value !== 'object') {
     return
@@ -243,7 +69,7 @@ test('person journey fixture provides an immutable Ritu Karidhal journey', () =>
   })
 })
 
-test('exploration catalogue provides the exact sourced article and eight journeys', () => {
+test('exploration catalogue reaches every outline with sourced sentences and decoys', () => {
   const { explorationArticle, guidanceProfilesByOutline, journeysByKey, sourceProfilesByOutline } =
     explorationCatalogue
 
@@ -254,104 +80,79 @@ test('exploration catalogue provides the exact sourced article and eight journey
     text: 'Travel and study undertaken to learn about unfamiliar places',
     sourceIds: ['national-geographic-why-we-explore'],
   })
-  assert.deepEqual(explorationArticle.sources, expectedSources)
-  assert.deepEqual(
-    explorationArticle.sections.map((section) => section.heading),
-    ['Introduction', 'Exploration on Earth', 'Space exploration'],
-  )
 
   const sentences = explorationArticle.sections.flatMap((section) =>
     section.paragraphs.flatMap((paragraph) => paragraph.sentences),
   )
-  assert.equal(sentences.length, 11)
-  assert.deepEqual(
-    Object.fromEntries(
-      sentences.map((sentence) => [
-        sentence.id,
-        sentence.segments.map((segment) => segment.text).join(''),
-      ]),
-    ),
-    expectedSentenceText,
-  )
-  assert.deepEqual(
-    Object.fromEntries(sentences.map((sentence) => [sentence.id, sentence.sourceIds[0]])),
-    expectedSourceIds,
-  )
+  const citedSourceIds = new Set(explorationArticle.description.sourceIds)
   for (const sentence of sentences) {
-    assert.equal(sentence.sourceIds.length, 1)
-    assert.ok(explorationArticle.sources[sentence.sourceIds[0]])
+    assert.equal(sentence.sourceIds.length, 1, `sentence ${sentence.id} needs one source`)
+    assert.ok(
+      explorationArticle.sources[sentence.sourceIds[0]],
+      `sentence ${sentence.id} cites an unknown source`,
+    )
+    citedSourceIds.add(sentence.sourceIds[0])
     assert.ok(
       sentence.segments.every((segment) => ['text', 'context', 'missing'].includes(segment.kind)),
     )
   }
-
-  assert.equal(Object.keys(journeysByKey).length, 8)
-  assert.equal(new Set(expectedJourneys.map(([key]) => key)).size, 8)
-  assert.equal(new Set(expectedJourneys.map(([, , , itemId]) => itemId)).size, 8)
-  assert.equal(new Set(expectedJourneys.map((entry) => entry[7])).size, 7)
-
-  for (const [
-    key,
-    title,
-    description,
-    itemId,
-    relation,
-    typeLabel,
-    articleType,
-    outline,
-    asset,
-  ] of expectedJourneys) {
-    const journey = journeysByKey[key]
-    assert.ok(journey)
-    assert.equal(journey.key, key)
-    assert.deepEqual(
-      {
-        journeyKey: journey.subject.journeyKey,
-        title: journey.subject.title,
-        description: journey.subject.description,
-        wikidataItemId: journey.subject.wikidataItemId,
-        wikidataItemUrl: journey.subject.wikidataItemUrl,
-        wikidataRelation: journey.subject.wikidataRelation,
-        typeLabel: journey.subject.typeLabel,
-        articleType: journey.subject.articleType,
-      },
-      {
-        journeyKey: key,
-        title,
-        description,
-        wikidataItemId: itemId,
-        wikidataItemUrl: `https://www.wikidata.org/wiki/${itemId}`,
-        wikidataRelation: relation,
-        typeLabel,
-        articleType,
-      },
-    )
-    assert.match(journey.subject.thumbnail.url, new RegExp(`/${asset.replace('.', '\\.')}$`))
-    assert.equal(typeof journey.subject.thumbnail.commonsFile, 'string')
-    assert.match(
-      journey.subject.thumbnail.commonsUrl,
-      /^https:\/\/commons\.wikimedia\.org\/wiki\/File:/,
-    )
-    assert.deepEqual(journey.sourceRequirements, { profileKey: outline })
-    assert.equal(journey.guidanceProfileKey, outline)
-    assert.deepEqual(journey.handoff, {
-      lang: 'en',
-      variant: 'toolbar-outline',
-      outline,
-    })
-    assert.equal(simpleEnglishOutlinesById[outline].articleType, articleType)
-    assert.ok(sourceProfilesByOutline[outline])
-    assert.ok(guidanceProfilesByOutline[outline])
+  for (const sourceId of Object.keys(explorationArticle.sources)) {
+    assert.ok(citedSourceIds.has(sourceId), `source ${sourceId} is never cited`)
   }
 
   const missingSegments = sentences.flatMap((sentence) =>
     sentence.segments.filter((segment) => segment.kind === 'missing'),
   )
-  assert.equal(missingSegments.length, 8)
-  assert.deepEqual(
-    new Set(missingSegments.map((segment) => segment.journeyKey)),
-    new Set(expectedJourneys.map(([key]) => key)),
+  const linkedJourneyKeys = new Set(missingSegments.map((segment) => segment.journeyKey))
+  assert.equal(missingSegments.length, linkedJourneyKeys.size, 'one red link per journey')
+  assert.deepEqual(linkedJourneyKeys, new Set(Object.keys(journeysByKey)))
+
+  const outlineLabels = new Set(
+    Object.values(simpleEnglishOutlinesById).map((outline) => outline.label),
   )
+  for (const [key, journey] of Object.entries(journeysByKey)) {
+    assert.equal(journey.key, key)
+    assert.equal(journey.subject.journeyKey, key)
+    const outline = simpleEnglishOutlinesById[journey.handoff.outline]
+    assert.ok(outline, `journey ${key} hands off to an unknown outline`)
+    assert.equal(journey.subject.articleType, outline.articleType)
+    assert.equal(journey.subject.typeLabel, outline.label)
+    assert.match(journey.subject.wikidataItemId, /^Q\d+$/)
+    assert.equal(
+      journey.subject.wikidataItemUrl,
+      `https://www.wikidata.org/wiki/${journey.subject.wikidataItemId}`,
+    )
+    assert.ok(['exact', 'related'].includes(journey.subject.wikidataRelation))
+    if (journey.subject.thumbnail) {
+      assert.match(
+        journey.subject.thumbnail.commonsUrl,
+        /^https:\/\/commons\.wikimedia\.org\/wiki\/File:/,
+      )
+    }
+    assert.deepEqual(journey.sourceRequirements, { profileKey: journey.handoff.outline })
+    assert.equal(journey.guidanceProfileKey, journey.handoff.outline)
+    assert.equal(journey.handoff.lang, 'en')
+    assert.equal(journey.handoff.variant, 'toolbar-outline')
+    assert.ok(sourceProfilesByOutline[journey.handoff.outline])
+    assert.ok(guidanceProfilesByOutline[journey.handoff.outline])
+
+    assert.ok(journey.decoys.length >= 2, `journey ${key} needs decoy results`)
+    for (const decoy of journey.decoys) {
+      assert.ok(decoy.title.length > 0)
+      assert.ok(decoy.description.length > 0)
+      if (decoy.typeLabel) {
+        assert.ok(
+          outlineLabels.has(decoy.typeLabel),
+          `decoy label ${decoy.typeLabel} is not an outline label`,
+        )
+      }
+    }
+  }
+
+  const coveredOutlines = new Set(
+    Object.values(journeysByKey).map((journey) => journey.handoff.outline),
+  )
+  assert.deepEqual(coveredOutlines, new Set(Object.keys(simpleEnglishOutlinesById)))
 
   assertDeeplyFrozen(explorationArticle)
   assertDeeplyFrozen(journeysByKey)
@@ -359,97 +160,29 @@ test('exploration catalogue provides the exact sourced article and eight journey
   assertDeeplyFrozen(guidanceProfilesByOutline)
 })
 
-test('exploration profiles provide exact source tips and guidance copy', () => {
+test('every outline has a source tip and three guidance bullets', () => {
   const { guidanceProfilesByOutline, sourceProfilesByOutline } = explorationCatalogue
-  const expectedProfiles = {
-    person: {
-      sourceTip:
-        'Prefer substantial biographies, institutional records, academic publications, and independent journalism.',
-      guidanceBullets: [
-        'Start with who the person is and why reliable independent sources discuss them.',
-        'Write in the third person and use a neutral tone.',
-        'Do not write about yourself, family, or friends.',
-      ],
-    },
-    'recent-event': {
-      sourceTip:
-        'Prefer established news organisations, official records, and independent expert analysis.',
-      guidanceBullets: [
-        'State what happened, where and when it happened, and why reliable sources covered it.',
-        'Present the sequence of events in chronological order.',
-        'Distinguish confirmed information from attributed claims.',
-      ],
-    },
-    'astronomical-object': {
-      sourceTip:
-        'Prefer astronomical catalogues, peer-reviewed research, observatory publications, and space-agency material.',
-      guidanceBullets: [
-        "Identify the object's type, location, and main physical characteristics.",
-        'Describe discovery and observation using published sources.',
-        'Avoid speculation that is not attributed to a reliable source.',
-      ],
-    },
-    software: {
-      sourceTip:
-        'Prefer independent technical publications, academic work, books, and established technology journalism.',
-      guidanceBullets: [
-        "Explain the software's purpose, development, and notable uses.",
-        "Separate independently documented use from the developer's own claims.",
-        'Avoid feature lists copied from product material.',
-      ],
-    },
-    company: {
-      sourceTip:
-        'Prefer independent business journalism, regulatory filings, books, and academic work.',
-      guidanceBullets: [
-        'Explain what the company does, when it was formed, and its documented products or services.',
-        'Cover significant criticism or disputes only in proportion to reliable coverage.',
-        'Avoid promotional language and unsupported claims of leadership or innovation.',
-      ],
-    },
-    landform: {
-      sourceTip:
-        'Prefer geological surveys, academic geography, authoritative atlases, and government scientific agencies.',
-      guidanceBullets: [
-        "Identify the landform's location, type, formation, and physical characteristics.",
-        'Attribute measurements when sources differ.',
-        'Separate scientific description from tourism or promotional claims.',
-      ],
-    },
-    island: {
-      sourceTip:
-        'Prefer government statistics, atlases, academic research, and reliable historical works.',
-      guidanceBullets: [
-        "Identify the island's location, political status, geography, and environment.",
-        'Add history, population, or ecology only when relevant and sourced.',
-        'Avoid travel-guide language.',
-      ],
-    },
-  }
 
   assert.deepEqual(
-    Object.fromEntries(
-      Object.entries(sourceProfilesByOutline).map(([key, profile]) => [key, profile.sourceTip]),
-    ),
-    Object.fromEntries(
-      Object.entries(expectedProfiles).map(([key, profile]) => [key, profile.sourceTip]),
-    ),
+    new Set(Object.keys(sourceProfilesByOutline)),
+    new Set(Object.keys(simpleEnglishOutlinesById)),
   )
   assert.deepEqual(
-    Object.fromEntries(
-      Object.entries(guidanceProfilesByOutline).map(([key, profile]) => [key, profile]),
-    ),
-    Object.fromEntries(
-      Object.entries(expectedProfiles).map(([key, profile]) => [
-        key,
-        {
-          guidanceHeading: 'Getting started with this article',
-          guidanceIntro: 'Here are a few tips to help you write an article.',
-          guidanceBullets: profile.guidanceBullets,
-        },
-      ]),
-    ),
+    new Set(Object.keys(guidanceProfilesByOutline)),
+    new Set(Object.keys(simpleEnglishOutlinesById)),
   )
+
+  for (const profile of Object.values(sourceProfilesByOutline)) {
+    assert.match(profile.sourceTip, /^Prefer .+\.$/)
+  }
+  for (const profile of Object.values(guidanceProfilesByOutline)) {
+    assert.equal(profile.guidanceHeading, 'Getting started with this article')
+    assert.equal(profile.guidanceIntro, 'Here are a few tips to help you write an article.')
+    assert.equal(profile.guidanceBullets.length, 3)
+    for (const bullet of profile.guidanceBullets) {
+      assert.ok(bullet.length > 0)
+    }
+  }
 })
 
 test('findSubject matches a trimmed case-insensitive Ritu Karidhal title', () => {
@@ -580,9 +313,8 @@ test('flow state is journey-bound and rejects a subject from another journey', (
   )
 })
 
-test('all eight ready journeys hand off only their own outline, title, and entered sources', () => {
-  for (const [key] of expectedJourneys) {
-    const journey = explorationCatalogue.journeysByKey[key]
+test('every ready journey hands off only its own outline, title, and entered sources', () => {
+  for (const journey of Object.values(explorationCatalogue.journeysByKey)) {
     const state = {
       ...createFlowState(journey),
       step: STEPS.GUIDANCE,

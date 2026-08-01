@@ -34,50 +34,52 @@
           Back
         </CdxButton>
 
-        <template v-if="subjectResult">
+        <!-- The list mirrors Special:NewArticle results: the subject plus the
+             other things Wikidata would return for the same words. Only the
+             subject continues; the rest are context, like the article's blue
+             links. -->
+        <div v-if="subjectResult" class="subject-results__list">
           <CdxCard
+            v-for="result in searchResults"
+            :key="`${result.title}-${result.description}`"
             class="subject-result"
-            role="button"
-            tabindex="0"
-            :thumbnail="{ url: subjectResult.thumbnail.url }"
-            :aria-label="`${subjectResult.title} · ${subjectResult.typeLabel} ${subjectResult.description}`"
-            @click="selectSubject"
-            @keydown.enter.prevent="selectSubject"
-            @keydown.space.prevent="selectSubject"
+            :class="{ 'subject-result--interactive': result.interactive }"
+            :role="result.interactive ? 'button' : undefined"
+            :tabindex="result.interactive ? 0 : undefined"
+            :thumbnail="result.thumbnail?.url ? { url: result.thumbnail.url } : {}"
+            :aria-label="
+              result.interactive
+                ? `${result.title} · ${result.typeLabel} ${result.description}`
+                : undefined
+            "
+            @click="result.interactive && selectSubject()"
+            @keydown.enter.prevent="result.interactive && selectSubject()"
+            @keydown.space.prevent="result.interactive && selectSubject()"
           >
             <template #title>
               <span class="subject-result__title">
-                <strong>{{ subjectResult.title }}</strong>
-                <span class="subject-result__separator">·</span>
-                <span class="subject-result__type">{{ subjectResult.typeLabel }}</span>
+                <strong>{{ result.title }}</strong>
+                <template v-if="result.typeLabel">
+                  <span class="subject-result__separator">·</span>
+                  <span class="subject-result__type">{{ result.typeLabel }}</span>
+                </template>
               </span>
             </template>
             <template #description>
-              <span class="subject-result__description">{{ subjectResult.description }}</span>
+              <span class="subject-result__description">{{ result.description }}</span>
             </template>
           </CdxCard>
-
-          <CdxCard
-            v-for="suggestion in subjectSuggestions"
-            :key="suggestion.title"
-            class="subject-result-dummy"
-            :thumbnail="{ url: subjectResult.thumbnail.url }"
-          >
-            <template #title>
-              <span class="subject-result__title">
-                <strong>{{ suggestion.title }}</strong>
-                <span class="subject-result__separator">·</span>
-                <span class="subject-result__type">{{ suggestion.typeLabel }}</span>
-              </span>
-            </template>
-            <template #description>
-              <span class="subject-result__description">{{ suggestion.description }}</span>
-            </template>
-          </CdxCard>
-        </template>
+        </div>
 
         <p v-else-if="showNoResults" class="subject-results__empty" role="status">
           No subjects found for "{{ flowState.titleInput }}"
+        </p>
+
+        <p v-if="subjectResult" class="subject-results__browse">
+          None of these?
+          <CdxButton weight="quiet" action="progressive" class="subject-results__browse-link">
+            Pick a type instead
+          </CdxButton>
         </p>
       </section>
     </section>
@@ -215,22 +217,15 @@ const shellRef = ref(null)
 const currentStep = computed(() => flowState.value.step)
 const currentHeading = computed(() => 'New article')
 const subjectResult = computed(() => findSubject(activeJourney.value, flowState.value.titleInput))
-const subjectSuggestions = computed(() =>
-  activeJourney.value.key === 'software-google-earth' && subjectResult.value
-    ? [
-        {
-          title: 'Google Earth Engine',
-          typeLabel: 'Software',
-          description: 'Cloud platform for planetary-scale geospatial analysis',
-        },
-        {
-          title: 'Google Earth VR',
-          typeLabel: 'Software',
-          description: 'Virtual reality application for exploring satellite imagery and 3D terrain',
-        },
-      ]
-    : [],
-)
+// The subject leads the list, the way the best outline match ranks first in
+// Special:NewArticle; the journey's decoys fill out the rest.
+const searchResults = computed(() => {
+  if (!subjectResult.value) return []
+  return [
+    { ...subjectResult.value, interactive: true },
+    ...(activeJourney.value.decoys ?? []).map((decoy) => ({ ...decoy, interactive: false })),
+  ]
+})
 const activeGuidance = computed(
   () => guidanceProfilesByOutline[activeJourney.value.guidanceProfileKey],
 )
@@ -439,28 +434,42 @@ watch(
   line-height: var(--line-height-x-large);
 }
 
-.subject-result.cdx-card,
-.subject-result-dummy.cdx-card {
+.subject-results__list {
+  display: grid;
+  gap: var(--spacing-75, 12px);
+}
+
+.subject-result.cdx-card {
   width: 100%;
 }
 
 .subject-result.cdx-card {
   transition: background-color var(--transition-duration-medium);
+}
+
+/* Only the card that continues the flow behaves like a control; the other
+   results sit inert, the way ArticleCard gates all affordances behind its
+   `interactive` prop. */
+.subject-result--interactive.cdx-card {
   cursor: var(--cursor-base--hover);
 }
 
-.subject-result:hover {
+.subject-result--interactive:hover {
   background-color: var(--background-color-interactive-subtle);
 }
 
-.subject-result:active {
+.subject-result--interactive:active {
   background-color: var(--background-color-interactive);
 }
 
-.subject-result:focus-visible {
+.subject-result--interactive:focus-visible {
   outline: var(--border-width-thick) var(--border-style-base)
     var(--outline-color-progressive--focus);
   outline-offset: var(--spacing-25);
+}
+
+.subject-result :deep(.cdx-thumbnail__placeholder .cdx-icon) {
+  opacity: 0.3;
 }
 
 .subject-result__title {
@@ -487,6 +496,23 @@ watch(
 .subject-result__description,
 .subject-results__empty {
   color: var(--color-subtle);
+}
+
+/* "None of these?" browse line, as under the Special:NewArticle results. The
+   type browser itself is outside this prototype's journeys. */
+.subject-results__browse {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-25);
+  margin: var(--spacing-100) 0 0;
+  color: var(--color-base);
+}
+
+.subject-results__browse-link.cdx-button {
+  padding: 0;
+  min-height: auto;
+  font-size: inherit;
+  font-weight: var(--font-weight-normal);
 }
 
 .article-guidance-sources {
