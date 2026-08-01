@@ -116,14 +116,65 @@ export function findScaffoldFields(doc) {
   doc.descendants((node, nodePosition) => {
     if (!node.isText || !node.text) return true
 
+    const bindingMark = node.marks.find((mark) => mark.type.name === 'scaffoldBinding')
+
     for (const match of node.text.matchAll(FIELD_PATTERN)) {
+      // A linked answer may legitimately contain brackets. It remains an
+      // answer unless it is still the mark's exact original prompt.
+      if (bindingMark && bindingMark.attrs.placeholder !== match[0]) continue
+
       fields.push({
         label: match[0],
         kind: classifyField(match[0]),
+        bindingKey: bindingMark?.attrs.binding ?? null,
         from: nodePosition + match.index,
         to: nodePosition + match.index + match[0].length,
       })
     }
+
+    return true
+  })
+
+  return fields
+}
+
+/**
+ * Every contiguous range carrying document-resident scaffold identity.
+ *
+ * @param {Object} doc ProseMirror document
+ * @return {{ key: string, placeholder: string, text: string, from: number, to: number, marks: Object[] }[]}
+ */
+export function findBoundFields(doc) {
+  const fields = []
+
+  doc.descendants((node, nodePosition) => {
+    if (!node.isText || !node.text) return true
+
+    const bindingMark = node.marks.find((mark) => mark.type.name === 'scaffoldBinding')
+    const key = bindingMark?.attrs.binding
+    const placeholder = bindingMark?.attrs.placeholder
+    if (!key || !placeholder) return true
+
+    const previous = fields.at(-1)
+    if (
+      previous &&
+      previous.to === nodePosition &&
+      previous.key === key &&
+      previous.placeholder === placeholder
+    ) {
+      previous.text += node.text
+      previous.to += node.nodeSize
+      return true
+    }
+
+    fields.push({
+      key,
+      placeholder,
+      text: node.text,
+      from: nodePosition,
+      to: nodePosition + node.nodeSize,
+      marks: node.marks,
+    })
 
     return true
   })

@@ -76,7 +76,9 @@ const outlineItems = computed(() => {
     // An article cannot be published without its lead, so it is always
     // required. Other sections opt in through the outline itself.
     required: true,
-    previewHtml: outlineWikitextToHtml(props.outline.lead?.content || ''),
+    previewHtml: outlineWikitextToHtml(props.outline.lead?.content || '', {
+      outlineId: props.outline.id,
+    }),
   }
   lead.description = getOutlineItemDescription(lead, props.outline)
 
@@ -90,7 +92,9 @@ const outlineItems = computed(() => {
     description: isReferencesSection(section)
       ? 'Appears with your first citation.'
       : getOutlineItemDescription(section, props.outline),
-    previewHtml: isReferencesSection(section) ? '' : outlineWikitextToHtml(section.content || ''),
+    previewHtml: isReferencesSection(section)
+      ? ''
+      : outlineWikitextToHtml(section.content || '', { outlineId: props.outline.id }),
   }))
 
   return [lead, ...sections]
@@ -132,7 +136,10 @@ function onAdd(item) {
   const editor = getEditor()
   if (!editor) return
 
-  const content = outlineItemToEditorHtml(item, { isLead: item.isLead })
+  const content = outlineItemToEditorHtml(item, {
+    isLead: item.isLead,
+    outlineId: props.outline.id,
+  })
   if (!content) return
 
   const inserted = insertOutlineContent(editor, content)
