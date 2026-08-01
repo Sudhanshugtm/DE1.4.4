@@ -53,7 +53,23 @@ function findReferencesStart(doc) {
  * Heading-only items receive an empty paragraph so the caret remains editable.
  */
 export function insertOutlineContent(editor, content, { keepAboveReferences = true } = {}) {
-  const referencesStart = keepAboveReferences ? findReferencesStart(editor.state.doc) : null
+  const doc = editor.state.doc
+  const referencesStart = keepAboveReferences ? findReferencesStart(doc) : null
+
+  // A fresh editor holds a single empty paragraph. The first section takes
+  // its place rather than stacking beneath it, so no blank line sits between
+  // the toolbar and the article.
+  const isEmptyDoc =
+    doc.childCount === 1 && doc.firstChild.isTextblock && doc.firstChild.content.size === 0
+
+  let insertAt
+  if (referencesStart !== null) {
+    insertAt = referencesStart
+  } else if (isEmptyDoc) {
+    insertAt = { from: 0, to: doc.content.size }
+  } else {
+    insertAt = doc.content.size
+  }
 
   return editor
     .chain()
@@ -63,10 +79,7 @@ export function insertOutlineContent(editor, content, { keepAboveReferences = tr
         ? commands.focus('end')
         : commands.setTextSelection(referencesStart),
     )
-    .insertContentAt(
-      referencesStart === null ? editor.state.doc.content.size : referencesStart,
-      addCursorMarker(content),
-    )
+    .insertContentAt(insertAt, addCursorMarker(content))
     .command(({ tr }) => {
       // Mark this as the outline arriving, so it is not mistaken for the
       // editor having written something.
