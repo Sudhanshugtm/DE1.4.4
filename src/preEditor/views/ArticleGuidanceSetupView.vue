@@ -52,7 +52,7 @@
                 ? `${result.title} · ${result.typeLabel} ${result.description}`
                 : undefined
             "
-            @click="result.interactive && selectSubject()"
+            @click="result.interactive ? selectSubject() : noteDecoySelection(result)"
             @keydown.enter.prevent="result.interactive && selectSubject()"
             @keydown.space.prevent="result.interactive && selectSubject()"
           >
@@ -71,7 +71,20 @@
           </CdxCard>
         </div>
 
-        <p v-else-if="showNoResults" class="subject-results__empty" role="status">
+        <!-- A tapped decoy answers rather than staying silent: this journey
+             follows one subject, and the message says which. -->
+        <CdxMessage
+          v-if="decoyNotice"
+          class="subject-results__decoy-notice"
+          type="notice"
+          :inline="false"
+          aria-live="polite"
+        >
+          No guidance journey for “{{ decoyNotice }}” in this prototype. Select
+          <strong>{{ subjectResult.title }}</strong> to continue.
+        </CdxMessage>
+
+        <p v-if="showNoResults" class="subject-results__empty" role="status">
           No subjects found for "{{ flowState.titleInput }}"
         </p>
 
@@ -183,7 +196,7 @@
 <script setup>
 import { computed, nextTick, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { CdxButton, CdxCard, CdxTextInput } from '@wikimedia/codex'
+import { CdxButton, CdxCard, CdxMessage, CdxTextInput } from '@wikimedia/codex'
 
 import ArticleGuidanceArticleInfo from '../components/ArticleGuidanceArticleInfo.vue'
 import ArticleGuidanceShell from '../components/ArticleGuidanceShell.vue'
@@ -253,6 +266,12 @@ function pushStep(step) {
   })
 }
 
+const decoyNotice = ref(null)
+
+function noteDecoySelection(result) {
+  decoyNotice.value = result.title
+}
+
 function updateTitle(value) {
   flowState.value = {
     ...flowState.value,
@@ -263,6 +282,7 @@ function updateTitle(value) {
   }
   sourceUrl.value = ''
   sourceError.value = ''
+  decoyNotice.value = null
 }
 
 function selectSubject() {
@@ -357,6 +377,7 @@ watch(
       flowState.value = createFlowState(resolution.journey, resolution.titleInput)
       sourceUrl.value = ''
       sourceError.value = ''
+      decoyNotice.value = null
     }
 
     if (resolution.needsReplace) {
@@ -496,6 +517,10 @@ watch(
 .subject-result__description,
 .subject-results__empty {
   color: var(--color-subtle);
+}
+
+.subject-results__decoy-notice {
+  margin-top: var(--spacing-25);
 }
 
 /* "None of these?" browse line, as under the Special:NewArticle results. The

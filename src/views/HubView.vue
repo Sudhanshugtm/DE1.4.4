@@ -24,10 +24,17 @@
 
 const prototypes = [
   {
-    key: 'ag-in-ve',
-    label: 'Pre-editor Article Guidance journey',
-    description: 'Demonstrates the article red-link journey before entering the editor.',
+    key: 'pre-editor-journey',
+    label: 'Full journey — reading to writing',
+    description:
+      'A reading article whose red links lead through subject, sources, and guidance into the editor.',
     to: { name: 'article' },
+  },
+  {
+    key: 'ag-in-ve',
+    label: 'Visual editor with article guidance',
+    description: 'Mobile-first · suggested sections, guidance, and checks inside the editor.',
+    to: { name: 'editor', query: { lang: 'en', variant: 'toolbar-outline' } },
   },
 ]
 </script>

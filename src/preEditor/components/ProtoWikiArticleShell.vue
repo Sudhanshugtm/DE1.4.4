@@ -85,9 +85,24 @@
                 }}</span>
                 <template v-else>{{ segment.text }}</template>
               </template>
+              <sup class="proto-wiki__ref" aria-hidden="true"
+                >[{{ referenceNumbers[sentence.sourceIds[0]] }}]</sup
+              >
               <template v-if="sentenceIndex < paragraph.sentences.length - 1">{{ ' ' }}</template>
             </template>
           </p>
+        </section>
+
+        <!-- The article practices what the flow later asks for: every sentence
+             points at its source, inert like the blue links. -->
+        <section class="proto-wiki__section" aria-label="References">
+          <h2 class="proto-wiki__section-heading">References</h2>
+          <ol class="proto-wiki__references">
+            <li v-for="reference in references" :key="reference.number">
+              {{ reference.publisher }} —
+              <span class="proto-wiki__context-link">{{ reference.hostname }}</span>
+            </li>
+          </ol>
         </section>
       </article>
     </main>
@@ -99,10 +114,11 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import { CdxButton, CdxIcon } from '@wikimedia/codex'
 import { cdxIconMenu, cdxIconSearch, cdxIconUserAvatar } from '@wikimedia/codex-icons'
 
-defineProps({
+const props = defineProps({
   article: {
     type: Object,
     required: true,
@@ -112,6 +128,34 @@ defineProps({
     required: true,
   },
 })
+
+// Sources are numbered in order of first citation, the way footnotes are; a
+// source cited twice keeps its number.
+const referenceNumbers = computed(() => {
+  const numbers = {}
+  for (const section of props.article.sections) {
+    for (const paragraph of section.paragraphs) {
+      for (const sentence of paragraph.sentences) {
+        const sourceId = sentence.sourceIds[0]
+        if (!(sourceId in numbers)) {
+          numbers[sourceId] = Object.keys(numbers).length + 1
+        }
+      }
+    }
+  }
+  return numbers
+})
+
+const references = computed(() =>
+  Object.entries(referenceNumbers.value).map(([sourceId, number]) => {
+    const source = props.article.sources[sourceId]
+    return {
+      number,
+      publisher: source.publisher,
+      hostname: new URL(source.url).hostname.replace(/^www\./, ''),
+    }
+  }),
+)
 
 const emit = defineEmits(['activate-missing-link'])
 
@@ -224,6 +268,27 @@ function activateMissingLink(event, journeyKey) {
 .proto-wiki__context-link {
   color: var(--color-progressive);
   text-decoration: none;
+}
+
+/* Citation markers sit at sentence ends, inert like the blue links. */
+.proto-wiki__ref {
+  color: var(--color-progressive);
+  font-family: var(--font-family-system-sans);
+  font-size: var(--font-size-x-small);
+  line-height: 0;
+  vertical-align: super;
+}
+
+.proto-wiki__references {
+  margin: 0;
+  padding-inline-start: var(--spacing-150);
+  font-family: var(--font-family-system-sans);
+  font-size: var(--font-size-small);
+  line-height: var(--line-height-small);
+}
+
+.proto-wiki__references li {
+  margin-bottom: var(--spacing-35);
 }
 
 .proto-wiki__section-heading {
