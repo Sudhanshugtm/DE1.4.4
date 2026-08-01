@@ -2,6 +2,46 @@
 <!-- ABOUTME: Markers sit beside the text they are about; pagination appears for more than one. -->
 
 <template>
+  <!-- A suggestion waits as a marker until asked; a check speaks up. When
+       both exist, the check takes the rail — feedback outranks guidance. -->
+  <template v-if="!checks.length && suggestion">
+    <div class="edit-check__gutter edit-check__gutter--suggestion">
+      <button
+        v-if="marker"
+        class="edit-check__marker edit-check__marker--suggestion"
+        :style="{ top: `${marker.top}px` }"
+        type="button"
+        :aria-label="suggestion.title"
+        :aria-expanded="suggestion.open"
+        @click="$emit('suggestion-open')"
+      >
+        <CdxIcon :icon="cdxIconLightbulb" class="edit-check__marker-icon" />
+      </button>
+    </div>
+
+    <div v-if="suggestion.open" class="edit-check__card" role="status">
+      <div class="edit-check__header">
+        <span class="edit-check__title">
+          <CdxIcon :icon="cdxIconLightbulb" class="edit-check__marker-icon" />
+          {{ suggestion.title }}
+        </span>
+        <CdxButton weight="quiet" aria-label="Close" @click="$emit('suggestion-dismiss')">
+          <CdxIcon :icon="cdxIconClose" />
+        </CdxButton>
+      </div>
+
+      <div class="edit-check__body">
+        <p v-if="suggestion.intro" class="edit-check__attribution">{{ suggestion.intro }}</p>
+        <ul class="edit-check__tips">
+          <li v-for="tip in suggestion.bullets" :key="tip">{{ tip }}</li>
+        </ul>
+        <div class="edit-check__actions">
+          <CdxButton @click="$emit('suggestion-dismiss')">Got it</CdxButton>
+        </div>
+      </div>
+    </div>
+  </template>
+
   <template v-if="checks.length">
     <!-- Gutter: a marker beside each stretch of text a check is about. -->
     <div class="edit-check__gutter" aria-hidden="true">
@@ -74,9 +114,13 @@ const props = defineProps({
     type: Number,
     default: 0,
   },
+  suggestion: {
+    type: Object,
+    default: null,
+  },
 })
 
-defineEmits(['act', 'dismiss', 'navigate'])
+defineEmits(['act', 'dismiss', 'navigate', 'suggestion-open', 'suggestion-dismiss'])
 
 const { getEditor } = useEditorInstance()
 const current = computed(() => props.checks[props.index] ?? props.checks[0] ?? {})
@@ -97,8 +141,11 @@ function positionMarkers() {
   }
 
   // A check about a place in the article points at it; one about the edit
-  // itself sits where the editor is working.
-  const position = firstField ? firstField.from : editor.state.selection.from
+  // itself sits where the editor is working; a waiting suggestion stays where
+  // it was offered.
+  const position = props.checks.length
+    ? (firstField?.from ?? editor.state.selection.from)
+    : (props.suggestion?.anchorPos ?? editor.state.selection.from)
 
   try {
     marker.value = { top: editor.view.coordsAtPos(position).top }
@@ -113,7 +160,10 @@ function schedulePositioning() {
   frame = requestAnimationFrame(positionMarkers)
 }
 
-watch(() => [props.checks, props.index], schedulePositioning, { deep: true, immediate: true })
+watch(() => [props.checks, props.index, props.suggestion], schedulePositioning, {
+  deep: true,
+  immediate: true,
+})
 onMounted(() => {
   schedulePositioning()
   window.addEventListener('resize', schedulePositioning)
@@ -163,6 +213,46 @@ onBeforeUnmount(() => {
 
 .edit-check__marker-icon {
   color: var(--color-icon-warning, #ab7f2a);
+}
+
+/* A suggestion's marker is an invitation, so it can be tapped; its bar and
+   bulb speak in the progressive voice rather than the warning one. */
+.edit-check__gutter--suggestion {
+  pointer-events: none;
+}
+
+.edit-check__marker--suggestion {
+  pointer-events: auto;
+  border: 0;
+  padding: 0;
+  background: var(--background-color-transparent);
+  cursor: pointer;
+}
+
+.edit-check__marker--suggestion::before {
+  background-color: var(--color-progressive, #36c);
+}
+
+.edit-check__marker--suggestion .edit-check__marker-icon {
+  color: var(--color-progressive, #36c);
+}
+
+.edit-check__attribution {
+  margin: 0;
+  color: var(--color-subtle);
+  font-size: var(--font-size-small);
+  line-height: var(--line-height-small);
+}
+
+.edit-check__tips {
+  margin: 0;
+  padding-inline-start: var(--spacing-125);
+  font-size: var(--font-size-medium);
+  line-height: var(--line-height-medium);
+}
+
+.edit-check__tips li {
+  margin-bottom: var(--spacing-35);
 }
 
 .edit-check__card {

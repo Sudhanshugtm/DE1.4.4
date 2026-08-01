@@ -67,9 +67,12 @@
     <EditCheckRail
       :checks="pendingChecks"
       :index="activeCheckIndex"
+      :suggestion="tipSuggestion"
       @act="onCheckAction"
       @dismiss="onDismissChecks"
       @navigate="onNavigateChecks"
+      @suggestion-open="onOpenTip"
+      @suggestion-dismiss="onDismissTip"
     />
     <SourceContextSheet v-model:open="sourceContextOpen" @add-citation="onAddCitationFromSource" />
     <SettingsDialog v-model:open="settingsDialogOpen" @outline-selected="onOutlineSelected" />
@@ -97,6 +100,7 @@ import SourceContextSheet from '@/components/SourceContextSheet.vue'
 import EditCheckRail from '@/components/EditCheckRail.vue'
 import { findIncompleteSentences, findScaffoldFields } from '@/utils/scaffoldFields'
 import { findReferencesList } from '@/extensions/referencesList'
+import { communityTipsByOutline } from '@/config/outlines/communityTips'
 import { useEditorSettings } from '@/composables/useEditorSettings'
 import { useEditorInstance } from '@/composables/useEditorInstance'
 import { useCursorRect } from '@/composables/useCursorRect'
@@ -340,6 +344,8 @@ async function onOutlineSelected(outlineId) {
   activeCheckIndex.value = 0
   hasAuthoredText.value = false
   nextCitationNumber.value = 1
+  tipSuggestion.value = null
+  hasDismissedTip.value = false
   initialView.value = 'outline'
   settingsDialogOpen.value = false
   isPopoverOpen.value = true
@@ -487,6 +493,40 @@ async function onContentInserted() {
   isPopoverOpen.value = false
   await nextTick()
   placeCursorAtFirstField()
+  offerCommunityTip()
+}
+
+// The community's writing tips ride a suggestion, the way guidance copy was
+// agreed to. It arrives only after the first section lands — the sheet owns
+// the landing moment — and only as a quiet marker: the card waits to be asked.
+const tipSuggestion = ref(null)
+const hasDismissedTip = ref(false)
+
+function offerCommunityTip() {
+  if (tipSuggestion.value || hasDismissedTip.value) return
+
+  const bullets = communityTipsByOutline[activeOutlineId.value]
+  if (!bullets?.length) return
+
+  const outline = simpleEnglishOutlinesById[activeOutlineId.value]
+  tipSuggestion.value = {
+    title: `Tips for ${outline.label} articles`,
+    intro: 'From Simple English editors',
+    bullets,
+    anchorPos: getEditor()?.state.selection.from ?? 1,
+    open: false,
+  }
+}
+
+// The card sits where the keyboard sits, so reading it and typing take turns.
+function onOpenTip() {
+  getEditor()?.commands.blur()
+  if (tipSuggestion.value) tipSuggestion.value = { ...tipSuggestion.value, open: true }
+}
+
+function onDismissTip() {
+  tipSuggestion.value = null
+  hasDismissedTip.value = true
 }
 
 function placeCursorAtFirstField() {
