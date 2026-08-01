@@ -1,3 +1,5 @@
+import { getFieldBindingKey } from '../config/outlines/fieldBindings.js'
+
 const SIMPLE_WIKIPEDIA_ARTICLE_URL = 'https://simple.wikipedia.org/wiki/'
 
 function escapeHtml(value) {
@@ -27,7 +29,7 @@ function renderEmphasis(value) {
  * Convert the small subset of inline wikitext used by Article Guidance
  * scaffolds into safe, readable HTML.
  */
-export function renderInlineWikitext(value = '') {
+export function renderInlineWikitext(value = '', { outlineId } = {}) {
   const tokens = []
   const stash = (html) => {
     const token = `%%OUTLINE_TOKEN_${tokens.length}%%`
@@ -36,6 +38,16 @@ export function renderInlineWikitext(value = '') {
   }
 
   let source = String(value)
+
+  if (outlineId) {
+    source = source.replace(/\[[^[\]]+\]/g, (label) => {
+      const binding = getFieldBindingKey(outlineId, label)
+      if (!binding) return label
+      return stash(
+        `<span data-scaffold-binding="${escapeHtml(binding)}" data-scaffold-placeholder="${escapeHtml(label)}">${escapeHtml(label)}</span>`,
+      )
+    })
+  }
 
   source = source.replace(/\{\{\s*(?:citation needed|cn)\b[^{}]*\}\}/gi, () =>
     stash('<sup class="outline-source-prompt">Source</sup>'),
@@ -68,7 +80,7 @@ function closeList(html, listType) {
  * Convert scaffold wikitext into block HTML suitable both for preview and for
  * insertion into TipTap. Bracket prompts remain ordinary, editable text.
  */
-export function outlineWikitextToHtml(value = '') {
+export function outlineWikitextToHtml(value = '', { outlineId } = {}) {
   const lines = String(value)
     .replace(/\r\n?/g, '\n')
     .replace(/<!--[\s\S]*?-->/g, '')
@@ -83,7 +95,7 @@ export function outlineWikitextToHtml(value = '') {
 
   const flushParagraph = () => {
     if (!paragraph.length) return
-    html.push(`<p>${renderInlineWikitext(paragraph.join(' '))}</p>`)
+    html.push(`<p>${renderInlineWikitext(paragraph.join(' '), { outlineId })}</p>`)
     paragraph = []
   }
 
@@ -105,7 +117,7 @@ export function outlineWikitextToHtml(value = '') {
         html.push(`<${nextListType}>`)
         listType = nextListType
       }
-      html.push(`<li>${renderInlineWikitext(listMatch[2])}</li>`)
+      html.push(`<li>${renderInlineWikitext(listMatch[2], { outlineId })}</li>`)
       continue
     }
 
@@ -113,7 +125,9 @@ export function outlineWikitextToHtml(value = '') {
     if (headingMatch) {
       flushParagraph()
       listType = closeList(html, listType)
-      html.push(`<p><strong>${renderInlineWikitext(headingMatch[1])}</strong></p>`)
+      html.push(
+        `<p><strong>${renderInlineWikitext(headingMatch[1], { outlineId })}</strong></p>`,
+      )
       continue
     }
 
@@ -135,15 +149,15 @@ export function isReferencesSection(section) {
  * Produce the editor payload for one flat outline item.
  * The lead has no heading. Every other item is an H2 followed by its body.
  */
-export function outlineItemToEditorHtml(item, { isLead = false } = {}) {
+export function outlineItemToEditorHtml(item, { isLead = false, outlineId } = {}) {
   if (!item) return ''
 
   if (isLead) {
-    return outlineWikitextToHtml(item.content)
+    return outlineWikitextToHtml(item.content, { outlineId })
   }
 
   const heading = `<h2 data-outline-item-key="${escapeHtml(item.key || '')}">${escapeHtml(item.title || '')}</h2>`
   if (isReferencesSection(item)) return heading
 
-  return `${heading}${outlineWikitextToHtml(item.content)}`
+  return `${heading}${outlineWikitextToHtml(item.content, { outlineId })}`
 }

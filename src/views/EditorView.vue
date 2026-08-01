@@ -211,6 +211,10 @@ function onPublish() {
   const editor = getEditor()
   if (!editor) return
 
+  // Publish is a commit boundary even when the caret has not left the field.
+  // Synchronize first so checks scan the current linked values.
+  editor.commands.commitFieldBinding()
+
   // Checks are answered, not typed into, and their card sits at the foot of
   // the screen. The keyboard steps aside so it is not left behind it.
   editor.commands.blur()

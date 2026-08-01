@@ -300,7 +300,7 @@ describe('section delete controls', () => {
     )
   })
 
-  it('returns focus to the editor after deleting a section', () => {
+  it('keeps the editor unfocused after deleting a section', () => {
     const editor = createEditor(`
       <h2 data-outline-item-key="city:history">History</h2>
       <p>History text</p>
@@ -311,7 +311,8 @@ describe('section delete controls', () => {
 
     control.dispatchEvent(new MouseEvent('click', { bubbles: true }))
 
-    expect(document.activeElement).toBe(editor.view.dom)
+    expect(document.activeElement).not.toBe(editor.view.dom)
+    expect(editor.isFocused).toBe(false)
   })
 
   it('restores and removes the deleted section and key through undo and redo', () => {

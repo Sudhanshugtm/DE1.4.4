@@ -1,10 +1,15 @@
 // @vitest-environment jsdom
 
 import { flushPromises, mount } from '@vue/test-utils'
+import { Editor } from '@tiptap/core'
+import StarterKit from '@tiptap/starter-kit'
 import { nextTick } from 'vue'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import TextEditor from '../src/components/TextEditor.vue'
+import { FieldBinding } from '../src/extensions/fieldBinding.js'
+import { ScaffoldBindingMark } from '../src/extensions/scaffoldBindingMark.js'
+import { findBoundFields } from '../src/utils/scaffoldFields.js'
 
 const mocks = vi.hoisted(() => ({
   getEditor: vi.fn(),
@@ -54,6 +59,7 @@ const stubs = {
 let router
 let wrapper
 let removeGuard
+let standaloneEditor
 
 function createTestRouter() {
   return createRouter({
@@ -104,12 +110,69 @@ afterEach(() => {
   removeGuard = undefined
   wrapper?.unmount()
   wrapper = undefined
+  standaloneEditor?.destroy()
+  standaloneEditor = undefined
   vi.restoreAllMocks()
   mocks.getEditor.mockReset()
   mocks.setEditor.mockReset()
 })
 
 describe('outline switching', () => {
+  it('commits a linked field before Publish scans for incomplete scaffold fields', async () => {
+    const calls = []
+    mocks.getEditor.mockReturnValue({
+      commands: {
+        commitFieldBinding: () => calls.push('commit'),
+        blur: () => calls.push('blur'),
+      },
+      state: {
+        doc: {
+          descendants: () => calls.push('scan'),
+        },
+      },
+    })
+    vi.spyOn(window, 'alert').mockImplementation(() => {})
+    await mountEditor({ variant: 'toolbar-outline', outline: 'country' })
+
+    wrapper.findComponent({ name: 'CdxToolbar' }).vm.$emit('publish')
+    await nextTick()
+
+    expect(calls).toEqual(['commit', 'blur', 'scan'])
+  })
+
+  it('publishes through a real linked-field commit that is one Undo and Redo event', async () => {
+    const prompt =
+      '<span data-scaffold-binding="country:subject-name" data-scaffold-placeholder="[Country name]">[Country name]</span>'
+    standaloneEditor = new Editor({
+      extensions: [StarterKit, ScaffoldBindingMark, FieldBinding],
+      content: `<p>${prompt}</p><p>${prompt}</p>`,
+    })
+    const field = findBoundFields(standaloneEditor.state.doc)[0]
+    standaloneEditor.commands.setTextSelection({ from: field.from, to: field.to })
+    standaloneEditor.commands.insertContent('India')
+    mocks.getEditor.mockReturnValue(standaloneEditor)
+    vi.spyOn(window, 'alert').mockImplementation(() => {})
+    await mountEditor({ variant: 'toolbar-outline', outline: 'country' })
+
+    wrapper.findComponent({ name: 'CdxToolbar' }).vm.$emit('publish')
+    await nextTick()
+
+    expect(findBoundFields(standaloneEditor.state.doc).map((bound) => bound.text)).toEqual([
+      'India',
+      'India',
+    ])
+    expect(standaloneEditor.commands.undo()).toBe(true)
+    expect(findBoundFields(standaloneEditor.state.doc).map((bound) => bound.text)).toEqual([
+      '[Country name]',
+      '[Country name]',
+    ])
+    expect(standaloneEditor.commands.redo()).toBe(true)
+    expect(findBoundFields(standaloneEditor.state.doc).map((bound) => bound.text)).toEqual([
+      'India',
+      'India',
+    ])
+  })
+
   it('starts a fresh editor session so later inserts cannot restore the previous outline', async () => {
     await mountEditor({ variant: 'toolbar-outline', outline: 'person' }, true)
     const previousEditor = wrapper.findComponent(TextEditor).vm.editor

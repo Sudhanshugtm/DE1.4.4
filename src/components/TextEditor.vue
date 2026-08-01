@@ -80,9 +80,10 @@ import SectionDeleteControls, { getOutlineSectionKeys } from '../extensions/sect
 import SectionHeading from '../extensions/sectionHeading'
 import { SourceSuperscript } from '../extensions/sourceSuperscript'
 import { ScaffoldFieldHighlight } from '../extensions/scaffoldFieldHighlight'
+import { ScaffoldBindingMark } from '../extensions/scaffoldBindingMark'
 import { FieldBinding } from '../extensions/fieldBinding'
 import { ReferencesList } from '../extensions/referencesList'
-import { findScaffoldFields } from '../utils/scaffoldFields'
+import { findBoundFields, findScaffoldFields } from '../utils/scaffoldFields'
 import { TextSelection } from '@tiptap/pm/state'
 import { closeHistory } from '@tiptap/pm/history'
 import { useEditorSettings } from '../composables/useEditorSettings'
@@ -162,6 +163,7 @@ const editor = useEditor({
     SourceSuperscript,
     AnnotationHighlight,
     ScaffoldFieldHighlight,
+    ScaffoldBindingMark,
     FieldBinding,
     PlaceholderChip,
     ReferencesList,
@@ -199,19 +201,31 @@ const editor = useEditor({
       // the fields so that one sitting against a field still wins the tap.
       if (event.target.closest?.('.outline-source-prompt')) return true
 
-      // Tapping a field takes the whole of it, so writing replaces the field
-      // rather than editing around its brackets.
-      const field = findScaffoldFields(view.state.doc).find(
+      // Linked values keep their semantic mark after being answered. Check
+      // them first so a correction selects the whole answer, not one word.
+      const boundField = findBoundFields(view.state.doc).find(
         (candidate) => pos >= candidate.from && pos <= candidate.to,
       )
-      if (field) {
+      if (boundField) {
         view.dispatch(
-          view.state.tr.setSelection(TextSelection.create(view.state.doc, field.from, field.to)),
+          view.state.tr.setSelection(
+            TextSelection.create(view.state.doc, boundField.from, boundField.to),
+          ),
         )
         return true
       }
 
-      return false
+      // Unbound fields retain the same whole-prompt replacement behavior.
+      const field = findScaffoldFields(view.state.doc).find(
+        (candidate) => pos >= candidate.from && pos <= candidate.to,
+      )
+      if (!field) return false
+
+      view.dispatch(
+        view.state.tr.setSelection(TextSelection.create(view.state.doc, field.from, field.to)),
+      )
+      return true
+
     },
   },
   onSelectionUpdate() {
@@ -244,7 +258,8 @@ const editor = useEditor({
     emit('editor-focused')
     setTimeout(() => updateButtonPosition(), 0)
   },
-  onBlur({ event }) {
+  onBlur({ editor: currentEditor, event }) {
+    currentEditor.commands.commitFieldBinding()
     if (
       event.relatedTarget &&
       (event.relatedTarget.closest('.codex-floating-entry') ||
