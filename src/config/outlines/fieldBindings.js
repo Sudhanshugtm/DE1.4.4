@@ -81,6 +81,10 @@ export const fieldBindings = Object.freeze({
     '[date]': 'person:birth-date',
     '[place of birth]': 'person:birthplace',
     '[place]': 'person:birthplace',
+    // Sentence-initial subject pronoun only: every repeat shares this casing,
+    // so one choice covers them all. The lowercase and possessive variants
+    // stay unbound — they are different casings or grammatical forms.
+    '[He/She/They]': 'person:subject-pronoun',
   },
   plant: {
     '[common name]': 'plant:subject-name',
@@ -91,6 +95,7 @@ export const fieldBindings = Object.freeze({
     '[date]': 'politician:birth-date',
     '[place of birth]': 'politician:birthplace',
     '[place]': 'politician:birthplace',
+    '[He/She/They]': 'politician:subject-pronoun',
   },
   product: {
     '[Product name]': 'product:subject-name',
@@ -120,6 +125,7 @@ export const fieldBindings = Object.freeze({
     '[date]': 'sportsperson:birth-date',
     '[place of birth]': 'sportsperson:birthplace',
     '[place]': 'sportsperson:birthplace',
+    '[He/She/They]': 'sportsperson:subject-pronoun',
   },
   'television-series': {
     '[Series title]': 'television-series:subject-name',

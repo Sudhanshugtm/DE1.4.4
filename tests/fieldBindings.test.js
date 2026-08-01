@@ -1,15 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { simpleEnglishOutlinesById } from '../src/config/outlines/simpleEnglish.js'
-import {
-  fieldBindings,
-  getFieldBindingKey,
-} from '../src/config/outlines/fieldBindings.js'
+import { fieldBindings, getFieldBindingKey } from '../src/config/outlines/fieldBindings.js'
 import { ScaffoldBindingMark } from '../src/extensions/scaffoldBindingMark.js'
 
 function outlineText(outline) {
-  return [outline.lead, ...(outline.sections || [])]
-    .map((item) => item?.content || '')
-    .join('\n')
+  return [outline.lead, ...(outline.sections || [])].map((item) => item?.content || '').join('\n')
 }
 
 function countOccurrences(text, label) {
@@ -28,13 +23,17 @@ describe('semantic scaffold field bindings', () => {
     expect(getFieldBindingKey('museum', '[museum name]')).toBe(
       getFieldBindingKey('museum', '[Museum name]'),
     )
+    expect(getFieldBindingKey('person', '[He/She/They]')).toBe('person:subject-pronoun')
   })
 
-  it('leaves ambiguous, compound, pronoun, and repeated-list labels unbound', () => {
+  it('leaves ambiguous, compound, differently-cased pronoun, and repeated-list labels unbound', () => {
     expect(getFieldBindingKey('person', '[year]')).toBeNull()
     expect(getFieldBindingKey('city', '[region/country]')).toBeNull()
     expect(getFieldBindingKey('island', '[country or territory]')).toBeNull()
-    expect(getFieldBindingKey('person', '[He/She/They]')).toBeNull()
+    // The subject pronoun binds only in its sentence-initial casing; the
+    // lowercase and possessive forms would need a different word.
+    expect(getFieldBindingKey('person', '[he/she/they]')).toBeNull()
+    expect(getFieldBindingKey('person', '[his/her/their]')).toBeNull()
     expect(getFieldBindingKey('school', '[Name]')).toBeNull()
     expect(getFieldBindingKey('television-series', '[Actor name]')).toBeNull()
   })
