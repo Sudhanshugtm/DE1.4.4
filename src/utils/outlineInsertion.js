@@ -75,9 +75,7 @@ export function insertOutlineContent(editor, content, { keepAboveReferences = tr
     .chain()
     .focus()
     .command(({ commands }) =>
-      referencesStart === null
-        ? commands.focus('end')
-        : commands.setTextSelection(referencesStart),
+      referencesStart === null ? commands.focus('end') : commands.setTextSelection(referencesStart),
     )
     .insertContentAt(insertAt, addCursorMarker(content))
     .command(({ tr }) => {
