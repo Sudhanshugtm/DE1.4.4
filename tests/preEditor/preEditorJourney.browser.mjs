@@ -151,12 +151,11 @@ async function addSource(page, source) {
 }
 
 async function assertOptionalSourcesUi(page) {
-  await assertVisible(page.getByRole('heading', { level: 3, name: 'Add sources (optional)' }))
+  await assertVisible(page.getByRole('heading', { level: 3, name: 'Add sources' }))
   await assertVisible(
-    page.getByText(
-      'If you have sources ready, add them now. You can also add citations while writing.',
-      { exact: true },
-    ),
+    page.getByText('Sources help readers check the facts and shows why this subject matters.', {
+      exact: true,
+    }),
   )
   assert.equal(await page.locator('.article-guidance-sources__required').count(), 0)
   assert.equal(
@@ -372,7 +371,7 @@ test('every red link can skip sources and opens its own outline', async (t) => {
         await result.click()
         await assertStep(page, journey, 'sources')
         await assertOptionalSourcesUi(page)
-        await assertSourceStatus(page, 'You can continue without adding a source.')
+        await assertSourceStatus(page, 'You can add sources while you write.')
         assert.equal(
           await page.getByRole('button', { name: 'Add source', exact: true }).isEnabled(),
           false,
@@ -399,25 +398,25 @@ test('source status announces add and remove transitions through zero', async ()
   try {
     await openSourcesStep(page, journey)
     await assertOptionalSourcesUi(page)
-    await assertSourceStatus(page, 'You can continue without adding a source.')
+    await assertSourceStatus(page, 'You can add sources while you write.')
     assert.equal(
       await page.getByRole('button', { name: 'Add source', exact: true }).isEnabled(),
       false,
     )
 
     await addSource(page, SOURCE_ONE)
-    await assertSourceStatus(page, '1 source added. You can add more while writing.')
+    await assertSourceStatus(page, 'You can add sources while you write.')
     await addSource(page, SOURCE_TWO)
-    await assertSourceStatus(page, '2 sources added. You can add more while writing.')
+    await assertSourceStatus(page, 'You can add sources while you write.')
 
     await page
       .getByRole('button', { name: `Remove source from example.com: ${SOURCE_ONE}` })
       .click()
-    await assertSourceStatus(page, '1 source added. You can add more while writing.')
+    await assertSourceStatus(page, 'You can add sources while you write.')
     await page
       .getByRole('button', { name: `Remove source from example.org: ${SOURCE_TWO}` })
       .click()
-    await assertSourceStatus(page, 'You can continue without adding a source.')
+    await assertSourceStatus(page, 'You can add sources while you write.')
     assert.deepEqual(externalRequests, [])
   } finally {
     await context.close()

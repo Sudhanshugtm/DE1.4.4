@@ -76,6 +76,7 @@
     <CiteDialog
       v-model:open="citeDialogOpen"
       :initial-tab="citeDialogInitialTab"
+      :reusable-sources="arrivalSources"
       @citation-created="onCitationCreated"
     />
   </div>
@@ -139,6 +140,23 @@ const forceButtonStyle = computed(() => {
     width: '44px',
     height: `${rect.lineHeight}px`,
   }
+})
+
+// Sources gathered before the editor opened travel in on the URL, the way the
+// guidance flow hands them over. They seed the citation flow's Re-use tab.
+const arrivalSources = computed(() => {
+  const raw = route.query.source
+  const urls = typeof raw === 'string' ? [raw] : Array.isArray(raw) ? raw : []
+  return urls
+    .map((url) => {
+      try {
+        const parsed = new URL(url)
+        return { url: parsed.href, domain: parsed.hostname.replace(/^www\./, '') }
+      } catch {
+        return null
+      }
+    })
+    .filter(Boolean)
 })
 
 const isRailOpen = ref(false)
@@ -364,9 +382,15 @@ function onClose() {
   router.push({ name: 'hub' })
 }
 
+// A citation starts from what the editor already has: sources brought along
+// from guidance open on Re-use; with none, Automatic leads as usual.
+function defaultCiteTab() {
+  return arrivalSources.value.length ? 'reuse' : 'automatic'
+}
+
 function onOpenCiteDefault() {
   pendingSourceRange.value = null
-  citeDialogInitialTab.value = 'automatic'
+  citeDialogInitialTab.value = defaultCiteTab()
   citeDialogOpen.value = true
 }
 
@@ -382,7 +406,7 @@ function onOpenSourceContext(range) {
 
 function onAddCitationFromSource() {
   sourceContextOpen.value = false
-  citeDialogInitialTab.value = 'automatic'
+  citeDialogInitialTab.value = defaultCiteTab()
   citeDialogOpen.value = true
 }
 

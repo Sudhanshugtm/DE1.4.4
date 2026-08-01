@@ -106,9 +106,9 @@
 
       <div class="article-guidance-sources">
         <div class="article-guidance-sources__main">
-          <h3 class="article-guidance-sources__heading">Add sources (optional)</h3>
+          <h3 class="article-guidance-sources__heading">Add sources</h3>
           <p class="article-guidance-sources__subtitle">
-            If you have sources ready, add them now. You can also add citations while writing.
+            Sources help readers check the facts and shows why this subject matters.
           </p>
 
           <SourceUrlForm
@@ -248,16 +248,9 @@ const sourceRecommendations = computed(() => [
 const showNoResults = computed(
   () => flowState.value.titleInput.trim().length > 0 && !subjectResult.value,
 )
-const sourceHelperText = computed(() => {
-  const sourceCount = flowState.value.sources.length
-  if (sourceCount === 0) {
-    return 'You can continue without adding a source.'
-  }
-  if (sourceCount === 1) {
-    return '1 source added. You can add more while writing.'
-  }
-  return `${sourceCount} sources added. You can add more while writing.`
-})
+// Sources are optional here, so the helper carries the extension's single
+// non-mandatory message rather than a count.
+const sourceHelperText = 'You can add sources while you write.'
 
 function pushStep(step) {
   return router.push({
