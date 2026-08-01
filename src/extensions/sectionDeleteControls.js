@@ -100,7 +100,8 @@ function deleteSection(view, getPos, key, headingText) {
   transaction.setSelection(TextSelection.near(transaction.doc.resolve(selectionPosition)))
   transaction.scrollIntoView()
   view.dispatch(transaction)
-  view.focus()
+  // Deleting tidies the article, it does not start writing: the editor is
+  // not focused, so no keyboard comes up over what remains.
 }
 
 function createTrashIcon() {
