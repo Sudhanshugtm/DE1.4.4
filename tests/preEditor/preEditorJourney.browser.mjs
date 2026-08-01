@@ -271,6 +271,33 @@ test('Exploration exposes eight exact red-link setup routes', async () => {
   }
 })
 
+test('Google Earth subject results remove metadata noise and show two suggestions', async () => {
+  const journey = JOURNEYS.find(({ key }) => key === 'software-google-earth')
+  const { context, externalRequests } = await newLocalContext({ width: 390, height: 844 })
+  const page = await context.newPage()
+
+  try {
+    await page.goto(setupUrl(journey))
+    await assertStep(page, journey, 'subject')
+
+    assert.equal(
+      await page
+        .getByRole('heading', { level: 1, name: 'New article', exact: true })
+        .evaluate((element) => window.getComputedStyle(element).outlineStyle),
+      'none',
+    )
+    assert.equal(await page.locator('.subject-result__wikidata').count(), 0)
+
+    const dummyResults = page.locator('.subject-result-dummy')
+    assert.equal(await dummyResults.count(), 2)
+    await assertVisible(dummyResults.getByText('Google Earth Engine', { exact: true }))
+    await assertVisible(dummyResults.getByText('Google Earth VR', { exact: true }))
+    assert.deepEqual(externalRequests, [])
+  } finally {
+    await context.close()
+  }
+})
+
 test('every red link can skip sources and opens its own outline', async (t) => {
   for (const [index, journey] of JOURNEYS.entries()) {
     await t.test(journey.title, async () => {
@@ -298,10 +325,22 @@ test('every red link can skip sources and opens its own outline', async (t) => {
         await assertVisible(result)
         await assertVisible(result.getByText(journey.title, { exact: true }))
         await assertVisible(result.getByText(journey.type, { exact: true }))
+        assert.equal(await result.locator('.subject-result__wikidata').count(), 0)
         assert.equal(
-          (await result.locator('.subject-result__wikidata').innerText()).trim(),
-          `${journey.relation} · ${journey.qid}`,
+          await page
+            .getByRole('heading', { level: 1, name: 'New article', exact: true })
+            .evaluate((element) => window.getComputedStyle(element).outlineStyle),
+          'none',
         )
+
+        const dummyResults = page.locator('.subject-result-dummy')
+        if (journey.key === 'software-google-earth') {
+          assert.equal(await dummyResults.count(), 2)
+          await assertVisible(dummyResults.getByText('Google Earth Engine', { exact: true }))
+          await assertVisible(dummyResults.getByText('Google Earth VR', { exact: true }))
+        } else {
+          assert.equal(await dummyResults.count(), 0)
+        }
 
         const thumbnail = result.locator('.cdx-thumbnail__image')
         await assertVisible(thumbnail)

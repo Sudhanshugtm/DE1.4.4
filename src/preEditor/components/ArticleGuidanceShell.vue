@@ -102,13 +102,8 @@ defineExpose({ focusHeading })
   font-size: var(--font-size-large);
   font-weight: var(--font-weight-bold);
   line-height: var(--line-height-large);
+  outline: none;
   text-align: center;
-}
-
-.article-guidance-shell__heading:focus-visible {
-  outline: var(--border-width-thick) var(--border-style-base)
-    var(--outline-color-progressive--focus);
-  outline-offset: var(--spacing-12);
 }
 
 .article-guidance-shell__header-spacer {

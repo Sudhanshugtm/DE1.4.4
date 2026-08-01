@@ -34,38 +34,47 @@
           Back
         </CdxButton>
 
-        <CdxCard
-          v-if="subjectResult"
-          class="subject-result"
-          role="button"
-          tabindex="0"
-          :thumbnail="{ url: subjectResult.thumbnail.url }"
-          :aria-label="`${subjectResult.title} · ${subjectResult.typeLabel} ${subjectResult.description}`"
-          @click="selectSubject"
-          @keydown.enter.prevent="selectSubject"
-          @keydown.space.prevent="selectSubject"
-        >
-          <template #title>
-            <span class="subject-result__title">
-              <strong>{{ subjectResult.title }}</strong>
-              <span class="subject-result__separator">·</span>
-              <span class="subject-result__type">{{ subjectResult.typeLabel }}</span>
-            </span>
-          </template>
-          <template #description>
-            <span class="subject-result__description">
-              {{ subjectResult.description }}
-              <span class="subject-result__wikidata">
-                {{
-                  subjectResult.wikidataRelation === 'related'
-                    ? 'Related Wikidata item'
-                    : 'Wikidata item'
-                }}
-                · {{ subjectResult.wikidataItemId }}
+        <template v-if="subjectResult">
+          <CdxCard
+            class="subject-result"
+            role="button"
+            tabindex="0"
+            :thumbnail="{ url: subjectResult.thumbnail.url }"
+            :aria-label="`${subjectResult.title} · ${subjectResult.typeLabel} ${subjectResult.description}`"
+            @click="selectSubject"
+            @keydown.enter.prevent="selectSubject"
+            @keydown.space.prevent="selectSubject"
+          >
+            <template #title>
+              <span class="subject-result__title">
+                <strong>{{ subjectResult.title }}</strong>
+                <span class="subject-result__separator">·</span>
+                <span class="subject-result__type">{{ subjectResult.typeLabel }}</span>
               </span>
-            </span>
-          </template>
-        </CdxCard>
+            </template>
+            <template #description>
+              <span class="subject-result__description">{{ subjectResult.description }}</span>
+            </template>
+          </CdxCard>
+
+          <CdxCard
+            v-for="suggestion in subjectSuggestions"
+            :key="suggestion.title"
+            class="subject-result-dummy"
+            :thumbnail="{ url: subjectResult.thumbnail.url }"
+          >
+            <template #title>
+              <span class="subject-result__title">
+                <strong>{{ suggestion.title }}</strong>
+                <span class="subject-result__separator">·</span>
+                <span class="subject-result__type">{{ suggestion.typeLabel }}</span>
+              </span>
+            </template>
+            <template #description>
+              <span class="subject-result__description">{{ suggestion.description }}</span>
+            </template>
+          </CdxCard>
+        </template>
 
         <p v-else-if="showNoResults" class="subject-results__empty" role="status">
           No subjects found for "{{ flowState.titleInput }}"
@@ -206,6 +215,22 @@ const shellRef = ref(null)
 const currentStep = computed(() => flowState.value.step)
 const currentHeading = computed(() => 'New article')
 const subjectResult = computed(() => findSubject(activeJourney.value, flowState.value.titleInput))
+const subjectSuggestions = computed(() =>
+  activeJourney.value.key === 'software-google-earth' && subjectResult.value
+    ? [
+        {
+          title: 'Google Earth Engine',
+          typeLabel: 'Software',
+          description: 'Cloud platform for planetary-scale geospatial analysis',
+        },
+        {
+          title: 'Google Earth VR',
+          typeLabel: 'Software',
+          description: 'Virtual reality application for exploring satellite imagery and 3D terrain',
+        },
+      ]
+    : [],
+)
 const activeGuidance = computed(
   () => guidanceProfilesByOutline[activeJourney.value.guidanceProfileKey],
 )
@@ -414,8 +439,12 @@ watch(
   line-height: var(--line-height-x-large);
 }
 
-.subject-result.cdx-card {
+.subject-result.cdx-card,
+.subject-result-dummy.cdx-card {
   width: 100%;
+}
+
+.subject-result.cdx-card {
   transition: background-color var(--transition-duration-medium);
   cursor: var(--cursor-base--hover);
 }
@@ -453,12 +482,6 @@ watch(
   margin: 0;
   font-size: var(--font-size-small);
   line-height: var(--line-height-small);
-}
-
-.subject-result__wikidata {
-  display: block;
-  margin-top: var(--spacing-25);
-  color: var(--color-placeholder);
 }
 
 .subject-result__description,
