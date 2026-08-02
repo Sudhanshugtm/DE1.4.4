@@ -223,30 +223,11 @@ function onPublish() {
   // the screen. The keyboard steps aside so it is not left behind it.
   editor.commands.blur()
 
-  const fields = findScaffoldFields(editor.state.doc)
   activeCheckIndex.value = 0
 
   // Anything already waiting stays waiting; publishing adds to the list.
   const carried = pendingChecks.value.filter((check) => check.name !== 'completeSection')
-
-  // Unfilled fields are one thing to put right, however many there are.
-  pendingChecks.value = fields.length
-    ? [
-        ...carried,
-        {
-          name: 'completeSection',
-          type: 'check',
-          title: 'Complete section',
-          message:
-            'Fields in templates cannot be empty. Before publishing, replace them with real content, or delete the sentences holding them.',
-          actions: [
-            { name: 'review', label: 'Review' },
-            { name: 'delete', label: 'Delete' },
-          ],
-          fields,
-        },
-      ]
-    : carried
+  pendingChecks.value = [...carried, ...buildCompleteSectionChecks(editor.state.doc)]
 
   if (!pendingChecks.value.length) {
     // Nothing left to resolve; a real editor would save here.
@@ -254,12 +235,30 @@ function onPublish() {
   }
 }
 
+// One finding per unfinished sentence, the way checks work in the editor:
+// the card speaks about the sentence in view, its actions touch only that
+// sentence, and pagination moves between findings.
+function buildCompleteSectionChecks(doc) {
+  const fields = findScaffoldFields(doc)
+
+  return findIncompleteSentences(doc).map((sentence) => ({
+    name: 'completeSection',
+    type: 'check',
+    title: 'Complete section',
+    message:
+      'This sentence still has unfilled fields. Complete them, or delete the sentence — empty fields cannot be published.',
+    actions: [
+      { name: 'complete', label: 'Complete' },
+      { name: 'deleteSentence', label: 'Delete sentence' },
+    ],
+    range: sentence,
+    fields: fields.filter((field) => field.from >= sentence.from && field.to <= sentence.to),
+  }))
+}
+
 function onNavigateChecks(nextIndex) {
   activeCheckIndex.value = Math.max(0, Math.min(nextIndex, pendingChecks.value.length - 1))
 }
-
-// Review walks the fields one at a time; Delete clears the ones still empty.
-const reviewedFieldIndex = ref(0)
 
 function onCheckAction({ action, check }) {
   const editor = getEditor()
@@ -272,11 +271,13 @@ function onCheckAction({ action, check }) {
     return
   }
 
-  if (!check?.fields?.length) return
+  if (check?.name !== 'completeSection') return
 
-  if (action === 'review') {
-    const field = check.fields[reviewedFieldIndex.value % check.fields.length]
-    reviewedFieldIndex.value += 1
+  // Complete hands the sentence back for writing: the first unfilled field is
+  // selected the way tapping it would, ready to be typed over.
+  if (action === 'complete') {
+    const field = check.fields[0]
+    if (!field) return
     editor
       .chain()
       .focus()
@@ -286,30 +287,26 @@ function onCheckAction({ action, check }) {
     return
   }
 
-  // A field cannot go on its own: "[Full name] was born on [date] in [place]."
-  // would be left as " was born on  in .". The sentence goes with it.
-  const chain = editor.chain().focus()
-  ;[...findIncompleteSentences(editor.state.doc)].reverse().forEach((sentence) => {
-    chain.deleteRange(sentence)
-  })
-  chain.run()
-
-  refreshChecks()
+  // Delete touches only the sentence in view. A field cannot go on its own —
+  // "[Full name] was born on [date]." would be left as " was born on ." —
+  // so the sentence goes whole, and the other findings stay theirs.
+  if (action === 'deleteSentence' && check.range) {
+    editor.chain().deleteRange(check.range).run()
+  }
 }
 
-// The document moved, so the fields still empty are found again.
+// The document moved: findings are recomputed from what is actually left, so
+// ranges stay true, resolved sentences retire themselves, and the list closes
+// when nothing remains.
 function refreshChecks() {
   const editor = getEditor()
-  const fields = editor ? findScaffoldFields(editor.state.doc) : []
-  reviewedFieldIndex.value = 0
+  if (!editor || !pendingChecks.value.some((check) => check.name === 'completeSection')) return
 
-  if (!fields.length) {
-    pendingChecks.value = []
-    return
-  }
-
-  pendingChecks.value = pendingChecks.value.map((check) =>
-    check.name === 'completeSection' ? { ...check, fields } : check,
+  const others = pendingChecks.value.filter((check) => check.name !== 'completeSection')
+  pendingChecks.value = [...others, ...buildCompleteSectionChecks(editor.state.doc)]
+  activeCheckIndex.value = Math.max(
+    0,
+    Math.min(activeCheckIndex.value, pendingChecks.value.length - 1),
   )
 }
 
@@ -320,6 +317,9 @@ function onDismissChecks() {
 function onOutlineSectionsChanged(sectionKeys) {
   const leadKeys = [...addedOutlineItems.value].filter((key) => key.endsWith(':lead'))
   addedOutlineItems.value = new Set([...leadKeys, ...sectionKeys])
+  // Fires on every document change, so open findings follow the text they
+  // are about — filling a sentence retires its finding without a new publish.
+  refreshChecks()
 }
 
 async function onOutlineSelected(outlineId) {
