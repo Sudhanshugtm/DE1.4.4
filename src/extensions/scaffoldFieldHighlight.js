@@ -14,6 +14,10 @@ function decorate(doc) {
   const decorations = findScaffoldFields(doc).map((field) =>
     Decoration.inline(field.from, field.to, {
       class: `scaffold-field scaffold-field--${field.kind}`,
+      // Prompts are the community's text, not the editor's spelling: without
+      // this, the browser underlines every bracketed word in red the moment
+      // the caret enters, and the scaffold reads as a page of typos.
+      spellcheck: 'false',
     }),
   )
 
