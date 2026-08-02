@@ -2,18 +2,20 @@
 <!-- ABOUTME: Keeps shared article context consistent across Sources and Guidance. -->
 
 <template>
+  <!-- Title and type read as one item; Edit follows them because it edits
+       the whole selection, not just the words of the title. -->
   <div class="article-guidance-subject" aria-label="Selected article subject">
     <h2 class="article-guidance-subject__title">{{ title }}</h2>
+    <CdxInfoChip class="article-guidance-subject__type">{{ typeLabel }}</CdxInfoChip>
     <CdxButton
       class="article-guidance-subject__edit"
       weight="quiet"
       type="button"
-      aria-label="Edit article title"
+      aria-label="Edit article title and type"
       @click="emit('edit')"
     >
       <CdxIcon :icon="cdxIconEdit" />
     </CdxButton>
-    <CdxInfoChip class="article-guidance-subject__type">{{ typeLabel }}</CdxInfoChip>
   </div>
 </template>
 
@@ -56,7 +58,8 @@ const emit = defineEmits(['edit'])
   flex: 0 0 auto;
 }
 
+/* The chip keeps its stock Codex form: current tokens, border included. */
 .article-guidance-subject__type {
-  border: 0;
+  flex: 0 0 auto;
 }
 </style>
