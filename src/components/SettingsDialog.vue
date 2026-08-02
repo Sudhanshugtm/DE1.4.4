@@ -5,8 +5,8 @@
       <div class="field-group">
         <CdxLabel>Article outline</CdxLabel>
         <p class="field-group__hint">
-          Currently: <strong>{{ currentOutlineLabel }}</strong> — in the real flow the topic is
-          chosen before the editor opens.
+          Currently: <strong>{{ currentOutlineLabel }}</strong
+          >. In the real flow the topic is chosen before the editor opens.
         </p>
         <OutlineSelector :show-intro="false" @select="onSelectOutline" />
       </div>

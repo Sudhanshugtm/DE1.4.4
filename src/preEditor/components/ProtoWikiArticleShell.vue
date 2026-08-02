@@ -76,7 +76,7 @@
                   v-if="segment.kind === 'missing'"
                   class="proto-wiki__missing-link"
                   :href="missingLinkHrefs[segment.journeyKey]"
-                  :aria-label="`${segment.text} — simulated missing article; opens article-creation guidance`"
+                  :aria-label="`${segment.text}: simulated missing article; opens article-creation guidance`"
                   @click="activateMissingLink($event, segment.journeyKey)"
                   >{{ segment.text }}</a
                 >
@@ -99,7 +99,7 @@
           <h2 class="proto-wiki__section-heading">References</h2>
           <ol class="proto-wiki__references">
             <li v-for="reference in references" :key="reference.number">
-              {{ reference.publisher }} —
+              {{ reference.publisher }}.
               <span class="proto-wiki__context-link">{{ reference.hostname }}</span>
             </li>
           </ol>

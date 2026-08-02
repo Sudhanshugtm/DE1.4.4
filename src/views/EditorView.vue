@@ -246,7 +246,7 @@ function buildCompleteSectionChecks(doc) {
     type: 'check',
     title: 'Complete section',
     message:
-      'This sentence still has unfilled fields. Complete them, or delete the sentence — empty fields cannot be published.',
+      'This sentence still has unfilled fields. Complete them, or delete the sentence. Empty fields cannot be published.',
     actions: [
       { name: 'complete', label: 'Complete' },
       { name: 'deleteSentence', label: 'Delete sentence' },

@@ -252,7 +252,7 @@ test('Exploration exposes eight exact red-link setup routes', async () => {
 
     for (const journey of JOURNEYS) {
       const link = page.getByRole('link', {
-        name: `${journey.title} — simulated missing article; opens article-creation guidance`,
+        name: `${journey.title}: simulated missing article; opens article-creation guidance`,
         exact: true,
       })
       await assertVisible(link)
@@ -310,7 +310,7 @@ test('every red link can skip sources and opens its own outline', async (t) => {
         await page.goto(appUrl('/article'))
         await page
           .getByRole('link', {
-            name: `${journey.title} — simulated missing article; opens article-creation guidance`,
+            name: `${journey.title}: simulated missing article; opens article-creation guidance`,
             exact: true,
           })
           .click()

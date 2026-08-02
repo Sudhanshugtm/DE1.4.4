@@ -25,7 +25,7 @@
 const prototypes = [
   {
     key: 'pre-editor-journey',
-    label: 'Full journey — reading to writing',
+    label: 'Full journey: reading to writing',
     description:
       'A reading article whose red links lead through subject, sources, and guidance into the editor.',
     to: { name: 'article' },
