@@ -137,7 +137,9 @@ describe('outline switching', () => {
     wrapper.findComponent({ name: 'CdxToolbar' }).vm.$emit('publish')
     await nextTick()
 
-    expect(calls).toEqual(['commit', 'blur', 'scan'])
+    // Publish scans twice — fields and unfinished sentences — but always
+    // after the linked field has been committed and the keyboard put away.
+    expect(calls).toEqual(['commit', 'blur', 'scan', 'scan'])
   })
 
   it('publishes through a real linked-field commit that is one Undo and Redo event', async () => {
