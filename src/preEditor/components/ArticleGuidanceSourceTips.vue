@@ -3,15 +3,14 @@
 
 <template>
   <aside class="article-guidance-source-tips">
+    <!-- Stock Codex Accordion: its own arrow on the left, no leading icon,
+         no fill on the head. -->
     <CdxAccordion
       v-model="tipsOpen"
       class="article-guidance-source-tips__accordion"
       separation="outline"
     >
-      <template #title>
-        <CdxIcon :icon="cdxIconInfoFilled" class="article-guidance-source-tips__icon" />
-        {{ tipsTitle }}
-      </template>
+      <template #title>{{ tipsTitle }}</template>
       <SourceTipsContent :recommended="recommended" />
     </CdxAccordion>
 
@@ -78,20 +77,6 @@ const SourceTipsContent = defineComponent({
 
 .article-guidance-source-tips__accordion {
   margin-top: var(--spacing-100);
-}
-
-.article-guidance-source-tips__accordion :deep(summary) {
-  position: relative;
-  padding-right: var(--spacing-200);
-  background-color: var(--background-color-neutral-subtle);
-}
-
-.article-guidance-source-tips__accordion :deep(.cdx-accordion__header__title) {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-50);
-  color: var(--color-subtle);
-  font-weight: var(--font-weight-normal);
 }
 
 .article-guidance-source-tips__panel {
