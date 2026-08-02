@@ -29,7 +29,6 @@
           <span class="source-url-form__add-label">Add source</span>
         </CdxButton>
       </div>
-      <div v-if="error" class="source-url-form__error" role="alert">{{ error }}</div>
     </form>
 
     <ul v-if="sources.length" class="source-url-form__sources" aria-label="Added sources">
@@ -130,12 +129,6 @@ const entryDisabled = computed(() => props.disabled)
 
 .source-url-form__add-label {
   display: none;
-}
-
-.source-url-form__error {
-  margin-bottom: var(--spacing-75);
-  color: var(--color-error);
-  font-size: var(--font-size-small);
 }
 
 .source-url-form__sources {

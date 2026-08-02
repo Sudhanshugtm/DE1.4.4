@@ -106,19 +106,29 @@
 
       <div class="article-guidance-sources">
         <div class="article-guidance-sources__main">
-          <h3 class="article-guidance-sources__heading">Add sources</h3>
-          <p class="article-guidance-sources__subtitle">
-            Sources help readers check the facts and shows why this subject matters.
-          </p>
-
-          <SourceUrlForm
-            :model-value="sourceUrl"
-            :error="sourceError"
-            :sources="flowState.sources"
-            @update:model-value="updateSourceUrl"
-            @submit="submitSource"
-            @remove="removeAcceptedSource"
-          />
+          <!-- One Field carries the whole anatomy: label, description, the
+               input, its validation, and the helper that belongs to it. -->
+          <CdxField
+            class="article-guidance-sources__field"
+            :status="sourceError ? 'error' : 'default'"
+            :messages="sourceError ? { error: sourceError } : {}"
+          >
+            <template #label>Add sources</template>
+            <template #description>
+              Sources help readers check the facts and shows why this subject matters.
+            </template>
+            <SourceUrlForm
+              :model-value="sourceUrl"
+              :error="sourceError"
+              :sources="flowState.sources"
+              @update:model-value="updateSourceUrl"
+              @submit="submitSource"
+              @remove="removeAcceptedSource"
+            />
+            <template #help-text>
+              <span role="status" aria-live="polite">{{ sourceHelperText }}</span>
+            </template>
+          </CdxField>
         </div>
 
         <ArticleGuidanceSourceTips
@@ -127,9 +137,6 @@
         />
 
         <div class="article-guidance-actions article-guidance-actions--sources">
-          <span class="article-guidance-actions__helper" role="status" aria-live="polite">
-            {{ sourceHelperText }}
-          </span>
           <div class="article-guidance-actions__right">
             <CdxButton
               class="article-guidance-actions__back"
@@ -196,7 +203,7 @@
 <script setup>
 import { computed, nextTick, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { CdxButton, CdxCard, CdxMessage, CdxTextInput } from '@wikimedia/codex'
+import { CdxButton, CdxCard, CdxField, CdxMessage, CdxTextInput } from '@wikimedia/codex'
 
 import ArticleGuidanceArticleInfo from '../components/ArticleGuidanceArticleInfo.vue'
 import ArticleGuidanceShell from '../components/ArticleGuidanceShell.vue'
@@ -542,20 +549,6 @@ watch(
   min-width: 0;
 }
 
-.article-guidance-sources__heading {
-  margin: 0 0 var(--spacing-25);
-  border: 0;
-  color: var(--color-base);
-  font-size: var(--font-size-x-large);
-  font-weight: var(--font-weight-bold);
-  line-height: var(--line-height-x-large);
-}
-
-.article-guidance-sources__subtitle {
-  margin: 0 0 var(--spacing-100);
-  color: var(--color-subtle);
-}
-
 .article-guidance-list {
   margin: 0;
   padding-left: var(--spacing-150);
@@ -585,13 +578,6 @@ watch(
   flex-direction: column;
   align-items: center;
   gap: var(--spacing-50);
-}
-
-.article-guidance-actions__helper {
-  color: var(--color-placeholder);
-  font-size: var(--font-size-small);
-  line-height: var(--line-height-small);
-  text-align: center;
 }
 
 .article-guidance-actions__right .article-guidance-actions__back,
@@ -678,10 +664,6 @@ watch(
   .article-guidance-actions__primary {
     width: auto;
     max-width: none;
-  }
-
-  .article-guidance-actions__helper {
-    text-align: left;
   }
 
   .article-guidance-guidance__card {

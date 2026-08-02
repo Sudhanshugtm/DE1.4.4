@@ -151,7 +151,7 @@ async function addSource(page, source) {
 }
 
 async function assertOptionalSourcesUi(page) {
-  await assertVisible(page.getByRole('heading', { level: 3, name: 'Add sources' }))
+  await assertVisible(page.locator('.cdx-field__label', { hasText: 'Add sources' }))
   await assertVisible(
     page.getByText('Sources help readers check the facts and shows why this subject matters.', {
       exact: true,
@@ -169,7 +169,7 @@ async function assertOptionalSourcesUi(page) {
 }
 
 async function assertSourceStatus(page, expectedText) {
-  const sourceStatus = page.locator('.article-guidance-actions__helper[role="status"]')
+  const sourceStatus = page.locator('.cdx-field__help-text [role="status"]')
   await assertVisible(sourceStatus)
   assert.equal(await sourceStatus.getAttribute('aria-live'), 'polite')
   assert.equal((await sourceStatus.innerText()).trim(), expectedText)
