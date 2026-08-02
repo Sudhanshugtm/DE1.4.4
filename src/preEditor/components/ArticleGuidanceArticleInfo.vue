@@ -58,8 +58,10 @@ const emit = defineEmits(['edit'])
   flex: 0 0 auto;
 }
 
-/* The chip keeps its stock Codex form: current tokens, border included. */
+/* Deliberate departure from the stock chip: next to a page title the notice
+   fill reads as a button, so the type wears only its outline here. */
 .article-guidance-subject__type {
   flex: 0 0 auto;
+  background-color: var(--background-color-transparent, transparent);
 }
 </style>
