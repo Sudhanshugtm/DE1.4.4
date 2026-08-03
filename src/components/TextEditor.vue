@@ -187,11 +187,11 @@ const editor = useEditor({
     handlePaste(view, event) {
       const pasted = event.clipboardData?.getData('text/plain') ?? ''
       if (pasted.trim().length >= PASTE_CHECK_MINIMUM_CHARACTERS) {
-        // Start a new history entry, so answering the check with "remove"
-        // takes back the paste and only the paste. Without this it undoes
-        // whatever it was grouped with, which can be the whole section.
+        // Keep the paste as its own history entry for anyone reaching for
+        // Undo, and record where it starts so the check can remove exactly
+        // it, independent of how history happens to be grouped.
         view.dispatch(closeHistory(view.state.tr))
-        emit('pasted', pasted)
+        emit('pasted', { text: pasted, from: view.state.selection.from })
       }
       return false
     },
@@ -225,7 +225,6 @@ const editor = useEditor({
         view.state.tr.setSelection(TextSelection.create(view.state.doc, field.from, field.to)),
       )
       return true
-
     },
   },
   onSelectionUpdate() {

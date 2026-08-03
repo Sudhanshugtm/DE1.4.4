@@ -185,16 +185,20 @@ const activeCheckIndex = ref(0)
 
 // Pasted text is raised as it happens, not held back until publishing:
 // the sooner it is asked about, the less there is to unpick.
-async function onPasted() {
+async function onPasted({ from }) {
   if (pendingChecks.value.some((check) => check.name === 'paste')) return
 
   // A check is about to take the rail; guidance does not come back over it.
   dismissTipQuietly()
 
   // Once the paste has landed, the keyboard steps aside for the card asking
-  // about it, which sits where the keyboard was.
+  // about it, which sits where the keyboard was. The selection now rests at
+  // the end of what was pasted, closing the range that began where the paste
+  // went in: remove acts on exactly that, whatever history did around it.
   await nextTick()
-  getEditor()?.commands.blur()
+  const editor = getEditor()
+  editor?.commands.blur()
+  const to = editor?.state.selection.from ?? from
 
   pendingChecks.value = [
     {
@@ -208,6 +212,7 @@ async function onPasted() {
         { name: 'keep', label: 'Yes, keep it' },
         { name: 'remove', label: 'No, remove it' },
       ],
+      range: { from, to },
     },
     ...pendingChecks.value,
   ]
@@ -293,7 +298,18 @@ function onCheckAction({ action, check }) {
   if (!editor) return
 
   if (check?.name === 'paste') {
-    if (action === 'remove') editor.chain().focus().undo().run()
+    // Remove deletes the recorded paste range and nothing else: undo would
+    // take back a history entry, whose size depends on what grouping did
+    // around the paste. The keyboard stays down and the view stays put.
+    if (action === 'remove' && check.range) {
+      editor
+        .chain()
+        .deleteRange({
+          from: Math.max(0, Math.min(check.range.from, editor.state.doc.content.size)),
+          to: Math.max(0, Math.min(check.range.to, editor.state.doc.content.size)),
+        })
+        .run()
+    }
     pendingChecks.value = pendingChecks.value.filter((pending) => pending.name !== 'paste')
     activeCheckIndex.value = 0
     return
@@ -597,6 +613,30 @@ function placeCursorAtFirstField() {
   const chain = editor.chain().focus()
   if (field) chain.setTextSelection(field.from)
   chain.scrollIntoView().run()
+
+  // scrollIntoView is minimal: a section added below a long article leaves
+  // its caret grazing the bottom edge, which reads as nothing having been
+  // added. Bring the landing spot up into comfortable view instead.
+  revealPositionNearTop(field ? field.from : editor.state.selection.from)
+}
+
+// Scrolls the article so the given position sits in the upper part of the
+// view, under the toolbar, where an arrival is seen rather than inferred.
+function revealPositionNearTop(position) {
+  const editor = getEditor()
+  if (!editor || typeof position !== 'number') return
+
+  const scroller = editor.view.dom
+  const target = 48 + 96
+
+  try {
+    const coords = editor.view.coordsAtPos(Math.min(position, editor.state.doc.content.size))
+    if (coords.top > target + 40 || coords.top < 48) {
+      scroller.scrollTop += coords.top - target
+    }
+  } catch {
+    // An unresolvable position just stays where it is.
+  }
 }
 
 // Neither sheet has a backdrop, so the article behind them stays tappable.
