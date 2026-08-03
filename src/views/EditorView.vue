@@ -29,7 +29,7 @@
           @open-settings="settingsDialogOpen = true"
           @open-source-context="onOpenSourceContext"
           @outline-sections-changed="onOutlineSectionsChanged"
-          @authored="hasAuthoredText = true"
+          @authored="onAuthored"
           @editor-focused="onEditorFocused"
           @pasted="onPasted"
         />
@@ -497,7 +497,13 @@ async function onContentInserted() {
   isPopoverOpen.value = false
   await nextTick()
 
-  if (offerCommunityTip()) return
+  if (offerCommunityTip()) {
+    // Insertion's own focus can arrive late on mobile; put the keyboard away
+    // again once everything has settled so the card has the stage alone.
+    await nextTick()
+    getEditor()?.commands.blur()
+    return
+  }
   placeCursorAtFirstField()
 }
 
@@ -531,12 +537,19 @@ function onDismissTip() {
   placeCursorAtFirstField()
 }
 
-// Tapping into the article while the tips are up is choosing to write: the
-// card yields without stealing the caret back.
+// Writing while the tips are up is choosing to write: the card yields
+// without stealing the caret. Typing is the signal, not focus — insertion
+// itself focuses the editor, and on some platforms that focus arrives late
+// enough to kill the card before it is ever seen.
 function dismissTipQuietly() {
   if (!tipSuggestion.value) return
   tipSuggestion.value = null
   hasDismissedTip.value = true
+}
+
+function onAuthored() {
+  hasAuthoredText.value = true
+  dismissTipQuietly()
 }
 
 function placeCursorAtFirstField() {
@@ -562,7 +575,6 @@ function placeCursorAtFirstField() {
 function onEditorFocused() {
   isPopoverOpen.value = false
   sourceContextOpen.value = false
-  dismissTipQuietly()
 }
 
 // The panel never auto-opens: the toolbar + (and the editor's entry points)
