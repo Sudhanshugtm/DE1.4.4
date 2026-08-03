@@ -212,6 +212,30 @@ async function onPasted() {
     ...pendingChecks.value,
   ]
   activeCheckIndex.value = 0
+
+  // The card asks about the paste, so the paste must be on screen: scroll
+  // it up from behind the card before the question is read.
+  await nextTick()
+  revealPositionAboveCard(getEditor()?.state.selection.from)
+}
+
+// Scrolls the article so the given position sits clear above the check card
+// instead of hidden behind it at the foot of the screen.
+function revealPositionAboveCard(position) {
+  const editor = getEditor()
+  if (!editor || typeof position !== 'number') return
+
+  const scroller = editor.view.dom
+  const card = document.querySelector('.edit-check__card')
+  const cardTop = card ? card.getBoundingClientRect().top : window.innerHeight
+
+  try {
+    const coords = editor.view.coordsAtPos(Math.min(position, editor.state.doc.content.size))
+    const clearance = cardTop - 96
+    if (coords.top > clearance) scroller.scrollTop += coords.top - clearance
+  } catch {
+    // An unresolvable position just stays where it is.
+  }
 }
 
 function onPublish() {
@@ -509,6 +533,11 @@ async function onContentInserted() {
 
 const tipSuggestion = ref(null)
 const hasDismissedTip = ref(false)
+const tipShownAt = ref(0)
+
+// Insertion's own focus can arrive hundreds of milliseconds late on mobile;
+// a person's tap comes seconds later. The window tells them apart.
+const TIP_SETTLE_MS = 800
 
 // The tips card shows itself once, in the space the keyboard would take, so
 // nothing competes with it. Returns whether it took the moment.
@@ -526,6 +555,7 @@ function offerCommunityTip() {
     bullets,
     open: true,
   }
+  tipShownAt.value = performance.now()
   return true
 }
 
@@ -575,6 +605,11 @@ function placeCursorAtFirstField() {
 function onEditorFocused() {
   isPopoverOpen.value = false
   sourceContextOpen.value = false
+  // Tapping into the article once the card has settled is choosing to
+  // write: the card goes, the keyboard stays, the tap decides the caret.
+  if (tipSuggestion.value && performance.now() - tipShownAt.value > TIP_SETTLE_MS) {
+    dismissTipQuietly()
+  }
 }
 
 // The panel never auto-opens: the toolbar + (and the editor's entry points)
@@ -620,10 +655,12 @@ watch(isToolbarOutlineVariant, () => {
   flex-basis: 100vw;
 }
 
-/* While the check gutter is up, the article ends where the gutter begins
-   instead of running on behind it. */
+/* While a check is up, the article ends where the gutter begins instead of
+   running on behind it, and carries enough foot room that text at the very
+   bottom can scroll clear of the card. */
 .editor-wrapper--check-gutter .editor-main :deep(.ProseMirror) {
   padding-inline-end: calc(44px + var(--spacing-100, 16px));
+  padding-bottom: 360px;
 }
 
 .editor-rail-column {
