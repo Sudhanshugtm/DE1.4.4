@@ -16,6 +16,7 @@
       :class="{
         'rail-open': isRailOpen,
         'editor-wrapper--full-width': isToolbarOutlineVariant,
+        'editor-wrapper--check-gutter': pendingChecks.length > 0,
       }"
     >
       <div class="editor-main" @click="isRailOpen && (isRailOpen = false)">
@@ -71,7 +72,6 @@
       @act="onCheckAction"
       @dismiss="onDismissChecks"
       @navigate="onNavigateChecks"
-      @suggestion-open="onOpenTip"
       @suggestion-dismiss="onDismissTip"
     />
     <SourceContextSheet v-model:open="sourceContextOpen" @add-citation="onAddCitationFromSource" />
@@ -188,6 +188,9 @@ const activeCheckIndex = ref(0)
 async function onPasted() {
   if (pendingChecks.value.some((check) => check.name === 'paste')) return
 
+  // A check is about to take the rail; guidance does not come back over it.
+  dismissTipQuietly()
+
   // Once the paste has landed, the keyboard steps aside for the card asking
   // about it, which sits where the keyboard was.
   await nextTick()
@@ -222,6 +225,7 @@ function onPublish() {
   // Checks are answered, not typed into, and their card sits at the foot of
   // the screen. The keyboard steps aside so it is not left behind it.
   editor.commands.blur()
+  dismissTipQuietly()
 
   activeCheckIndex.value = 0
 
@@ -485,46 +489,52 @@ function onOpenCiteDiscover() {
   citeDialogOpen.value = true
 }
 
-// Adding a section hands the editor straight back to writing: the guidance
-// steps aside and the caret waits at the first thing to fill in, so the
-// keyboard comes up on the article rather than on top of the sheet.
+// One act at a time after the sheet: the first section's arrival belongs to
+// the community's tips, and only when those are put away does the caret take
+// the stage with the keyboard. Later sections skip straight to writing.
 async function onContentInserted() {
   isRailOpen.value = false
   isPopoverOpen.value = false
   await nextTick()
+
+  if (offerCommunityTip()) return
   placeCursorAtFirstField()
-  offerCommunityTip()
 }
 
-// The community's writing tips ride a suggestion, the way guidance copy was
-// agreed to. It arrives only after the first section lands — the sheet owns
-// the landing moment — and only as a quiet marker: the card waits to be asked.
 const tipSuggestion = ref(null)
 const hasDismissedTip = ref(false)
 
+// The tips card shows itself once, in the space the keyboard would take, so
+// nothing competes with it. Returns whether it took the moment.
 function offerCommunityTip() {
-  if (tipSuggestion.value || hasDismissedTip.value) return
+  if (tipSuggestion.value || hasDismissedTip.value) return false
 
   const bullets = communityTipsByOutline[activeOutlineId.value]
-  if (!bullets?.length) return
+  if (!bullets?.length) return false
 
   const outline = simpleEnglishOutlinesById[activeOutlineId.value]
+  getEditor()?.commands.blur()
   tipSuggestion.value = {
     title: `Tips for ${outline.label} articles`,
     intro: 'From Simple English editors',
     bullets,
-    anchorPos: getEditor()?.state.selection.from ?? 1,
-    open: false,
+    open: true,
   }
+  return true
 }
 
-// The card sits where the keyboard sits, so reading it and typing take turns.
-function onOpenTip() {
-  getEditor()?.commands.blur()
-  if (tipSuggestion.value) tipSuggestion.value = { ...tipSuggestion.value, open: true }
-}
-
+// Putting the tips away hands the stage to writing: caret at the first
+// field, keyboard up, nothing else asking to be looked at.
 function onDismissTip() {
+  tipSuggestion.value = null
+  hasDismissedTip.value = true
+  placeCursorAtFirstField()
+}
+
+// Tapping into the article while the tips are up is choosing to write: the
+// card yields without stealing the caret back.
+function dismissTipQuietly() {
+  if (!tipSuggestion.value) return
   tipSuggestion.value = null
   hasDismissedTip.value = true
 }
@@ -552,6 +562,7 @@ function placeCursorAtFirstField() {
 function onEditorFocused() {
   isPopoverOpen.value = false
   sourceContextOpen.value = false
+  dismissTipQuietly()
 }
 
 // The panel never auto-opens: the toolbar + (and the editor's entry points)
@@ -595,6 +606,12 @@ watch(isToolbarOutlineVariant, () => {
 
 .editor-wrapper--full-width .editor-main {
   flex-basis: 100vw;
+}
+
+/* While the check gutter is up, the article ends where the gutter begins
+   instead of running on behind it. */
+.editor-wrapper--check-gutter .editor-main :deep(.ProseMirror) {
+  padding-inline-end: calc(44px + var(--spacing-100, 16px));
 }
 
 .editor-rail-column {
