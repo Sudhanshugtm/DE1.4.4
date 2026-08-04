@@ -147,10 +147,13 @@ export function isReviewedVerifiedFact(fact, currentOutlineId) {
     return false
   }
 
+  if (!Object.hasOwn(reviewedTargetContexts, fact.targetFieldId)) {
+    return false
+  }
+
   const reviewedContext = reviewedTargetContexts[fact.targetFieldId]
   return (
     fact.outlineId === currentOutlineId &&
-    reviewedContext !== undefined &&
     Object.entries(reviewedContext).every(([field, value]) => fact[field] === value)
   )
 }

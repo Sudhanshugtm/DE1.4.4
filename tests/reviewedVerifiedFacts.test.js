@@ -148,6 +148,15 @@ describe('reviewed verified fact fixtures', () => {
     )
   })
 
+  it('rejects inherited target keys that are not own allowlist entries', () => {
+    expect(
+      isReviewedVerifiedFact(
+        { ...expectedPortugalFacts[0], targetFieldId: '__proto__' },
+        'country',
+      ),
+    ).toBe(false)
+  })
+
   it('allows only an absent value language or the supported pt tag', () => {
     expect(isReviewedVerifiedFact(expectedPortugalFacts[0], 'country')).toBe(true)
     expect(isReviewedVerifiedFact(expectedPortugalFacts[1], 'country')).toBe(true)
