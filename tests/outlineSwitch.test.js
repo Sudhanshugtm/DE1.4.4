@@ -11,6 +11,16 @@ import { FieldBinding } from '../src/extensions/fieldBinding.js'
 import { ScaffoldBindingMark } from '../src/extensions/scaffoldBindingMark.js'
 import { findBoundFields } from '../src/utils/scaffoldFields.js'
 
+const expectedBuddhismFact = Object.freeze({
+  id: 'buddhism-inception-range',
+  label: 'Approximate origin period',
+  value: 'Between 563 BCE and 483 BCE',
+  qualification:
+    'Wikidata records the inception date as unknown, bounded by these earliest and latest dates.',
+  referenceCount: 1,
+  claimUrl: 'https://www.wikidata.org/wiki/Q748#P571',
+})
+
 const mocks = vi.hoisted(() => ({
   getEditor: vi.fn(),
   setEditor: vi.fn(),
@@ -19,6 +29,8 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@/components/CdxToolbar.vue', () => ({
   default: {
     name: 'CdxToolbar',
+    props: ['showVerifiedFacts'],
+    emits: ['open-outline', 'open-verified-facts', 'publish'],
     template: '<div />',
   },
 }))
@@ -46,11 +58,15 @@ const stubs = {
   },
   OutlinePopover: {
     name: 'OutlinePopover',
-    props: ['open', 'initialView', 'addedItems'],
+    props: ['open', 'initialView', 'addedItems', 'verifiedFacts'],
     emits: ['update:open', 'update:addedItems'],
     template: '<div class="outline-popover" />',
   },
-  EditorRail: true,
+  EditorRail: {
+    name: 'EditorRail',
+    props: ['initialView', 'isOpen'],
+    template: '<div class="editor-rail" />',
+  },
   CiteDialog: true,
   SourceContextSheet: true,
   CdxIcon: true,
@@ -91,6 +107,14 @@ function outlinePopover() {
   return wrapper.findComponent({ name: 'OutlinePopover' })
 }
 
+function toolbar() {
+  return wrapper.findComponent({ name: 'CdxToolbar' })
+}
+
+function editorRail() {
+  return wrapper.findComponent({ name: 'EditorRail' })
+}
+
 function markerCapableEditor() {
   return {
     id: 'editor',
@@ -115,6 +139,90 @@ afterEach(() => {
   vi.restoreAllMocks()
   mocks.getEditor.mockReset()
   mocks.setEditor.mockReset()
+})
+
+describe('reviewed verified facts integration', () => {
+  it('offers and passes the exact reviewed fact for a supported toolbar route', async () => {
+    await mountEditor({
+      lang: 'en',
+      variant: 'toolbar-outline',
+      outline: 'religion',
+      title: 'Buddhism',
+    })
+
+    expect(toolbar().props('showVerifiedFacts')).toBe(true)
+    expect(outlinePopover().props('verifiedFacts')).toEqual([expectedBuddhismFact])
+  })
+
+  it('reopens a dismissed toolbar sheet directly on reviewed facts without touching the editor', async () => {
+    await mountEditor({
+      lang: 'en',
+      variant: 'toolbar-outline',
+      outline: 'religion',
+      title: 'Buddhism',
+    })
+    outlinePopover().vm.$emit('update:open', false)
+    await nextTick()
+
+    toolbar().vm.$emit('open-verified-facts')
+    await nextTick()
+
+    expect(outlinePopover().props('open')).toBe(true)
+    expect(outlinePopover().props('initialView')).toBe('verified-facts')
+    expect(mocks.getEditor).not.toHaveBeenCalled()
+  })
+
+  it('fails closed when the route has no reviewed facts', async () => {
+    await mountEditor({
+      lang: 'en',
+      variant: 'toolbar-outline',
+      outline: 'religion',
+      title: 'Unsupported title',
+    })
+
+    expect(toolbar().props('showVerifiedFacts')).toBe(false)
+    expect(outlinePopover().props('verifiedFacts')).toEqual([])
+
+    outlinePopover().vm.$emit('update:open', false)
+    await nextTick()
+    toolbar().vm.$emit('open-verified-facts')
+    await nextTick()
+
+    expect(outlinePopover().props('open')).toBe(false)
+  })
+
+  it('opens suggested sections in toolbar mode even when a placeholder is selected', async () => {
+    mocks.getEditor.mockReturnValue({
+      state: { selection: { node: { type: { name: 'placeholderChip' } } } },
+    })
+    await mountEditor({
+      lang: 'en',
+      variant: 'toolbar-outline',
+      outline: 'religion',
+      title: 'Buddhism',
+    })
+    outlinePopover().vm.$emit('update:open', false)
+    await nextTick()
+
+    toolbar().vm.$emit('open-outline')
+    await nextTick()
+
+    expect(outlinePopover().props('open')).toBe(true)
+    expect(outlinePopover().props('initialView')).toBe('outline')
+  })
+
+  it('preserves placeholder-selected verified facts in the non-toolbar rail', async () => {
+    mocks.getEditor.mockReturnValue({
+      state: { selection: { node: { type: { name: 'placeholderChip' } } } },
+    })
+    await mountEditor({ outline: 'person' })
+
+    toolbar().vm.$emit('open-outline')
+    await nextTick()
+
+    expect(editorRail().props('initialView')).toBe('verified-facts')
+    expect(editorRail().props('isOpen')).toBe(true)
+  })
 })
 
 describe('outline switching', () => {

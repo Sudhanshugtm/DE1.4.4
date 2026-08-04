@@ -6,6 +6,16 @@ import { createMemoryHistory, createRouter } from 'vue-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import OutlinePopover from '../src/components/OutlinePopover.vue'
 
+const reviewedFact = Object.freeze({
+  id: 'buddhism-inception-range',
+  label: 'Approximate origin period',
+  value: 'Between 563 BCE and 483 BCE',
+  qualification:
+    'Wikidata records the inception date as unknown, bounded by these earliest and latest dates.',
+  referenceCount: 1,
+  claimUrl: 'https://www.wikidata.org/wiki/Q748#P571',
+})
+
 class ResizeObserverMock {
   observe() {}
 
@@ -27,14 +37,23 @@ const stubs = {
     template: '<div />',
   },
   OutlineAccordionList: true,
-  VerifiedFactsList: true,
+  VerifiedFactsReferenceList: {
+    name: 'VerifiedFactsReferenceList',
+    props: ['facts'],
+    template:
+      '<div data-testid="verified-facts-reference-list" :data-fact-count="facts.length">{{ facts.map((fact) => `${fact.label}: ${fact.value}`).join(\' | \') }}</div>',
+  },
+  VerifiedFactsList: {
+    name: 'VerifiedFactsList',
+    template: '<div data-testid="legacy-verified-facts-list" />',
+  },
   ReferenceSourcesList: true,
 }
 
 let router
 let wrapper
 
-async function mountPopover() {
+async function mountPopover(props = {}) {
   router = createRouter({
     history: createMemoryHistory(),
     routes: [{ path: '/editor', name: 'editor', component: { template: '<div />' } }],
@@ -47,6 +66,7 @@ async function mountPopover() {
       open: true,
       selectableOutlines: true,
       addedItems: new Set(),
+      ...props,
     },
     global: {
       plugins: [router],
@@ -64,6 +84,42 @@ afterEach(() => {
 })
 
 describe('outline popover', () => {
+  it('shows reviewed facts as a read-only reference list for selectable outlines', async () => {
+    vi.stubGlobal('ResizeObserver', ResizeObserverMock)
+    await mountPopover({
+      open: false,
+      initialView: 'verified-facts',
+      verifiedFacts: [reviewedFact],
+    })
+
+    await wrapper.setProps({ open: true })
+    await nextTick()
+    await nextTick()
+
+    expect(wrapper.find('.outline-popover-header__title').text()).toContain('Verified facts')
+    const referenceList = wrapper.find('[data-testid="verified-facts-reference-list"]')
+    expect(referenceList.attributes('data-fact-count')).toBe('1')
+    expect(referenceList.text()).toContain('Approximate origin period: Between 563 BCE and 483 BCE')
+    expect(wrapper.findComponent({ name: 'VerifiedFactsList' }).exists()).toBe(false)
+  })
+
+  it('keeps the legacy verified facts list for non-selectable outlines', async () => {
+    vi.stubGlobal('ResizeObserver', ResizeObserverMock)
+    await mountPopover({
+      open: false,
+      selectableOutlines: false,
+      initialView: 'verified-facts',
+      verifiedFacts: [reviewedFact],
+    })
+
+    await wrapper.setProps({ open: true })
+    await nextTick()
+    await nextTick()
+
+    expect(wrapper.find('[data-testid="legacy-verified-facts-list"]').exists()).toBe(true)
+    expect(wrapper.findComponent({ name: 'VerifiedFactsReferenceList' }).exists()).toBe(false)
+  })
+
   it('resets a dismissed sheet scroll position when a new outline opens', async () => {
     vi.stubGlobal('ResizeObserver', ResizeObserverMock)
     await mountPopover()

@@ -35,8 +35,12 @@
         v-else-if="selectedView === 'outline'"
         @content-inserted="$emit('content-inserted')"
       />
+      <VerifiedFactsReferenceList
+        v-if="selectableOutlines && selectedView === 'verified-facts'"
+        :facts="verifiedFacts"
+      />
       <VerifiedFactsList
-        v-if="selectedView === 'verified-facts'"
+        v-else-if="!selectableOutlines && selectedView === 'verified-facts'"
         @content-inserted="$emit('content-inserted')"
       />
       <ReferenceSourcesList
@@ -59,6 +63,7 @@ import {
 } from '@wikimedia/codex-icons'
 import OutlineAccordionList from './OutlineAccordionList.vue'
 import OutlineStructureList from './OutlineStructureList.vue'
+import VerifiedFactsReferenceList from './VerifiedFactsReferenceList.vue'
 import VerifiedFactsList from './VerifiedFactsList.vue'
 import ReferenceSourcesList from './ReferenceSourcesList.vue'
 import { simpleEnglishOutlinesById } from '../config/outlines/simpleEnglish.js'
@@ -72,6 +77,10 @@ const props = defineProps({
   selectableOutlines: {
     type: Boolean,
     default: false,
+  },
+  verifiedFacts: {
+    type: Array,
+    default: () => [],
   },
 })
 const open = defineModel('open', { type: Boolean, default: false })

@@ -2,10 +2,12 @@
   <div class="editor-page">
     <CdxToolbar
       :show-outline-entry="isToolbarOutlineVariant"
+      :show-verified-facts="reviewedVerifiedFacts.length > 0"
       :show-cite="!isToolbarOutlineVariant"
       :highlight-outline-entry="highlightOutlineEntry"
       :can-publish="hasAuthoredText"
       @open-outline="onOpenOutline"
+      @open-verified-facts="onOpenVerifiedFacts"
       @insert-menu-opened="hasOpenedInsertMenu = true"
       @cite="onOpenCiteDefault"
       @link="onOpenLink"
@@ -63,6 +65,7 @@
       v-model:added-items="addedOutlineItems"
       :initial-view="initialView"
       :selectable-outlines="isToolbarOutlineVariant"
+      :verified-facts="reviewedVerifiedFacts"
       @content-inserted="onContentInserted"
       @open-cite-discover="onOpenCiteDiscover"
     />
@@ -122,6 +125,7 @@ import { useEditorSettings } from '@/composables/useEditorSettings'
 import { useEditorInstance } from '@/composables/useEditorInstance'
 import { useCursorRect } from '@/composables/useCursorRect'
 import { simpleEnglishOutlinesById } from '@/config/outlines/simpleEnglish'
+import { getReviewedVerifiedFacts } from '@/config/reviewedVerifiedFacts'
 
 const route = useRoute()
 const router = useRouter()
@@ -139,6 +143,15 @@ const activeOutlineId = computed(() => {
     : 'person'
 })
 const activeOutlineLabel = computed(() => simpleEnglishOutlinesById[activeOutlineId.value].label)
+const reviewedVerifiedFacts = computed(() => {
+  const language = typeof route.query.lang === 'string' ? route.query.lang : 'en'
+  const title = typeof route.query.title === 'string' ? route.query.title : ''
+  return getReviewedVerifiedFacts({
+    language,
+    outline: activeOutlineId.value,
+    title,
+  })
+})
 
 // Force entry point
 const { getEditor } = useEditorInstance()
@@ -444,12 +457,24 @@ watch(isPopoverOpen, (isOpen, wasOpen) => {
   if (!isOpen && wasOpen) hasDismissedSheet.value = true
 })
 
+function onOpenVerifiedFacts() {
+  if (reviewedVerifiedFacts.value.length === 0) return
+
+  dismissTipQuietly()
+  initialView.value = 'verified-facts'
+  isPopoverOpen.value = true
+}
+
 function onOpenOutline() {
   // One sheet at a time: choosing structure puts the tips away.
   dismissTipQuietly()
-  const editor = getEditor()
-  const isPlaceholderSelected = editor?.state.selection.node?.type.name === 'placeholderChip'
-  initialView.value = isPlaceholderSelected ? 'verified-facts' : null
+  if (isToolbarOutlineVariant.value) {
+    initialView.value = 'outline'
+  } else {
+    const editor = getEditor()
+    const isPlaceholderSelected = editor?.state.selection.node?.type.name === 'placeholderChip'
+    initialView.value = isPlaceholderSelected ? 'verified-facts' : null
+  }
 
   if (effectiveOutlineLocation.value === 'popover') {
     isPopoverOpen.value = true
