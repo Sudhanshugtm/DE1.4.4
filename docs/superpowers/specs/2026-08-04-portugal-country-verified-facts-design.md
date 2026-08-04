@@ -21,6 +21,13 @@ The current Buddhism journey is an honest sparse example: direct Wikidata data y
 
 The prototype excludes capital because its current reference is weak, and excludes region because Wikidata offers different granularities that the system should not choose silently. Deprecated language statements are excluded.
 
+The reviewed qualification copy is fixed rather than improvised during implementation:
+
+- Official name: `Wikidata records this official name in Portuguese and cites Portugal's diplomatic portal.`
+- Area: `Wikidata records this area with a point in time of 2021 and cites Pordata.`
+- Population: `The preferred Wikidata population statement is dated 2021, uses the census method, and cites Portugal's national statistics office.`
+- Official language: `Wikidata records Portuguese as the current normal-rank official-language value and cites section 11.3 of Portugal's constitution.`
+
 ## Scope
 
 This slice will:
@@ -85,18 +92,33 @@ The reviewed fixture remains a static, route-keyed snapshot. Each fact adds expl
 ```js
 {
   id: 'portugal-area-2021',
+  outlineId: 'country',
   sectionId: 'introduction',
   sectionLabel: 'Introduction',
+  targetFieldId: 'country:introduction:area',
+  targetFieldToken: '[area]',
   fieldLabel: 'Area',
   label: 'Area',
   value: '92,225 km²',
-  qualification: 'Wikidata records this area with a point in time of 2021.',
+  qualification: 'Wikidata records this area with a point in time of 2021 and cites Pordata.',
   referenceCount: 1,
   claimUrl: 'https://www.wikidata.org/wiki/Q45#P2046',
 }
 ```
 
-`sectionId`, `sectionLabel`, and `fieldLabel` are required for every reviewed fact. The existing Buddhism fact receives the same context metadata so the renderer has one consistent contract.
+`outlineId`, `sectionId`, `sectionLabel`, `targetFieldId`, `targetFieldToken`, and `fieldLabel` are required for every reviewed fact. A `valueLanguage` field is optional for values that are not language-specific; when present, it must be a supported BCP 47 language tag. The official-name fact uses `valueLanguage: 'pt'`, and the renderer applies `lang="pt"` to `República Portuguesa`.
+
+Field mapping is validated against an explicit allowlist, not accepted merely because strings are present:
+
+| Outline | Section | Target field ID | Exact scaffold token |
+|---|---|---|---|
+| Country | Introduction | `country:introduction:official-name` | `[official name]` |
+| Country | Introduction | `country:introduction:area` | `[area]` |
+| Country | Introduction | `country:introduction:population` | `[population]` |
+| Country | Introduction | `country:introduction:language` | `[language]` |
+| Religion | Introduction | `religion:introduction:approximate-period` | `[approximate period]` |
+
+The validator checks the whole `{ outlineId, sectionId, targetFieldId, targetFieldToken }` tuple against this allowlist and against the current route's outline. A fact whose target belongs to another outline, section, field ID, or token fails closed. The existing Buddhism fact receives the Religion mapping metadata so the renderer has one consistent contract.
 
 The fixture lookup continues to fail closed. It returns copies, performs no network request, rejects malformed records, and only accepts exact HTTPS Wikidata item-plus-property links.
 
@@ -128,6 +150,7 @@ The fixture lookup continues to fail closed. It returns copies, performs no netw
 - The coverage count appears in visible text and is available to assistive technology.
 - Each group uses a heading associated with its section.
 - Each fact article remains labelled by its field-level heading.
+- Language-specific values use semantic `lang` metadata; `República Portuguesa` is marked `lang="pt"`.
 - Provenance links retain visible underlines, visible keyboard focus, descriptive accessible names, `target="_blank"`, and `rel="noopener"`.
 - Dates, language, rank implications, and source context are written in text, not encoded only through color.
 - No card uses button semantics, a pointer cursor, or an insertion icon.
@@ -137,6 +160,8 @@ The fixture lookup continues to fail closed. It returns copies, performs no netw
 - Unsupported route: omit the toolbar entry.
 - Empty or invalid fact set: do not open an empty Verified Facts sheet.
 - Missing section or field context: omit the malformed fact.
+- Mismatched outline, section, field ID, or scaffold token: omit the malformed fact.
+- Invalid language metadata: omit the malformed fact.
 - Missing reference or invalid claim URL: omit the malformed fact.
 - Multiple or ambiguous values: do not choose one silently.
 - Deprecated values: exclude them.
@@ -147,13 +172,18 @@ The fixture lookup continues to fail closed. It returns copies, performs no netw
 Automated checks will cover:
 
 - the exact Portugal/Country route returns four facts in the intended order;
-- every Portugal fact contains Introduction and field-level mapping metadata;
-- official name, area, population, and official language preserve their reviewed values and qualifications;
+- every Portugal fact contains the allowlisted Country → Introduction → exact-field mapping tuple;
+- wrong outline, section, field ID, or scaffold token mappings fail closed;
+- official name, area, population, and official language preserve their reviewed values and exact qualification copy;
+- the Portuguese official name renders with `lang="pt"`, and invalid language metadata fails closed;
 - Buddhism remains available with its one reviewed fact and matching context metadata;
 - unsupported routes still return no facts;
 - malformed context metadata fails closed;
-- the presentation renders the dynamic count and one Introduction group with four labelled articles;
+- the presentation renders the dynamic count and one Introduction group whose heading is associated with its region;
+- all four articles have unique IDs and correct `aria-labelledby` relationships;
+- fact cards expose no button or button-role semantics;
 - links use the exact Q45 property anchors and remain safe;
+- provenance links have descriptive accessible names that announce their new-tab behavior;
 - opening and closing the new route's sheet does not change the real editor document, selection, or undo depth;
 - the full test suite, focused lint, formatting, diff check, and production build pass.
 
@@ -164,6 +194,7 @@ Manual in-app verification will cover:
 - readable count, group, card hierarchy, qualifiers, and provenance at a narrow viewport;
 - sheet scrolling through all four cards;
 - keyboard focus and close behavior;
+- a brief screen-reader announcement pass covering the dialog title, coverage summary, Introduction heading, Portuguese-language value, each fact label, and new-tab provenance link;
 - hidden entry on an unsupported route;
 - unchanged editor content, selection, and undo availability;
 - no new browser console errors.
@@ -171,4 +202,3 @@ Manual in-app verification will cover:
 ## Local-only handoff
 
 After verification, keep the work on the isolated local branch and leave the Portugal route open in the in-app browser. Do not merge, push, create a pull request, or update GitHub Pages.
-
