@@ -1,7 +1,12 @@
 <template>
   <div class="cdx-toolbar">
     <div class="cdx-toolbar__lhs">
-      <CdxButton class="cdx-toolbar__btn cdx-toolbar__btn--close" weight="quiet" aria-label="Close" @click="emit('close')">
+      <CdxButton
+        class="cdx-toolbar__btn cdx-toolbar__btn--close"
+        weight="quiet"
+        aria-label="Close"
+        @click="emit('close')"
+      >
         <CdxIcon :icon="cdxIconClose" />
       </CdxButton>
       <CdxButton class="cdx-toolbar__btn" weight="quiet" aria-label="Undo">
@@ -24,7 +29,7 @@
       >
         <CdxIcon :icon="cdxIconQuotes" />
       </CdxButton>
-      <CdxButton class="cdx-toolbar__btn" weight="quiet" aria-label="Link">
+      <CdxButton class="cdx-toolbar__btn" weight="quiet" aria-label="Link" @click="emit('link')">
         <CdxIcon :icon="cdxIconLink" />
       </CdxButton>
       <CdxButton
@@ -142,7 +147,7 @@ defineProps({
   },
 })
 
-const emit = defineEmits(['cite', 'close', 'open-outline', 'publish', 'insert-menu-opened'])
+const emit = defineEmits(['cite', 'close', 'link', 'open-outline', 'publish', 'insert-menu-opened'])
 import { onMounted, onBeforeUnmount, ref } from 'vue'
 import { CdxButton, CdxIcon } from '@wikimedia/codex'
 import {

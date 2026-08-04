@@ -8,6 +8,7 @@
       @open-outline="onOpenOutline"
       @insert-menu-opened="hasOpenedInsertMenu = true"
       @cite="onOpenCiteDefault"
+      @link="onOpenLink"
       @close="onClose"
       @publish="onPublish"
     />
@@ -86,7 +87,15 @@
       v-model:open="citeDialogOpen"
       :initial-tab="citeDialogInitialTab"
       :reusable-sources="arrivalSources"
+      :outline-id="activeOutlineId"
+      :outline-label="activeOutlineLabel"
       @citation-created="onCitationCreated"
+    />
+    <LinkDialog
+      v-model:open="linkDialogOpen"
+      :outline-id="activeOutlineId"
+      :outline-label="activeOutlineLabel"
+      @link-created="onLinkCreated"
     />
   </div>
 </template>
@@ -105,6 +114,7 @@ import OutlinePopover from '@/components/OutlinePopover.vue'
 import SourceContextSheet from '@/components/SourceContextSheet.vue'
 import EditCheckRail from '@/components/EditCheckRail.vue'
 import CommunityTipsSheet from '@/components/CommunityTipsSheet.vue'
+import LinkDialog from '@/components/LinkDialog.vue'
 import { findIncompleteSentences, findScaffoldFields } from '@/utils/scaffoldFields'
 import { findReferencesList } from '@/extensions/referencesList'
 import { communityTipsByOutline } from '@/config/outlines/communityTips'
@@ -128,6 +138,7 @@ const activeOutlineId = computed(() => {
     ? outlineId
     : 'person'
 })
+const activeOutlineLabel = computed(() => simpleEnglishOutlinesById[activeOutlineId.value].label)
 
 // Force entry point
 const { getEditor } = useEditorInstance()
@@ -536,6 +547,28 @@ function appendReference(url) {
 function onOpenCiteDiscover() {
   citeDialogInitialTab.value = 'discover'
   citeDialogOpen.value = true
+}
+
+// ── Link tool: same add-time source rules as citing ──
+
+const linkDialogOpen = ref(false)
+
+function onOpenLink() {
+  linkDialogOpen.value = true
+}
+
+// A link lands where the caret was: on a selection it links the words, on a
+// caret it writes the address as its own link.
+function onLinkCreated({ url }) {
+  const editor = getEditor()
+  if (!editor) return
+
+  const { empty } = editor.state.selection
+  if (empty) {
+    editor.chain().focus().insertContent(`<a href="${url}">${url}</a> `).run()
+  } else {
+    editor.chain().focus().setLink({ href: url }).run()
+  }
 }
 
 // One act at a time after the sheet: the first section's arrival belongs to

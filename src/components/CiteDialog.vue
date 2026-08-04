@@ -20,6 +20,9 @@
               placeholder="e.g. http://www.example.com"
               @submit-click="onCreate"
             />
+            <CdxMessage v-if="discouragedError" type="error" :inline="true">
+              {{ discouragedError }}
+            </CdxMessage>
             <div>
               <CdxButton>
                 <CdxIcon :icon="cdxIconLogoWikidata" />
@@ -37,6 +40,9 @@
           <div class="cite-dialog__tab-content">
             <template v-if="reusableSources.length">
               <p class="cite-dialog__description">Sources you added before writing</p>
+              <CdxMessage v-if="discouragedError" type="error" :inline="true">
+                {{ discouragedError }}
+              </CdxMessage>
               <ul class="cite-dialog__reuse-list">
                 <li v-for="source in reusableSources" :key="source.url">
                   <button
@@ -68,8 +74,17 @@
 
 <script setup>
 import { ref, watch } from 'vue'
-import { CdxDialog, CdxTabs, CdxTab, CdxSearchInput, CdxButton, CdxIcon } from '@wikimedia/codex'
+import {
+  CdxDialog,
+  CdxTabs,
+  CdxTab,
+  CdxSearchInput,
+  CdxButton,
+  CdxIcon,
+  CdxMessage,
+} from '@wikimedia/codex'
 import { cdxIconLink, cdxIconLogoWikidata } from '@wikimedia/codex-icons'
+import { findDiscouragedSource } from '../config/outlines/discouragedSources'
 
 const props = defineProps({
   initialTab: {
@@ -82,6 +97,14 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  outlineId: {
+    type: String,
+    default: '',
+  },
+  outlineLabel: {
+    type: String,
+    default: 'this type of',
+  },
 })
 
 const emit = defineEmits(['citation-created'])
@@ -89,22 +112,40 @@ const emit = defineEmits(['citation-created'])
 const open = defineModel('open', { type: Boolean, default: false })
 const activeTab = ref(props.initialTab)
 const searchQuery = ref('')
+const discouragedError = ref('')
 
 watch(open, (isOpen) => {
   if (isOpen) {
     activeTab.value = props.initialTab
+    discouragedError.value = ''
   }
 })
+
+watch([searchQuery, activeTab], () => {
+  discouragedError.value = ''
+})
+
+// The community said no to this source before writing began; saying yes to
+// it here would defeat the whole idea. Error, with the way forward.
+function rejectIfDiscouraged(url) {
+  const match = findDiscouragedSource(url, props.outlineId)
+  if (!match) return false
+
+  discouragedError.value = `Simple English editors discourage ${match.domain} as a source for ${props.outlineLabel} articles. Cite an independent, reliable source instead.`
+  return true
+}
 
 function onCreate() {
   const url = searchQuery.value.trim()
   if (!url) return
+  if (rejectIfDiscouraged(url)) return
   searchQuery.value = ''
   open.value = false
   emit('citation-created', { url })
 }
 
 function onReuseSource(source) {
+  if (rejectIfDiscouraged(source.url)) return
   open.value = false
   emit('citation-created', { url: source.url })
 }
