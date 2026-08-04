@@ -20,6 +20,27 @@ export function getOutlineSectionKeys(doc) {
   return keys
 }
 
+/**
+ * Whether the article still has a lead: any content standing before the
+ * first section heading. The lead has no heading of its own, so clearing it
+ * by hand is only visible this way.
+ */
+export function hasLeadContent(doc) {
+  let found = false
+  let reachedHeading = false
+
+  doc.forEach((node) => {
+    if (found || reachedHeading) return
+    if (isTopLevelH2(node)) {
+      reachedHeading = true
+      return
+    }
+    if (node.textContent.trim() !== '') found = true
+  })
+
+  return found
+}
+
 export function findSectionRange(doc, key) {
   let from = null
   let to = null

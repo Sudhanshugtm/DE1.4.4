@@ -52,7 +52,11 @@ function findReferencesStart(doc) {
  * Add an outline item and leave the caret at its first scaffold text.
  * Heading-only items receive an empty paragraph so the caret remains editable.
  */
-export function insertOutlineContent(editor, content, { keepAboveReferences = true } = {}) {
+export function insertOutlineContent(
+  editor,
+  content,
+  { keepAboveReferences = true, atStart = false } = {},
+) {
   const doc = editor.state.doc
   const referencesStart = keepAboveReferences ? findReferencesStart(doc) : null
 
@@ -63,10 +67,13 @@ export function insertOutlineContent(editor, content, { keepAboveReferences = tr
     doc.childCount === 1 && doc.firstChild.isTextblock && doc.firstChild.content.size === 0
 
   let insertAt
-  if (referencesStart !== null) {
-    insertAt = referencesStart
-  } else if (isEmptyDoc) {
+  if (isEmptyDoc) {
     insertAt = { from: 0, to: doc.content.size }
+  } else if (atStart) {
+    // The lead opens the article wherever it is added from.
+    insertAt = 0
+  } else if (referencesStart !== null) {
+    insertAt = referencesStart
   } else {
     insertAt = doc.content.size
   }

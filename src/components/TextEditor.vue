@@ -76,7 +76,10 @@ import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import { AnnotationHighlight } from '../extensions/annotationHighlight'
 import { PlaceholderChip } from '../extensions/placeholderChip'
-import SectionDeleteControls, { getOutlineSectionKeys } from '../extensions/sectionDeleteControls'
+import SectionDeleteControls, {
+  getOutlineSectionKeys,
+  hasLeadContent,
+} from '../extensions/sectionDeleteControls'
 import SectionHeading from '../extensions/sectionHeading'
 import { SourceSuperscript } from '../extensions/sourceSuperscript'
 import { ScaffoldFieldHighlight } from '../extensions/scaffoldFieldHighlight'
@@ -234,7 +237,11 @@ const editor = useEditor({
   },
   onTransaction({ editor: currentEditor, transaction }) {
     if (transaction.docChanged) {
-      emit('outline-sections-changed', getOutlineSectionKeys(currentEditor.state.doc))
+      emit(
+        'outline-sections-changed',
+        getOutlineSectionKeys(currentEditor.state.doc),
+        hasLeadContent(currentEditor.state.doc),
+      )
       // Inserting an outline is the community writing, not the editor, and
       // the editor's own setup runs before anyone has typed. Only edits made
       // while writing count as having written something.
@@ -590,7 +597,11 @@ onMounted(() => {
   // Register the editor instance globally
   if (editor.value) {
     setEditor(editor.value)
-    emit('outline-sections-changed', getOutlineSectionKeys(editor.value.state.doc))
+    emit(
+      'outline-sections-changed',
+      getOutlineSectionKeys(editor.value.state.doc),
+      hasLeadContent(editor.value.state.doc),
+    )
     if (import.meta.env.DEV) window.__editor = editor.value
   }
 

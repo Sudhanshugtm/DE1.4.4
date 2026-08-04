@@ -142,7 +142,7 @@ function onAdd(item) {
   })
   if (!content) return
 
-  const inserted = insertOutlineContent(editor, content)
+  const inserted = insertOutlineContent(editor, content, { atStart: item.isLead })
   if (!inserted) return
 
   addedItems.value = new Set([...addedItems.value, item.key])

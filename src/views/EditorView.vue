@@ -376,8 +376,12 @@ function onDismissChecks() {
   pendingChecks.value = []
 }
 
-function onOutlineSectionsChanged(sectionKeys) {
-  const leadKeys = [...addedOutlineItems.value].filter((key) => key.endsWith(':lead'))
+function onOutlineSectionsChanged(sectionKeys, hasLead = true) {
+  // The lead has no heading to track, so its presence arrives separately: a
+  // hand-cleared Introduction becomes addable in the sheet again.
+  const leadKeys = hasLead
+    ? [...addedOutlineItems.value].filter((key) => key.endsWith(':lead'))
+    : []
   addedOutlineItems.value = new Set([...leadKeys, ...sectionKeys])
   // Fires on every document change, so open findings follow the text they
   // are about — filling a sentence retires its finding without a new publish.
