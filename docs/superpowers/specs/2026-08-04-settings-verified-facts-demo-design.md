@@ -28,7 +28,7 @@ An ordinary route never exposes the Verified facts toolbar entry, even when revi
 
 ### `SettingsDialog.vue`
 
-Owns only the visible Settings presentation. It preserves the existing Article outline group, renders the new Prototype demos group, and emits `open-verified-facts-demo` when the real button is activated. It does not construct routes or reset editor state.
+Owns only the visible Settings presentation. It preserves the existing Article outline group, renders the new Prototype demos group, and emits `open-verified-facts-demo` when the real button is activated. A `demo-launch-pending` input disables the button while navigation is in flight. The dialog does not construct routes or reset editor state.
 
 ### `EditorView.vue`
 
@@ -37,11 +37,16 @@ Coordinates the route and editor session:
 - It considers the demo enabled only when `verifiedfacts=1` and the current route resolves to at least one reviewed fact.
 - It passes that result to the toolbar as the Verified facts visibility Boolean.
 - It handles `open-verified-facts-demo` by navigating to the exact curated Portugal query.
-- It resets the editor only after successful navigation, using a keyed `TextEditor` remount so TipTap content, selection, and undo history cannot leak into the demo.
+- It owns an `editorSessionRevision` number and keys `TextEditor` with both the active outline and that revision. It increments the revision only after confirmed successful demo navigation. This guarantees a remount even when the source article already uses the Country outline, so TipTap content, selection, and undo history cannot leak into the demo.
 - It resets the surrounding article-session state already cleared during an intentional outline switch: added outline progress, edit checks, authored-state, citation numbering, and contextual tips.
 - It closes Settings after success. Failed or rejected navigation preserves both the current draft and the open Settings dialog.
+- It guards the launch with an `isOpeningVerifiedFactsDemo` state so repeated activation cannot start overlapping navigations.
 
-If the exact curated demo route is already active, selecting the launcher only closes Settings; it does not erase the current demo draft.
+If the exact curated demo route is already active, selecting the launcher only closes Settings; it does not erase the current demo draft. “Exact” is semantic rather than string-order dependent: the path is `/editor`, the hash is empty, and the query has exactly the seven canonical keys and scalar values listed above. Query ordering does not matter. A route with a missing, different, repeated, or extra value is not exact and is normalized through the normal launch transition.
+
+### `CdxToolbar.vue`
+
+Retains its existing content and behavior. It exposes one narrow `focusInsertButton()` method that focuses the already-existing toolbar `+` button. After a successful demo launch and editor remount, `EditorView` calls this method so focus lands on the next relevant control without opening the menu automatically.
 
 The existing outline-selection handler and its complete list of outlines remain available. Switching outline continues to use the current behavior. If a flagged route no longer resolves to reviewed facts after a switch, the toolbar entry fails closed.
 
@@ -51,13 +56,17 @@ The existing outline-selection handler and its complete list of outlines remain 
 
 ## Navigation and failure handling
 
-The launcher uses client-side navigation so Back can return to the previous route. Route state is changed before editor state is reset. A navigation exception or Vue Router failure stops the operation without closing Settings or clearing the draft.
+The launcher first applies the semantic exact-route guard. For every other route, it performs one `router.push()` to the canonical target so Back can return to the previous route. It treats both a thrown exception and any result recognized by Vue Router's `isNavigationFailure()` as failure. After the promise resolves, it also confirms that `router.currentRoute` semantically matches the canonical target. Only then may it reset the article session, close Settings, and move focus. Any failure or final-route mismatch stops the operation without closing Settings or clearing the draft.
+
+While this navigation is pending, the launch handler ignores repeated requests and the Settings button is disabled. Pending state is cleared in all success and failure paths.
 
 The canonical query is intentionally explicit rather than inheriting unrelated parameters from the current article. This gives every reviewer the same English, toolbar-outline, Country/Portugal experience.
 
 ## Accessibility and responsive behavior
 
 The launcher is a native Codex button rather than a clickable container, so it is reachable and activatable by keyboard and assistive technology. The section label and description explain that it opens a prototype demo and name Portugal before activation.
+
+After success, focus moves to the remounted toolbar `+` button, the next control needed to reach Verified facts. On failure, Settings stays open, the launch button becomes enabled again, and focus remains on that button. The pending disabled state and handler guard prevent duplicate activation.
 
 The new group follows the existing dialog spacing and Codex design tokens. It must fit the current Settings dialog without horizontal overflow at mobile widths. The outline selector remains first and unchanged.
 
@@ -69,10 +78,14 @@ Automated tests must prove:
 2. Settings renders the Prototype demos copy and emits `open-verified-facts-demo` from the button.
 3. An unflagged Portugal route has four reviewed facts internally but does not expose Verified facts in the toolbar.
 4. The flagged Portugal route exposes Verified facts and passes the same four facts to the existing sheet.
-5. Launching from another article navigates to the exact canonical query, closes Settings, and remounts a fresh editor session only after success.
-6. Selecting the launcher on the exact demo route closes Settings without clearing the current session.
-7. Failed or rejected navigation leaves the current route, draft session, and Settings state unchanged.
-8. Unsupported or mismatched flagged routes fail closed when no reviewed facts resolve.
+5. Launching from another outline and from another Country article performs one `router.push()` to the exact canonical query, closes Settings, increments the dedicated editor-session key, and focuses the toolbar `+` only after confirmed success.
+6. The successful transition resets every surrounding session bucket: added-outline progress, edit checks and active check position, authored/publish state, citation numbering, and contextual-tip state.
+7. Semantic canonical equality ignores query ordering but rejects missing, different, repeated, or extra values and a non-empty hash.
+8. Selecting the launcher on the exact demo route closes Settings without changing the route, session key, draft, or surrounding session state.
+9. Both a thrown navigation error and a resolved Vue Router navigation failure leave the current route, draft session, surrounding session state, and Settings state unchanged; focus returns to the re-enabled launch button.
+10. A final-route mismatch is handled like navigation failure.
+11. Repeated activation while navigation is pending starts no additional navigation.
+12. Unsupported or mismatched flagged routes fail closed when no reviewed facts resolve.
 
 Fresh verification before publishing must include the focused tests, full test suite, lint, production build, and an in-app-browser walkthrough. The walkthrough must confirm the normal route hides the entry, the Settings outline list still works, the launcher opens the canonical Portugal demo, `+` reveals Verified facts only there, all four facts appear, the layout works at desktop and mobile widths, and no application errors appear.
 
