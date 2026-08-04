@@ -90,6 +90,17 @@
         <CdxIcon :icon="cdxIconListBullet" size="small" />
         <span>Suggested sections</span>
       </button>
+      <button
+        v-if="showVerifiedFacts"
+        class="cdx-toolbar__insert-item cdx-toolbar__insert-item--verified"
+        role="menuitem"
+        type="button"
+        data-testid="insert-verified-facts"
+        @click="onInsertVerifiedFacts"
+      >
+        <CdxIcon :icon="cdxIconCheckAll" size="small" />
+        <span>Verified facts</span>
+      </button>
       <div class="cdx-toolbar__insert-group">
         <button
           v-for="tool in nativeInsertTools"
@@ -133,6 +144,10 @@ defineProps({
     type: Boolean,
     default: false,
   },
+  showVerifiedFacts: {
+    type: Boolean,
+    default: false,
+  },
   showCite: {
     type: Boolean,
     default: true,
@@ -147,7 +162,15 @@ defineProps({
   },
 })
 
-const emit = defineEmits(['cite', 'close', 'link', 'open-outline', 'publish', 'insert-menu-opened'])
+const emit = defineEmits([
+  'cite',
+  'close',
+  'link',
+  'open-outline',
+  'open-verified-facts',
+  'publish',
+  'insert-menu-opened',
+])
 import { onMounted, onBeforeUnmount, ref } from 'vue'
 import { CdxButton, CdxIcon } from '@wikimedia/codex'
 import {
@@ -162,6 +185,7 @@ import {
   cdxIconCollapse,
   cdxIconNext,
   cdxIconListBullet,
+  cdxIconCheckAll,
   cdxIconImage,
   cdxIconImageGallery,
   cdxIconTable,
@@ -222,6 +246,12 @@ function onInsertSuggestedSections() {
   insertMenuOpen.value = false
   moreExpanded.value = false
   emit('open-outline')
+}
+
+function onInsertVerifiedFacts() {
+  insertMenuOpen.value = false
+  moreExpanded.value = false
+  emit('open-verified-facts')
 }
 
 function closeInsertMenu() {
@@ -327,6 +357,10 @@ onBeforeUnmount(() => document.removeEventListener('click', closeInsertMenu))
 
 .cdx-toolbar__insert-item:hover {
   background-color: var(--background-color-interactive-subtle);
+}
+
+.cdx-toolbar__insert-item--verified {
+  min-height: 44px;
 }
 
 /* The wiki's own tools sit together, divided from what guidance adds. */
