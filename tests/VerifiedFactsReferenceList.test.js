@@ -4,8 +4,14 @@ import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
 import VerifiedFactsReferenceList from '../src/components/VerifiedFactsReferenceList.vue'
 
-const buddhismInceptionFact = Object.freeze({
+const buddhismFact = Object.freeze({
   id: 'buddhism-inception-range',
+  outlineId: 'religion',
+  sectionId: 'introduction',
+  sectionLabel: 'Introduction',
+  targetFieldId: 'religion:introduction:approximate-period',
+  targetFieldToken: '[approximate period]',
+  fieldLabel: 'Approximate period',
   label: 'Approximate origin period',
   value: 'Between 563 BCE and 483 BCE',
   qualification:
@@ -14,75 +20,123 @@ const buddhismInceptionFact = Object.freeze({
   claimUrl: 'https://www.wikidata.org/wiki/Q748#P571',
 })
 
+const portugalFacts = [
+  {
+    id: 'portugal-official-name-portuguese',
+    outlineId: 'country',
+    sectionId: 'introduction',
+    sectionLabel: 'Introduction',
+    targetFieldId: 'country:introduction:official-name',
+    targetFieldToken: '[official name]',
+    fieldLabel: 'Official name',
+    label: 'Official name',
+    value: 'República Portuguesa',
+    valueLanguage: 'pt',
+    qualification: 'Reviewed name qualification.',
+    referenceCount: 1,
+    claimUrl: 'https://www.wikidata.org/wiki/Q45#P1448',
+  },
+  {
+    id: 'portugal-area-2021',
+    outlineId: 'country',
+    sectionId: 'introduction',
+    sectionLabel: 'Introduction',
+    targetFieldId: 'country:introduction:area',
+    targetFieldToken: '[area]',
+    fieldLabel: 'Area',
+    label: 'Area',
+    value: '92,225 km²',
+    qualification: 'Reviewed area qualification.',
+    referenceCount: 1,
+    claimUrl: 'https://www.wikidata.org/wiki/Q45#P2046',
+  },
+  {
+    id: 'portugal-population-2021-census',
+    outlineId: 'country',
+    sectionId: 'introduction',
+    sectionLabel: 'Introduction',
+    targetFieldId: 'country:introduction:population',
+    targetFieldToken: '[population]',
+    fieldLabel: 'Population',
+    label: 'Population',
+    value: '10,347,892',
+    qualification: 'Reviewed population qualification.',
+    referenceCount: 2,
+    claimUrl: 'https://www.wikidata.org/wiki/Q45#P1082',
+  },
+  {
+    id: 'portugal-official-language',
+    outlineId: 'country',
+    sectionId: 'introduction',
+    sectionLabel: 'Introduction',
+    targetFieldId: 'country:introduction:language',
+    targetFieldToken: '[language]',
+    fieldLabel: 'Official language',
+    label: 'Official language',
+    value: 'Portuguese',
+    qualification: 'Reviewed language qualification.',
+    referenceCount: 1,
+    claimUrl: 'https://www.wikidata.org/wiki/Q45#P37',
+  },
+]
+
 describe('VerifiedFactsReferenceList', () => {
-  it('presents referenced Wikidata information without an insertion action', () => {
+  it('summarizes plural Country matches exactly and keeps four cards read-only', () => {
     const wrapper = mount(VerifiedFactsReferenceList, {
-      props: { facts: [buddhismInceptionFact] },
+      props: { facts: portugalFacts, outlineLabel: 'Country' },
     })
 
-    expect(wrapper.text()).toContain(
-      'Referenced information from Wikidata. Check the source before using it.',
+    expect(wrapper.get('.verified-facts-reference-list__intro').text()).toBe(
+      '4 referenced facts matched to the Country outline. Check each source before using it.',
     )
-    expect(wrapper.text()).toContain('For your reference')
-    expect(wrapper.text()).toContain('Approximate origin period')
-    expect(wrapper.text()).toContain('Between 563 BCE and 483 BCE')
-    expect(wrapper.text()).toContain(
-      'Wikidata records the inception date as unknown, bounded by these earliest and latest dates.',
-    )
-    expect(wrapper.text()).toContain('1 reference')
+    expect(wrapper.findAll('article')).toHaveLength(4)
     expect(wrapper.find('button').exists()).toBe(false)
     expect(wrapper.find('[role="button"]').exists()).toBe(false)
+    expect(wrapper.find('[tabindex]').exists()).toBe(false)
+    expect(wrapper.find('[onclick]').exists()).toBe(false)
   })
 
-  it('links to the exact Wikidata statement with external-link safeguards', () => {
+  it('uses singular grammar and groups by outline and section in insertion order', () => {
     const wrapper = mount(VerifiedFactsReferenceList, {
-      props: { facts: [buddhismInceptionFact] },
+      props: { facts: [buddhismFact], outlineLabel: 'Religion' },
     })
-    const statementLink = wrapper.get('a')
 
-    expect(statementLink.text()).toBe('View this statement on Wikidata')
-    expect(statementLink.attributes('href')).toBe('https://www.wikidata.org/wiki/Q748#P571')
-    expect(statementLink.attributes('target')).toBe('_blank')
-    expect(statementLink.attributes('rel')).toBe('noopener')
-    expect(statementLink.attributes('aria-label')).toBe(
-      'View this statement on Wikidata: Approximate origin period (opens in a new tab)',
+    expect(wrapper.get('.verified-facts-reference-list__intro').text()).toBe(
+      '1 referenced fact matched to the Religion outline. Check each source before using it.',
     )
+    const section = wrapper.get('section')
+    const heading = wrapper.get('h3')
+    expect(section.attributes('aria-labelledby')).toBe(heading.attributes('id'))
+    expect(heading.text()).toBe('Introduction')
   })
 
-  it('labels each fact article with its visible fact label', () => {
+  it('labels articles from unique visible field headings and preserves value language', () => {
     const wrapper = mount(VerifiedFactsReferenceList, {
-      props: { facts: [buddhismInceptionFact] },
+      props: { facts: portugalFacts, outlineLabel: 'Country' },
     })
-    const factArticle = wrapper.get('article')
-    const factLabelId = 'verified-fact-buddhism-inception-range'
+    const articles = wrapper.findAll('article')
+    const ids = articles.map((article) => article.attributes('id'))
+    const headingIds = articles.map((article) => article.attributes('aria-labelledby'))
 
-    expect(factArticle.attributes('aria-labelledby')).toBe(factLabelId)
-    expect(wrapper.get(`#${factLabelId}`).text()).toBe('Approximate origin period')
+    expect(new Set(ids).size).toBe(4)
+    expect(new Set(headingIds).size).toBe(4)
+    expect(wrapper.get(`#${headingIds[0]}`).element.tagName).toBe('H4')
+    expect(wrapper.get(`#${headingIds[0]}`).text()).toBe('Official name')
+    expect(wrapper.get('.verified-facts-reference-list__value').attributes('lang')).toBe('pt')
+    expect(articles[2].text()).toContain('2 references')
   })
 
-  it('keeps multiple fact labels unique and pluralizes reference counts', () => {
-    const secondFact = Object.freeze({
-      id: 'buddhism-founder',
-      label: 'Traditionally attributed founder',
-      value: 'Gautama Buddha',
-      qualification: 'Wikidata identifies Gautama Buddha as the founder of Buddhism.',
-      referenceCount: 2,
-      claimUrl: 'https://www.wikidata.org/wiki/Q748#P112',
-    })
+  it('keeps exact safe Wikidata links with a field-based accessible name', () => {
     const wrapper = mount(VerifiedFactsReferenceList, {
-      props: { facts: [buddhismInceptionFact, secondFact] },
+      props: { facts: [buddhismFact], outlineLabel: 'Religion' },
     })
-    const factArticles = wrapper.findAll('article')
-    const articleLabelIds = factArticles.map((article) => article.attributes('aria-labelledby'))
+    const link = wrapper.get('a')
 
-    expect(articleLabelIds).toEqual([
-      'verified-fact-buddhism-inception-range',
-      'verified-fact-buddhism-founder',
-    ])
-    expect(new Set(articleLabelIds).size).toBe(2)
-    expect(wrapper.get('#verified-fact-buddhism-founder').text()).toBe(
-      'Traditionally attributed founder',
-    )
-    expect(factArticles[1].text()).toContain('2 references')
+    expect(link.attributes()).toMatchObject({
+      href: 'https://www.wikidata.org/wiki/Q748#P571',
+      target: '_blank',
+      rel: 'noopener',
+      'aria-label': 'View this statement on Wikidata: Approximate period (opens in a new tab)',
+    })
   })
 })

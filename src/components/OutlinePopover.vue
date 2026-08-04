@@ -39,6 +39,7 @@
       <VerifiedFactsReferenceList
         v-if="selectableOutlines && selectedView === 'verified-facts'"
         :facts="verifiedFacts"
+        :outline-label="outlineLabel"
       />
       <VerifiedFactsList
         v-else-if="!selectableOutlines && selectedView === 'verified-facts'"
@@ -82,6 +83,10 @@ const props = defineProps({
   verifiedFacts: {
     type: Array,
     default: () => [],
+  },
+  outlineLabel: {
+    type: String,
+    required: true,
   },
 })
 const open = defineModel('open', { type: Boolean, default: false })

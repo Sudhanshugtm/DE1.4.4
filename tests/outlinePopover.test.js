@@ -8,6 +8,12 @@ import OutlinePopover from '../src/components/OutlinePopover.vue'
 
 const reviewedFact = Object.freeze({
   id: 'buddhism-inception-range',
+  outlineId: 'religion',
+  sectionId: 'introduction',
+  sectionLabel: 'Introduction',
+  targetFieldId: 'religion:introduction:approximate-period',
+  targetFieldToken: '[approximate period]',
+  fieldLabel: 'Approximate period',
   label: 'Approximate origin period',
   value: 'Between 563 BCE and 483 BCE',
   qualification:
@@ -39,9 +45,9 @@ const stubs = {
   OutlineAccordionList: true,
   VerifiedFactsReferenceList: {
     name: 'VerifiedFactsReferenceList',
-    props: ['facts'],
+    props: ['facts', 'outlineLabel'],
     template:
-      '<div data-testid="verified-facts-reference-list" :data-fact-count="facts.length">{{ facts.map((fact) => `${fact.label}: ${fact.value}`).join(\' | \') }}</div>',
+      '<div data-testid="verified-facts-reference-list" :data-fact-count="facts.length" :data-outline-label="outlineLabel">{{ facts.map((fact) => `${fact.fieldLabel}: ${fact.value}`).join(\' | \') }}</div>',
   },
   VerifiedFactsList: {
     name: 'VerifiedFactsList',
@@ -66,6 +72,7 @@ async function mountPopover(props = {}) {
       open: true,
       selectableOutlines: true,
       addedItems: new Set(),
+      outlineLabel: 'Country',
       ...props,
     },
     global: {
@@ -138,7 +145,8 @@ describe('outline popover', () => {
     expect(wrapper.find('.outline-popover-header__title').text()).toContain('Verified facts')
     const referenceList = wrapper.find('[data-testid="verified-facts-reference-list"]')
     expect(referenceList.attributes('data-fact-count')).toBe('1')
-    expect(referenceList.text()).toContain('Approximate origin period: Between 563 BCE and 483 BCE')
+    expect(referenceList.attributes('data-outline-label')).toBe('Country')
+    expect(referenceList.text()).toContain('Approximate period: Between 563 BCE and 483 BCE')
     expect(wrapper.findComponent({ name: 'VerifiedFactsList' }).exists()).toBe(false)
   })
 

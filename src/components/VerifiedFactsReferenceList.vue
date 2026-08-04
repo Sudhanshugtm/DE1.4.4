@@ -1,22 +1,30 @@
 <template>
   <div class="verified-facts-reference-list">
-    <p class="verified-facts-reference-list__intro">
-      Referenced information from Wikidata. Check the source before using it.
-    </p>
+    <p class="verified-facts-reference-list__intro">{{ summary }}</p>
 
-    <section :aria-labelledby="headingId">
-      <h3 :id="headingId" class="verified-facts-reference-list__heading">For your reference</h3>
+    <section
+      v-for="group in groupedFacts"
+      :key="group.key"
+      class="verified-facts-reference-list__section"
+      :aria-labelledby="group.headingId"
+    >
+      <h3 :id="group.headingId" class="verified-facts-reference-list__heading">
+        {{ group.sectionLabel }}
+      </h3>
 
       <article
-        v-for="fact in facts"
+        v-for="fact in group.facts"
+        :id="`verified-fact-${fact.id}`"
         :key="fact.id"
         class="verified-facts-reference-list__fact"
-        :aria-labelledby="`verified-fact-${fact.id}`"
+        :aria-labelledby="`verified-fact-${fact.id}-heading`"
       >
-        <p :id="`verified-fact-${fact.id}`" class="verified-facts-reference-list__label">
-          {{ fact.label }}
+        <h4 :id="`verified-fact-${fact.id}-heading`" class="verified-facts-reference-list__label">
+          {{ fact.fieldLabel }}
+        </h4>
+        <p class="verified-facts-reference-list__value" :lang="fact.valueLanguage || undefined">
+          {{ fact.value }}
         </p>
-        <p class="verified-facts-reference-list__value">{{ fact.value }}</p>
         <p class="verified-facts-reference-list__qualification">{{ fact.qualification }}</p>
 
         <div class="verified-facts-reference-list__provenance">
@@ -29,7 +37,7 @@
             :href="fact.claimUrl"
             target="_blank"
             rel="noopener"
-            :aria-label="`View this statement on Wikidata: ${fact.label} (opens in a new tab)`"
+            :aria-label="`View this statement on Wikidata: ${fact.fieldLabel} (opens in a new tab)`"
           >
             View this statement on Wikidata
           </a>
@@ -40,52 +48,79 @@
 </template>
 
 <script setup>
-import { useId } from 'vue'
+import { computed } from 'vue'
 
-defineProps({
+const props = defineProps({
   facts: {
     type: Array,
     required: true,
   },
+  outlineLabel: {
+    type: String,
+    required: true,
+  },
 })
 
-const headingId = useId()
+const summary = computed(() => {
+  const noun = props.facts.length === 1 ? 'fact' : 'facts'
+  return `${props.facts.length} referenced ${noun} matched to the ${props.outlineLabel} outline. Check each source before using it.`
+})
+
+const groupedFacts = computed(() => {
+  const groups = new Map()
+  for (const fact of props.facts) {
+    const key = `${fact.outlineId}:${fact.sectionId}`
+    if (!groups.has(key)) {
+      groups.set(key, {
+        key,
+        headingId: `verified-facts-section-${fact.outlineId}-${fact.sectionId}-heading`,
+        sectionLabel: fact.sectionLabel,
+        facts: [],
+      })
+    }
+    groups.get(key).facts.push(fact)
+  }
+  return [...groups.values()]
+})
 </script>
 
 <style scoped>
 .verified-facts-reference-list {
-  color: var(--color-base, #202122);
+  color: var(--color-base);
 }
 
 .verified-facts-reference-list__intro {
-  margin: 0 0 var(--spacing-100, 16px);
-  color: var(--color-subtle, #54595d);
-  font-size: var(--font-size-medium, 16px);
-  line-height: var(--line-height-medium, 26px);
+  margin: 0 0 var(--spacing-100);
+  color: var(--color-subtle);
+  font-size: var(--font-size-medium);
+  line-height: var(--line-height-medium);
+}
+
+.verified-facts-reference-list__section + .verified-facts-reference-list__section {
+  margin-top: var(--spacing-100);
 }
 
 .verified-facts-reference-list__heading {
-  margin: 0 0 var(--spacing-75, 12px);
-  font-size: var(--font-size-small, 14px);
-  font-weight: var(--font-weight-semi-bold, 600);
-  line-height: var(--line-height-small, 22px);
+  margin: 0 0 var(--spacing-75);
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-semi-bold);
+  line-height: var(--line-height-small);
 }
 
 .verified-facts-reference-list__fact {
   display: flex;
   min-width: 0;
   flex-direction: column;
-  gap: var(--spacing-75, 12px);
-  padding: var(--spacing-100, 16px);
-  border: var(--border-width-base, 1px) var(--border-style-base, solid)
-    var(--border-color-subtle, #c8ccd1);
-  border-radius: calc(var(--border-radius-base, 2px) * 4);
-  background-color: var(--background-color-base, #fff);
+  gap: var(--spacing-75);
+  padding: var(--spacing-100);
+  border: var(--border-width-base) var(--border-style-base) var(--border-color-subtle);
+  border-radius: calc(var(--border-radius-base) * 4);
+  background-color: var(--background-color-base);
   overflow-wrap: anywhere;
 }
 
 .verified-facts-reference-list__fact + .verified-facts-reference-list__fact {
-  margin-top: var(--spacing-75, 12px);
+  margin-top: var(--spacing-75);
 }
 
 .verified-facts-reference-list__label,
@@ -95,23 +130,23 @@ const headingId = useId()
 }
 
 .verified-facts-reference-list__label {
-  color: var(--color-subtle, #54595d);
-  font-size: var(--font-size-small, 14px);
-  font-weight: var(--font-weight-semi-bold, 600);
-  line-height: var(--line-height-small, 22px);
+  color: var(--color-subtle);
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-semi-bold);
+  line-height: var(--line-height-small);
 }
 
 .verified-facts-reference-list__value {
-  font-size: var(--font-size-medium, 16px);
-  font-weight: var(--font-weight-semi-bold, 600);
-  line-height: var(--line-height-medium, 26px);
+  font-size: var(--font-size-medium);
+  font-weight: var(--font-weight-semi-bold);
+  line-height: var(--line-height-medium);
 }
 
 .verified-facts-reference-list__qualification,
 .verified-facts-reference-list__provenance {
-  color: var(--color-subtle, #54595d);
-  font-size: var(--font-size-small, 14px);
-  line-height: var(--line-height-small, 22px);
+  color: var(--color-subtle);
+  font-size: var(--font-size-small);
+  line-height: var(--line-height-small);
 }
 
 .verified-facts-reference-list__provenance {
@@ -119,24 +154,20 @@ const headingId = useId()
   flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
-  gap: var(--spacing-50, 8px) var(--spacing-75, 12px);
-  padding-top: var(--spacing-75, 12px);
-  border-top: var(--border-width-base, 1px) var(--border-style-base, solid)
-    var(--border-color-subtle, #c8ccd1);
+  gap: var(--spacing-50) var(--spacing-75);
+  padding-top: var(--spacing-75);
+  border-top: var(--border-width-base) var(--border-style-base) var(--border-color-subtle);
 }
 
-.verified-facts-reference-list__link {
-  color: var(--color-progressive, #36c);
-  text-decoration: underline;
-}
-
+.verified-facts-reference-list__link,
 .verified-facts-reference-list__link:hover {
+  color: var(--color-progressive);
   text-decoration: underline;
 }
 
 .verified-facts-reference-list__link:focus-visible {
-  outline: var(--border-width-thick, 2px) var(--border-style-base, solid)
-    var(--outline-color-progressive--focus, #36c);
-  outline-offset: var(--spacing-12, 2px);
+  outline: var(--border-width-thick) var(--border-style-base)
+    var(--outline-color-progressive--focus);
+  outline-offset: var(--spacing-12);
 }
 </style>

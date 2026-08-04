@@ -66,6 +66,7 @@
       :initial-view="initialView"
       :selectable-outlines="isToolbarOutlineVariant"
       :verified-facts="reviewedVerifiedFacts"
+      :outline-label="activeOutlineLabel"
       @content-inserted="onContentInserted"
       @open-cite-discover="onOpenCiteDiscover"
     />

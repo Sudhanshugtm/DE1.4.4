@@ -4,14 +4,79 @@ import {
   isReviewedVerifiedFact,
 } from '../src/config/reviewedVerifiedFacts.js'
 
-const reviewedContext = Object.freeze({
-  language: 'en',
-  outline: 'religion',
-  title: 'Buddhism',
-})
+const portugalContext = Object.freeze({ language: 'en', outline: 'country', title: 'Portugal' })
+
+const expectedPortugalFacts = Object.freeze([
+  Object.freeze({
+    id: 'portugal-official-name-portuguese',
+    outlineId: 'country',
+    sectionId: 'introduction',
+    sectionLabel: 'Introduction',
+    targetFieldId: 'country:introduction:official-name',
+    targetFieldToken: '[official name]',
+    fieldLabel: 'Official name',
+    label: 'Official name',
+    value: 'República Portuguesa',
+    valueLanguage: 'pt',
+    qualification:
+      "Wikidata records this official name in Portuguese and cites Portugal's diplomatic portal.",
+    referenceCount: 1,
+    claimUrl: 'https://www.wikidata.org/wiki/Q45#P1448',
+  }),
+  Object.freeze({
+    id: 'portugal-area-2021',
+    outlineId: 'country',
+    sectionId: 'introduction',
+    sectionLabel: 'Introduction',
+    targetFieldId: 'country:introduction:area',
+    targetFieldToken: '[area]',
+    fieldLabel: 'Area',
+    label: 'Area',
+    value: '92,225 km²',
+    qualification: 'Wikidata records this area with a point in time of 2021 and cites Pordata.',
+    referenceCount: 1,
+    claimUrl: 'https://www.wikidata.org/wiki/Q45#P2046',
+  }),
+  Object.freeze({
+    id: 'portugal-population-2021-census',
+    outlineId: 'country',
+    sectionId: 'introduction',
+    sectionLabel: 'Introduction',
+    targetFieldId: 'country:introduction:population',
+    targetFieldToken: '[population]',
+    fieldLabel: 'Population',
+    label: 'Population',
+    value: '10,347,892',
+    qualification:
+      "The preferred Wikidata population statement is dated 2021, uses the census method, and cites Portugal's national statistics office.",
+    referenceCount: 1,
+    claimUrl: 'https://www.wikidata.org/wiki/Q45#P1082',
+  }),
+  Object.freeze({
+    id: 'portugal-official-language',
+    outlineId: 'country',
+    sectionId: 'introduction',
+    sectionLabel: 'Introduction',
+    targetFieldId: 'country:introduction:language',
+    targetFieldToken: '[language]',
+    fieldLabel: 'Official language',
+    label: 'Official language',
+    value: 'Portuguese',
+    qualification:
+      "Wikidata records Portuguese as the current normal-rank official-language value and cites section 11.3 of Portugal's constitution.",
+    referenceCount: 1,
+    claimUrl: 'https://www.wikidata.org/wiki/Q45#P37',
+  }),
+])
 
 const expectedBuddhismFact = Object.freeze({
   id: 'buddhism-inception-range',
+  outlineId: 'religion',
+  sectionId: 'introduction',
+  sectionLabel: 'Introduction',
+  targetFieldId: 'religion:introduction:approximate-period',
+  targetFieldToken: '[approximate period]',
+  fieldLabel: 'Approximate period',
   label: 'Approximate origin period',
   value: 'Between 563 BCE and 483 BCE',
   qualification:
@@ -21,137 +86,100 @@ const expectedBuddhismFact = Object.freeze({
 })
 
 describe('reviewed verified fact fixtures', () => {
-  it('returns the reviewed Buddhism inception range', () => {
-    expect(getReviewedVerifiedFacts(reviewedContext)).toEqual([expectedBuddhismFact])
+  it('returns the four frozen Portugal facts in reviewed order', () => {
+    expect(getReviewedVerifiedFacts(portugalContext)).toEqual(expectedPortugalFacts)
+    expect(getReviewedVerifiedFacts(portugalContext).map(({ id }) => id)).toEqual([
+      'portugal-official-name-portuguese',
+      'portugal-area-2021',
+      'portugal-population-2021-census',
+      'portugal-official-language',
+    ])
   })
 
-  it('returns no facts for an unreviewed context', () => {
+  it('returns the context-complete Buddhism fixture', () => {
     expect(
-      getReviewedVerifiedFacts({
-        language: 'en',
-        outline: 'religion',
-        title: 'Christianity',
-      }),
+      getReviewedVerifiedFacts({ language: 'en', outline: 'religion', title: 'Buddhism' }),
+    ).toEqual([expectedBuddhismFact])
+  })
+
+  it('returns no facts for unsupported and malformed routes', () => {
+    expect(
+      getReviewedVerifiedFacts({ language: 'en', outline: 'country', title: 'Spain' }),
     ).toEqual([])
+    expect(getReviewedVerifiedFacts({ language: 'en', outline: 'religion' })).toEqual([])
+    expect(getReviewedVerifiedFacts('en:country:Portugal')).toEqual([])
+  })
+
+  it('returns isolated copies', () => {
+    const first = getReviewedVerifiedFacts(portugalContext)
+    first[0].value = 'Changed'
+    expect(getReviewedVerifiedFacts(portugalContext)).toEqual(expectedPortugalFacts)
+  })
+
+  it('accepts reviewed tuples only for their current outline', () => {
+    expect(isReviewedVerifiedFact(expectedPortugalFacts[0], 'country')).toBe(true)
+    expect(isReviewedVerifiedFact(expectedPortugalFacts[0], 'religion')).toBe(false)
+    expect(isReviewedVerifiedFact(expectedPortugalFacts[0])).toBe(false)
   })
 
   it.each([
-    { label: 'undefined', context: undefined },
-    { label: 'null', context: null },
-    { label: 'an empty array', context: [] },
-    { label: 'a route-key array', context: ['en:religion:Buddhism'] },
-    { label: 'a symbol', context: Symbol('en:religion:Buddhism') },
-    { label: 'a string', context: 'en:religion:Buddhism' },
-    { label: 'a missing language', context: { outline: 'religion', title: 'Buddhism' } },
-    {
-      label: 'a non-string language',
-      context: { language: Symbol('en'), outline: 'religion', title: 'Buddhism' },
-    },
-    {
-      label: 'a non-string outline',
-      context: { language: 'en', outline: ['religion'], title: 'Buddhism' },
-    },
-    {
-      label: 'a non-string title',
-      context: { language: 'en', outline: 'religion', title: { value: 'Buddhism' } },
-    },
-  ])('returns no facts without throwing for $label context', ({ context }) => {
-    let result
-
-    expect(() => {
-      result = getReviewedVerifiedFacts(context)
-    }).not.toThrow()
-    expect(result).toEqual([])
-  })
-
-  it('returns isolated fact copies', () => {
-    const firstResult = getReviewedVerifiedFacts(reviewedContext)
-    firstResult[0].value = 'Changed by the caller'
-
-    const secondResult = getReviewedVerifiedFacts(reviewedContext)
-
-    expect(secondResult).toEqual([expectedBuddhismFact])
-    expect(secondResult[0]).not.toBe(firstResult[0])
-  })
-
-  it('accepts the exact reviewed Buddhism fact', () => {
-    expect(isReviewedVerifiedFact(expectedBuddhismFact)).toBe(true)
+    'outlineId',
+    'sectionId',
+    'sectionLabel',
+    'targetFieldId',
+    'targetFieldToken',
+    'fieldLabel',
+  ])('rejects a missing context tuple field: %s', (field) => {
+    const fact = { ...expectedPortugalFacts[0] }
+    delete fact[field]
+    expect(isReviewedVerifiedFact(fact, 'country')).toBe(false)
   })
 
   it.each([
-    {
-      label: 'missing qualification and claim URL',
-      fact: {
-        id: 'unqualified-fact',
-        label: 'Unqualified fact',
-        value: 'Unknown',
-        referenceCount: 1,
-      },
-    },
-    { label: 'empty id', fact: { ...expectedBuddhismFact, id: '' } },
-    { label: 'blank label', fact: { ...expectedBuddhismFact, label: '   ' } },
-    { label: 'non-string value', fact: { ...expectedBuddhismFact, value: 563 } },
-    { label: 'non-string qualification', fact: { ...expectedBuddhismFact, qualification: null } },
-    { label: 'zero references', fact: { ...expectedBuddhismFact, referenceCount: 0 } },
-    { label: 'negative references', fact: { ...expectedBuddhismFact, referenceCount: -1 } },
-    { label: 'fractional references', fact: { ...expectedBuddhismFact, referenceCount: 1.5 } },
-    { label: 'string reference count', fact: { ...expectedBuddhismFact, referenceCount: '1' } },
-    { label: 'non-string claim URL', fact: { ...expectedBuddhismFact, claimUrl: 571 } },
-    { label: 'relative claim URL', fact: { ...expectedBuddhismFact, claimUrl: '/wiki/Q748#P571' } },
-    {
-      label: 'JavaScript claim URL',
-      fact: { ...expectedBuddhismFact, claimUrl: 'javascript:alert(1)#P571' },
-    },
-    {
-      label: 'HTTP claim URL',
-      fact: { ...expectedBuddhismFact, claimUrl: 'http://www.wikidata.org/wiki/Q748#P571' },
-    },
-    {
-      label: 'bare Wikidata hostname',
-      fact: { ...expectedBuddhismFact, claimUrl: 'https://wikidata.org/wiki/Q748#P571' },
-    },
-    {
-      label: 'lookalike Wikidata hostname',
-      fact: {
-        ...expectedBuddhismFact,
-        claimUrl: 'https://www.wikidata.org.evil.test/wiki/Q748#P571',
-      },
-    },
-    {
-      label: 'Wikidata homepage path',
-      fact: { ...expectedBuddhismFact, claimUrl: 'https://www.wikidata.org/#P571' },
-    },
-    {
-      label: 'Wikidata special page path',
-      fact: {
-        ...expectedBuddhismFact,
-        claimUrl: 'https://www.wikidata.org/wiki/Special:Random#P571',
-      },
-    },
-    {
-      label: 'arbitrary Wikidata path',
-      fact: {
-        ...expectedBuddhismFact,
-        claimUrl: 'https://www.wikidata.org/not-a-claim/Q748#P571',
-      },
-    },
-    {
-      label: 'claim URL without a hash',
-      fact: { ...expectedBuddhismFact, claimUrl: 'https://www.wikidata.org/wiki/Q748' },
-    },
-    {
-      label: 'non-property hash',
-      fact: { ...expectedBuddhismFact, claimUrl: 'https://www.wikidata.org/wiki/Q748#Q571' },
-    },
-    {
-      label: 'property hash without digits',
-      fact: { ...expectedBuddhismFact, claimUrl: 'https://www.wikidata.org/wiki/Q748#P' },
-    },
-    {
-      label: 'property hash with a suffix',
-      fact: { ...expectedBuddhismFact, claimUrl: 'https://www.wikidata.org/wiki/Q748#P571-extra' },
-    },
-  ])('rejects $label', ({ fact }) => {
-    expect(isReviewedVerifiedFact(fact)).toBe(false)
+    ['outlineId', 'religion'],
+    ['sectionId', 'history'],
+    ['sectionLabel', 'Lead'],
+    ['targetFieldId', 'country:introduction:population'],
+    ['targetFieldToken', '[population]'],
+    ['fieldLabel', 'Name'],
+  ])('rejects a mismatched allowlisted tuple field: %s', (field, value) => {
+    expect(isReviewedVerifiedFact({ ...expectedPortugalFacts[0], [field]: value }, 'country')).toBe(
+      false,
+    )
+  })
+
+  it('allows only an absent value language or the supported pt tag', () => {
+    expect(isReviewedVerifiedFact(expectedPortugalFacts[0], 'country')).toBe(true)
+    expect(isReviewedVerifiedFact(expectedPortugalFacts[1], 'country')).toBe(true)
+    expect(
+      isReviewedVerifiedFact({ ...expectedPortugalFacts[0], valueLanguage: '' }, 'country'),
+    ).toBe(false)
+    expect(
+      isReviewedVerifiedFact({ ...expectedPortugalFacts[0], valueLanguage: 'en' }, 'country'),
+    ).toBe(false)
+  })
+
+  it.each([
+    '/wiki/Q45#P1448',
+    'http://www.wikidata.org/wiki/Q45#P1448',
+    'https://wikidata.org/wiki/Q45#P1448',
+    'https://www.wikidata.org.evil.test/wiki/Q45#P1448',
+    'https://www.wikidata.org/wiki/Special:Random#P1448',
+    'https://www.wikidata.org/wiki/Q45#Q1448',
+    'https://www.wikidata.org/wiki/Q45#P1448-extra',
+  ])('rejects hardened claim URL case %s', (claimUrl) => {
+    expect(isReviewedVerifiedFact({ ...expectedPortugalFacts[0], claimUrl }, 'country')).toBe(false)
+  })
+
+  it.each([
+    ['id', ''],
+    ['label', '   '],
+    ['value', 45],
+    ['qualification', null],
+    ['referenceCount', 0],
+  ])('rejects invalid required data field %s', (field, value) => {
+    expect(isReviewedVerifiedFact({ ...expectedPortugalFacts[0], [field]: value }, 'country')).toBe(
+      false,
+    )
   })
 })

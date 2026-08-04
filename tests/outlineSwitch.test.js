@@ -14,6 +14,12 @@ import { findBoundFields } from '../src/utils/scaffoldFields.js'
 
 const expectedBuddhismFact = Object.freeze({
   id: 'buddhism-inception-range',
+  outlineId: 'religion',
+  sectionId: 'introduction',
+  sectionLabel: 'Introduction',
+  targetFieldId: 'religion:introduction:approximate-period',
+  targetFieldToken: '[approximate period]',
+  fieldLabel: 'Approximate period',
   label: 'Approximate origin period',
   value: 'Between 563 BCE and 483 BCE',
   qualification:
@@ -59,7 +65,7 @@ const stubs = {
   },
   OutlinePopover: {
     name: 'OutlinePopover',
-    props: ['open', 'initialView', 'addedItems', 'verifiedFacts'],
+    props: ['open', 'initialView', 'addedItems', 'verifiedFacts', 'outlineLabel'],
     emits: ['update:open', 'update:addedItems'],
     template: '<div class="outline-popover" />',
   },
@@ -144,7 +150,29 @@ afterEach(() => {
 })
 
 describe('reviewed verified facts integration', () => {
-  it('offers and passes the exact reviewed fact for a supported toolbar route', async () => {
+  it('offers four Portugal facts and passes the Country outline label', async () => {
+    await mountEditor({
+      lang: 'en',
+      variant: 'toolbar-outline',
+      outline: 'country',
+      title: 'Portugal',
+    })
+
+    expect(toolbar().props('showVerifiedFacts')).toBe(true)
+    expect(outlinePopover().props('outlineLabel')).toBe('Country')
+    expect(
+      outlinePopover()
+        .props('verifiedFacts')
+        .map(({ id, value }) => ({ id, value })),
+    ).toEqual([
+      { id: 'portugal-official-name-portuguese', value: 'República Portuguesa' },
+      { id: 'portugal-area-2021', value: '92,225 km²' },
+      { id: 'portugal-population-2021-census', value: '10,347,892' },
+      { id: 'portugal-official-language', value: 'Portuguese' },
+    ])
+  })
+
+  it('preserves the Buddhism fact and passes the Religion outline label', async () => {
     await mountEditor({
       lang: 'en',
       variant: 'toolbar-outline',
@@ -152,8 +180,8 @@ describe('reviewed verified facts integration', () => {
       title: 'Buddhism',
     })
 
-    expect(toolbar().props('showVerifiedFacts')).toBe(true)
     expect(outlinePopover().props('verifiedFacts')).toEqual([expectedBuddhismFact])
+    expect(outlinePopover().props('outlineLabel')).toBe('Religion')
   })
 
   it('reopens a dismissed toolbar sheet directly on reviewed facts without touching the editor', async () => {
@@ -179,8 +207,8 @@ describe('reviewed verified facts integration', () => {
       {
         lang: 'en',
         variant: 'toolbar-outline',
-        outline: 'religion',
-        title: 'Buddhism',
+        outline: 'country',
+        title: 'Portugal',
       },
       true,
     )
