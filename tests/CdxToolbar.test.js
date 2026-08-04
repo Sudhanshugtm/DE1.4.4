@@ -25,6 +25,7 @@ function mountToolbar(props = {}) {
       ...props,
     },
     global: { stubs },
+    attachTo: document.body,
   })
 }
 
@@ -38,6 +39,15 @@ afterEach(() => {
 })
 
 describe('CdxToolbar verified facts insert entry', () => {
+  it('focuses Insert without opening its menu', async () => {
+    mountToolbar()
+
+    wrapper.vm.focusInsertButton()
+
+    expect(document.activeElement).toBe(wrapper.get('[aria-label="Insert"]').element)
+    expect(wrapper.find('[role="menu"]').exists()).toBe(false)
+  })
+
   it('shows Verified facts immediately after Suggested sections when enabled', async () => {
     mountToolbar({ showVerifiedFacts: true })
 

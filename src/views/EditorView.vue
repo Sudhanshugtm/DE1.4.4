@@ -1,8 +1,9 @@
 <template>
   <div class="editor-page">
     <CdxToolbar
+      ref="toolbarRef"
       :show-outline-entry="isToolbarOutlineVariant"
-      :show-verified-facts="reviewedVerifiedFacts.length > 0"
+      :show-verified-facts="isVerifiedFactsDemoEnabled"
       :show-cite="!isToolbarOutlineVariant"
       :highlight-outline-entry="highlightOutlineEntry"
       :can-publish="hasAuthoredText"
@@ -24,7 +25,7 @@
     >
       <div class="editor-main" @click="isRailOpen && (isRailOpen = false)">
         <TextEditor
-          :key="activeOutlineId"
+          :key="editorSessionRevision"
           :show-outline-entry="!isToolbarOutlineVariant"
           :show-placeholder="isToolbarOutlineVariant"
           :suppress-auto-focus="isToolbarOutlineVariant"
@@ -86,7 +87,12 @@
       :bullets="tipSuggestion?.bullets ?? []"
     />
     <SourceContextSheet v-model:open="sourceContextOpen" @add-citation="onAddCitationFromSource" />
-    <SettingsDialog v-model:open="settingsDialogOpen" @outline-selected="onOutlineSelected" />
+    <SettingsDialog
+      v-model:open="settingsDialogOpen"
+      :demo-launch-pending="isOpeningVerifiedFactsDemo"
+      @outline-selected="onOutlineSelected"
+      @open-verified-facts-demo="onOpenVerifiedFactsDemo"
+    />
     <CiteDialog
       v-model:open="citeDialogOpen"
       :initial-tab="citeDialogInitialTab"
@@ -127,6 +133,10 @@ import { useEditorInstance } from '@/composables/useEditorInstance'
 import { useCursorRect } from '@/composables/useCursorRect'
 import { simpleEnglishOutlinesById } from '@/config/outlines/simpleEnglish'
 import { getReviewedVerifiedFacts } from '@/config/reviewedVerifiedFacts'
+import {
+  VERIFIED_FACTS_DEMO_ROUTE,
+  isExactVerifiedFactsDemoRoute,
+} from '@/config/verifiedFactsDemo'
 
 const route = useRoute()
 const router = useRouter()
@@ -153,6 +163,12 @@ const reviewedVerifiedFacts = computed(() => {
     title,
   })
 })
+const isVerifiedFactsDemoEnabled = computed(
+  () => route.query.verifiedfacts === '1' && reviewedVerifiedFacts.value.length > 0,
+)
+const toolbarRef = ref(null)
+const editorSessionRevision = ref(0)
+const isOpeningVerifiedFactsDemo = ref(false)
 
 // Force entry point
 const { getEditor } = useEditorInstance()
@@ -402,23 +418,7 @@ function onOutlineSectionsChanged(sectionKeys, hasLead = true) {
   refreshChecks()
 }
 
-async function onOutlineSelected(outlineId) {
-  if (outlineId === activeOutlineId.value) {
-    settingsDialogOpen.value = false
-    return
-  }
-
-  try {
-    const failure = await router.replace({
-      query: { ...route.query, outline: outlineId },
-    })
-    if (isNavigationFailure(failure)) return
-  } catch {
-    return
-  }
-
-  // A different outline is a different article, so the editor starts clean:
-  // the previous article's text, checks and progress all go with it.
+function resetArticleSessionState() {
   addedOutlineItems.value = new Set()
   pendingChecks.value = []
   activeCheckIndex.value = 0
@@ -426,9 +426,69 @@ async function onOutlineSelected(outlineId) {
   nextCitationNumber.value = 1
   tipSuggestion.value = null
   hasDismissedTip.value = false
+}
+
+async function onOutlineSelected(outlineId) {
+  if (outlineId === activeOutlineId.value) {
+    settingsDialogOpen.value = false
+    return
+  }
+
+  const targetLocation = {
+    name: 'editor',
+    query: { ...route.query, outline: outlineId },
+    hash: route.hash,
+  }
+  const expectedFullPath = router.resolve(targetLocation).fullPath
+
+  try {
+    const failure = await router.replace(targetLocation)
+    if (isNavigationFailure(failure)) return
+  } catch {
+    return
+  }
+  if (router.currentRoute.value.fullPath !== expectedFullPath) return
+
+  // A different outline is a different article, so the editor starts clean:
+  // the previous article's text, checks and progress all go with it.
+  editorSessionRevision.value += 1
+  resetArticleSessionState()
   initialView.value = 'outline'
   settingsDialogOpen.value = false
   isPopoverOpen.value = true
+}
+
+async function onOpenVerifiedFactsDemo() {
+  if (isOpeningVerifiedFactsDemo.value) return
+  if (isExactVerifiedFactsDemoRoute(route)) {
+    settingsDialogOpen.value = false
+    return
+  }
+
+  isOpeningVerifiedFactsDemo.value = true
+  let launchConfirmed = false
+  try {
+    const failure = await router.push(VERIFIED_FACTS_DEMO_ROUTE)
+    if (isNavigationFailure(failure)) return
+    if (!isExactVerifiedFactsDemoRoute(router.currentRoute.value)) return
+
+    launchConfirmed = true
+    editorSessionRevision.value += 1
+    resetArticleSessionState()
+    initialView.value = 'outline'
+    settingsDialogOpen.value = false
+    isPopoverOpen.value = true
+    await nextTick()
+    toolbarRef.value?.focusInsertButton()
+  } catch {
+    // Failed navigation keeps the current editor session intact.
+  } finally {
+    isOpeningVerifiedFactsDemo.value = false
+    if (!launchConfirmed) {
+      await nextTick()
+      document.querySelector('[data-testid="open-verified-facts-demo"]')?.focus()
+    }
+  }
 }
 
 function onForceButtonClick() {
@@ -459,7 +519,7 @@ watch(isPopoverOpen, (isOpen, wasOpen) => {
 })
 
 function onOpenVerifiedFacts() {
-  if (reviewedVerifiedFacts.value.length === 0) return
+  if (!isVerifiedFactsDemoEnabled.value) return
 
   dismissTipQuietly()
   initialView.value = 'verified-facts'

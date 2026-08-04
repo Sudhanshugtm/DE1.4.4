@@ -259,6 +259,12 @@ function closeInsertMenu() {
   moreExpanded.value = false
 }
 
+function focusInsertButton() {
+  insertButtonRef.value?.$el?.focus()
+}
+
+defineExpose({ focusInsertButton })
+
 onMounted(() => document.addEventListener('click', closeInsertMenu))
 onBeforeUnmount(() => document.removeEventListener('click', closeInsertMenu))
 </script>
