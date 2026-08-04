@@ -84,6 +84,35 @@ afterEach(() => {
 })
 
 describe('outline popover', () => {
+  it('initializes an already-open sheet from the requested verified facts view', async () => {
+    vi.stubGlobal('ResizeObserver', ResizeObserverMock)
+    await mountPopover({
+      initialView: 'verified-facts',
+      verifiedFacts: [reviewedFact],
+    })
+
+    expect(wrapper.find('.outline-popover-header__title').text()).toContain('Verified facts')
+    expect(wrapper.find('[data-testid="verified-facts-reference-list"]').exists()).toBe(true)
+    expect(wrapper.findComponent({ name: 'VerifiedFactsList' }).exists()).toBe(false)
+  })
+
+  it('switches an open sheet when its requested view changes', async () => {
+    vi.stubGlobal('ResizeObserver', ResizeObserverMock)
+    await mountPopover({
+      initialView: 'outline',
+      verifiedFacts: [reviewedFact],
+    })
+
+    expect(wrapper.find('.outline-popover-header__title').text()).toContain('Suggested sections')
+
+    await wrapper.setProps({ initialView: 'verified-facts' })
+    await nextTick()
+
+    expect(wrapper.find('.outline-popover-header__title').text()).toContain('Verified facts')
+    expect(wrapper.find('[data-testid="verified-facts-reference-list"]').exists()).toBe(true)
+    expect(wrapper.findComponent({ name: 'VerifiedFactsList' }).exists()).toBe(false)
+  })
+
   it('shows reviewed facts as a read-only reference list for selectable outlines', async () => {
     vi.stubGlobal('ResizeObserver', ResizeObserverMock)
     await mountPopover({

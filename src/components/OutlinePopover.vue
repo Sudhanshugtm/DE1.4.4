@@ -104,11 +104,15 @@ const selectedOutline = computed(() => {
   return simpleEnglishOutlinesById[DEFAULT_OUTLINE_ID]
 })
 
-watch(open, (isOpen) => {
-  if (isOpen) {
-    selectedView.value = props.initialView || 'outline'
-  }
-})
+watch(
+  [open, () => props.initialView],
+  ([isOpen, initialView]) => {
+    if (isOpen) {
+      selectedView.value = initialView || 'outline'
+    }
+  },
+  { immediate: true },
+)
 
 const menuItems = [
   {

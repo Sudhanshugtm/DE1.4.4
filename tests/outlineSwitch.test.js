@@ -2,6 +2,7 @@
 
 import { flushPromises, mount } from '@vue/test-utils'
 import { Editor } from '@tiptap/core'
+import { undoDepth } from '@tiptap/pm/history'
 import StarterKit from '@tiptap/starter-kit'
 import { nextTick } from 'vue'
 import { createMemoryHistory, createRouter } from 'vue-router'
@@ -91,6 +92,7 @@ async function mountEditor(query = {}, useRealTextEditor = false) {
   const activeStubs = { ...stubs }
   if (useRealTextEditor) delete activeStubs.TextEditor
   wrapper = mount(EditorView, {
+    ...(useRealTextEditor ? { attachTo: document.body } : {}),
     global: {
       plugins: [router],
       stubs: activeStubs,
@@ -170,6 +172,50 @@ describe('reviewed verified facts integration', () => {
     expect(outlinePopover().props('open')).toBe(true)
     expect(outlinePopover().props('initialView')).toBe('verified-facts')
     expect(mocks.getEditor).not.toHaveBeenCalled()
+  })
+
+  it('opens reviewed facts without changing real editor content, selection, or history', async () => {
+    await mountEditor(
+      {
+        lang: 'en',
+        variant: 'toolbar-outline',
+        outline: 'religion',
+        title: 'Buddhism',
+      },
+      true,
+    )
+    const editor = wrapper.findComponent(TextEditor).vm.editor
+    editor.commands.setContent('<p>A stable plain draft remains unchanged.</p>')
+    editor
+      .chain()
+      .focus(null, { scrollIntoView: false })
+      .setTextSelection({ from: 3, to: 15 })
+      .run()
+    await new Promise((resolve) => requestAnimationFrame(resolve))
+    await nextTick()
+
+    expect(editor.isFocused).toBe(true)
+    expect(editor.state.selection.empty).toBe(false)
+    const documentBefore = editor.getJSON()
+    const selectionBefore = {
+      from: editor.state.selection.from,
+      to: editor.state.selection.to,
+    }
+    const undoDepthBefore = undoDepth(editor.state)
+
+    outlinePopover().vm.$emit('update:open', false)
+    await nextTick()
+    toolbar().vm.$emit('open-verified-facts')
+    await flushPromises()
+    await nextTick()
+
+    expect(editor.getJSON()).toEqual(documentBefore)
+    expect({
+      from: editor.state.selection.from,
+      to: editor.state.selection.to,
+    }).toEqual(selectionBefore)
+    expect(undoDepth(editor.state)).toBe(undoDepthBefore)
+    expect(outlinePopover().props('open')).toBe(true)
   })
 
   it('fails closed when the route has no reviewed facts', async () => {
