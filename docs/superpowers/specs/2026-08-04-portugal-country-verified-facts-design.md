@@ -12,12 +12,12 @@ This remains a local design prototype. It must not be pushed, published, or pres
 
 The current Buddhism journey is an honest sparse example: direct Wikidata data yields only a small number of responsibly usable statements for the Religion outline. Portugal is a better breadth example because four referenced statements have clear matches in the Country introduction:
 
-| Country-outline prompt | Wikidata statement | Reviewed display | Context that must remain visible |
-|---|---|---|---|
-| Official name | [Q45 P1448](https://www.wikidata.org/wiki/Q45#P1448) | `República Portuguesa` | Portuguese-language value; one reference to Portugal's diplomatic portal |
-| Area | [Q45 P2046](https://www.wikidata.org/wiki/Q45#P2046) | `92,225 km²` | Point in time: 2021; one Pordata reference |
-| Population | [Q45 P1082](https://www.wikidata.org/wiki/Q45#P1082) | `10,347,892` | Preferred statement; 2021 census; one official census reference |
-| Official language | [Q45 P37](https://www.wikidata.org/wiki/Q45#P37) | `Portuguese` | Normal-rank current value; one constitutional reference |
+| Country-outline prompt | Wikidata statement                                   | Reviewed display       | Context that must remain visible                                         |
+| ---------------------- | ---------------------------------------------------- | ---------------------- | ------------------------------------------------------------------------ |
+| Official name          | [Q45 P1448](https://www.wikidata.org/wiki/Q45#P1448) | `República Portuguesa` | Portuguese-language value; one reference to Portugal's diplomatic portal |
+| Area                   | [Q45 P2046](https://www.wikidata.org/wiki/Q45#P2046) | `92,225 km²`           | Point in time: 2021; one Pordata reference                               |
+| Population             | [Q45 P1082](https://www.wikidata.org/wiki/Q45#P1082) | `10,347,892`           | Preferred statement; 2021 census; one official census reference          |
+| Official language      | [Q45 P37](https://www.wikidata.org/wiki/Q45#P37)     | `Portuguese`           | Normal-rank current value; one constitutional reference                  |
 
 The prototype excludes capital because its current reference is weak, and excludes region because Wikidata offers different granularities that the system should not choose silently. Deprecated language statements are excluded.
 
@@ -110,12 +110,12 @@ The reviewed fixture remains a static, route-keyed snapshot. Each fact adds expl
 
 Field mapping is validated against an explicit allowlist, not accepted merely because strings are present:
 
-| Outline | Section | Target field ID | Exact scaffold token |
-|---|---|---|---|
-| Country | Introduction | `country:introduction:official-name` | `[official name]` |
-| Country | Introduction | `country:introduction:area` | `[area]` |
-| Country | Introduction | `country:introduction:population` | `[population]` |
-| Country | Introduction | `country:introduction:language` | `[language]` |
+| Outline  | Section      | Target field ID                            | Exact scaffold token   |
+| -------- | ------------ | ------------------------------------------ | ---------------------- |
+| Country  | Introduction | `country:introduction:official-name`       | `[official name]`      |
+| Country  | Introduction | `country:introduction:area`                | `[area]`               |
+| Country  | Introduction | `country:introduction:population`          | `[population]`         |
+| Country  | Introduction | `country:introduction:language`            | `[language]`           |
 | Religion | Introduction | `religion:introduction:approximate-period` | `[approximate period]` |
 
 The validator checks the whole `{ outlineId, sectionId, targetFieldId, targetFieldToken }` tuple against this allowlist and against the current route's outline. A fact whose target belongs to another outline, section, field ID, or token fails closed. The existing Buddhism fact receives the Religion mapping metadata so the renderer has one consistent contract.

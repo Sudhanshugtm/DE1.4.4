@@ -28,6 +28,7 @@
 ### Task 1: Reviewed fixture lookup
 
 **Files:**
+
 - Create: `src/config/reviewedVerifiedFacts.js`
 - Create: `tests/reviewedVerifiedFacts.test.js`
 
@@ -60,16 +61,20 @@ describe('reviewed Verified Facts lookup', () => {
   })
 
   it('fails closed for an unreviewed context', () => {
-    expect(getReviewedVerifiedFacts({ language: 'en', outline: 'religion', title: 'Other' })).toEqual([])
+    expect(
+      getReviewedVerifiedFacts({ language: 'en', outline: 'religion', title: 'Other' }),
+    ).toEqual([])
   })
 
   it('rejects a fact with missing provenance or uncertainty fields', () => {
-    expect(isReviewedVerifiedFact({
-      id: 'incomplete',
-      label: 'Incomplete',
-      value: 'Incomplete',
-      referenceCount: 1,
-    })).toBe(false)
+    expect(
+      isReviewedVerifiedFact({
+        id: 'incomplete',
+        label: 'Incomplete',
+        value: 'Incomplete',
+        referenceCount: 1,
+      }),
+    ).toBe(false)
   })
 })
 ```
@@ -85,9 +90,7 @@ Expected: FAIL because the module does not exist.
 Create `src/config/reviewedVerifiedFacts.js`:
 
 ```js
-const REQUIRED_FIELDS = [
-  'id', 'label', 'value', 'qualification', 'referenceCount', 'claimUrl',
-]
+const REQUIRED_FIELDS = ['id', 'label', 'value', 'qualification', 'referenceCount', 'claimUrl']
 
 const reviewedFactsByContext = Object.freeze({
   'en:religion:Buddhism': [
@@ -104,9 +107,7 @@ const reviewedFactsByContext = Object.freeze({
 })
 
 export function isReviewedVerifiedFact(fact) {
-  return REQUIRED_FIELDS.every(
-    (field) => fact[field] !== undefined && fact[field] !== '',
-  )
+  return REQUIRED_FIELDS.every((field) => fact[field] !== undefined && fact[field] !== '')
 }
 
 export function getReviewedVerifiedFacts({ language, outline, title }) {
@@ -133,6 +134,7 @@ git commit -m "feat: add reviewed verified fact fixtures"
 ### Task 2: Read-only fact presentation
 
 **Files:**
+
 - Create: `src/components/VerifiedFactsReferenceList.vue`
 - Create: `tests/VerifiedFactsReferenceList.test.js`
 
@@ -150,7 +152,8 @@ const fact = {
   id: 'buddhism-inception-range',
   label: 'Approximate origin period',
   value: 'Between 563 BCE and 483 BCE',
-  qualification: 'Wikidata records the inception date as unknown, bounded by these earliest and latest dates.',
+  qualification:
+    'Wikidata records the inception date as unknown, bounded by these earliest and latest dates.',
   referenceCount: 1,
   claimUrl: 'https://www.wikidata.org/wiki/Q748#P571',
 }
@@ -170,7 +173,11 @@ describe('VerifiedFactsReferenceList', () => {
     const wrapper = mount(VerifiedFactsReferenceList, { props: { facts: [fact] } })
     const link = wrapper.get('a')
     expect(link.text()).toBe('View this statement on Wikidata')
-    expect(link.attributes()).toMatchObject({ href: fact.claimUrl, target: '_blank', rel: 'noopener' })
+    expect(link.attributes()).toMatchObject({
+      href: fact.claimUrl,
+      target: '_blank',
+      rel: 'noopener',
+    })
     expect(wrapper.find('[role="button"]').exists()).toBe(false)
   })
 })
@@ -201,13 +208,17 @@ Create `src/components/VerifiedFactsReferenceList.vue` with this markup:
         <p class="verified-facts-reference__value">{{ fact.value }}</p>
         <p class="verified-facts-reference__qualification">{{ fact.qualification }}</p>
         <div class="verified-facts-reference__provenance">
-          <span>{{ fact.referenceCount }} {{ fact.referenceCount === 1 ? 'reference' : 'references' }}</span>
+          <span
+            >{{ fact.referenceCount }}
+            {{ fact.referenceCount === 1 ? 'reference' : 'references' }}</span
+          >
           <a
             :href="fact.claimUrl"
             target="_blank"
             rel="noopener"
             :aria-label="`View ${fact.label} statement on Wikidata`"
-          >View this statement on Wikidata</a>
+            >View this statement on Wikidata</a
+          >
         </div>
       </article>
     </section>
@@ -237,6 +248,7 @@ git commit -m "feat: present verified facts as references"
 ### Task 3: Toolbar discovery entry
 
 **Files:**
+
 - Modify: `src/components/CdxToolbar.vue`
 - Create: `tests/CdxToolbar.test.js`
 
@@ -329,6 +341,7 @@ git commit -m "feat: expose verified facts from insert menu"
 ### Task 4: Sheet and route integration
 
 **Files:**
+
 - Modify: `src/components/OutlinePopover.vue`
 - Modify: `src/views/EditorView.vue`
 - Modify: `tests/outlinePopover.test.js`
