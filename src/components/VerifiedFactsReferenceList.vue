@@ -7,8 +7,15 @@
     <section :aria-labelledby="headingId">
       <h3 :id="headingId" class="verified-facts-reference-list__heading">For your reference</h3>
 
-      <article v-for="fact in facts" :key="fact.id" class="verified-facts-reference-list__fact">
-        <p class="verified-facts-reference-list__label">{{ fact.label }}</p>
+      <article
+        v-for="fact in facts"
+        :key="fact.id"
+        class="verified-facts-reference-list__fact"
+        :aria-labelledby="`verified-fact-${fact.id}`"
+      >
+        <p :id="`verified-fact-${fact.id}`" class="verified-facts-reference-list__label">
+          {{ fact.label }}
+        </p>
         <p class="verified-facts-reference-list__value">{{ fact.value }}</p>
         <p class="verified-facts-reference-list__qualification">{{ fact.qualification }}</p>
 
@@ -22,7 +29,7 @@
             :href="fact.claimUrl"
             target="_blank"
             rel="noopener"
-            :aria-label="`View ${fact.label} statement on Wikidata`"
+            :aria-label="`View this statement on Wikidata: ${fact.label} (opens in a new tab)`"
           >
             View this statement on Wikidata
           </a>
@@ -120,7 +127,7 @@ const headingId = useId()
 
 .verified-facts-reference-list__link {
   color: var(--color-progressive, #36c);
-  text-decoration: none;
+  text-decoration: underline;
 }
 
 .verified-facts-reference-list__link:hover {

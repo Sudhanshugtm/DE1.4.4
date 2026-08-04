@@ -45,7 +45,44 @@ describe('VerifiedFactsReferenceList', () => {
     expect(statementLink.attributes('target')).toBe('_blank')
     expect(statementLink.attributes('rel')).toBe('noopener')
     expect(statementLink.attributes('aria-label')).toBe(
-      'View Approximate origin period statement on Wikidata',
+      'View this statement on Wikidata: Approximate origin period (opens in a new tab)',
     )
+  })
+
+  it('labels each fact article with its visible fact label', () => {
+    const wrapper = mount(VerifiedFactsReferenceList, {
+      props: { facts: [buddhismInceptionFact] },
+    })
+    const factArticle = wrapper.get('article')
+    const factLabelId = 'verified-fact-buddhism-inception-range'
+
+    expect(factArticle.attributes('aria-labelledby')).toBe(factLabelId)
+    expect(wrapper.get(`#${factLabelId}`).text()).toBe('Approximate origin period')
+  })
+
+  it('keeps multiple fact labels unique and pluralizes reference counts', () => {
+    const secondFact = Object.freeze({
+      id: 'buddhism-founder',
+      label: 'Traditionally attributed founder',
+      value: 'Gautama Buddha',
+      qualification: 'Wikidata identifies Gautama Buddha as the founder of Buddhism.',
+      referenceCount: 2,
+      claimUrl: 'https://www.wikidata.org/wiki/Q748#P112',
+    })
+    const wrapper = mount(VerifiedFactsReferenceList, {
+      props: { facts: [buddhismInceptionFact, secondFact] },
+    })
+    const factArticles = wrapper.findAll('article')
+    const articleLabelIds = factArticles.map((article) => article.attributes('aria-labelledby'))
+
+    expect(articleLabelIds).toEqual([
+      'verified-fact-buddhism-inception-range',
+      'verified-fact-buddhism-founder',
+    ])
+    expect(new Set(articleLabelIds).size).toBe(2)
+    expect(wrapper.get('#verified-fact-buddhism-founder').text()).toBe(
+      'Traditionally attributed founder',
+    )
+    expect(factArticles[1].text()).toContain('2 references')
   })
 })
