@@ -68,11 +68,17 @@
     <EditCheckRail
       :checks="pendingChecks"
       :index="activeCheckIndex"
-      :suggestion="tipSuggestion"
       @act="onCheckAction"
       @dismiss="onDismissChecks"
       @navigate="onNavigateChecks"
-      @suggestion-dismiss="onDismissTip"
+    />
+    <!-- The community's tips ride the same bottom-sheet pattern as the
+         suggested sections: guidance shares one shape, checks another. -->
+    <CommunityTipsSheet
+      v-model:open="tipSheetOpen"
+      :title="tipSuggestion?.title ?? ''"
+      :attribution="tipSuggestion?.intro ?? ''"
+      :bullets="tipSuggestion?.bullets ?? []"
     />
     <SourceContextSheet v-model:open="sourceContextOpen" @add-citation="onAddCitationFromSource" />
     <SettingsDialog v-model:open="settingsDialogOpen" @outline-selected="onOutlineSelected" />
@@ -98,6 +104,7 @@ import CiteDialog from '@/components/CiteDialog.vue'
 import OutlinePopover from '@/components/OutlinePopover.vue'
 import SourceContextSheet from '@/components/SourceContextSheet.vue'
 import EditCheckRail from '@/components/EditCheckRail.vue'
+import CommunityTipsSheet from '@/components/CommunityTipsSheet.vue'
 import { findIncompleteSentences, findScaffoldFields } from '@/utils/scaffoldFields'
 import { findReferencesList } from '@/extensions/referencesList'
 import { communityTipsByOutline } from '@/config/outlines/communityTips'
@@ -423,6 +430,8 @@ watch(isPopoverOpen, (isOpen, wasOpen) => {
 })
 
 function onOpenOutline() {
+  // One sheet at a time: choosing structure puts the tips away.
+  dismissTipQuietly()
   const editor = getEditor()
   const isPlaceholderSelected = editor?.state.selection.node?.type.name === 'placeholderChip'
   initialView.value = isPlaceholderSelected ? 'verified-facts' : null
@@ -550,6 +559,15 @@ async function onContentInserted() {
 const tipSuggestion = ref(null)
 const hasDismissedTip = ref(false)
 const tipShownAt = ref(0)
+
+// The sheet opens while the tips hold the stage, and yields instantly to any
+// check. Closing it, by Got it, the X, or Escape, hands the caret over.
+const tipSheetOpen = computed({
+  get: () => Boolean(tipSuggestion.value?.open) && pendingChecks.value.length === 0,
+  set: (value) => {
+    if (!value) onDismissTip()
+  },
+})
 
 // Insertion's own focus can arrive hundreds of milliseconds late on mobile;
 // a person's tap comes seconds later. The window tells them apart.

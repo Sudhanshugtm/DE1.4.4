@@ -1,34 +1,7 @@
-<!-- ABOUTME: The gutter markers and card that carry edit checks and suggestions. -->
+<!-- ABOUTME: The gutter markers and card that carry edit checks. -->
 <!-- ABOUTME: Markers sit beside the text they are about; pagination appears for more than one. -->
 
 <template>
-  <!-- A suggestion is a card that shows itself once and waits to be put
-       away; it never takes a gutter marker. When a check exists, the check
-       takes the rail: feedback outranks guidance. -->
-  <template v-if="!checks.length && suggestion">
-    <div v-if="suggestion.open" class="edit-check__card" role="status">
-      <div class="edit-check__header">
-        <span class="edit-check__title">
-          <CdxIcon :icon="cdxIconLightbulb" class="edit-check__suggestion-icon" />
-          {{ suggestion.title }}
-        </span>
-        <CdxButton weight="quiet" aria-label="Close" @click="$emit('suggestion-dismiss')">
-          <CdxIcon :icon="cdxIconClose" />
-        </CdxButton>
-      </div>
-
-      <div class="edit-check__body">
-        <p v-if="suggestion.intro" class="edit-check__attribution">{{ suggestion.intro }}</p>
-        <ul class="edit-check__tips">
-          <li v-for="tip in suggestion.bullets" :key="tip">{{ tip }}</li>
-        </ul>
-        <div class="edit-check__actions">
-          <CdxButton @click="$emit('suggestion-dismiss')">Got it</CdxButton>
-        </div>
-      </div>
-    </div>
-  </template>
-
   <template v-if="checks.length">
     <!-- Gutter: a marker beside each stretch of text a check is about. -->
     <div class="edit-check__gutter" aria-hidden="true">
@@ -101,13 +74,9 @@ const props = defineProps({
     type: Number,
     default: 0,
   },
-  suggestion: {
-    type: Object,
-    default: null,
-  },
 })
 
-defineEmits(['act', 'dismiss', 'navigate', 'suggestion-dismiss'])
+defineEmits(['act', 'dismiss', 'navigate'])
 
 const { getEditor } = useEditorInstance()
 const current = computed(() => props.checks[props.index] ?? props.checks[0] ?? {})
@@ -144,7 +113,7 @@ function schedulePositioning() {
   frame = requestAnimationFrame(positionMarkers)
 }
 
-watch(() => [props.checks, props.index, props.suggestion], schedulePositioning, {
+watch(() => [props.checks, props.index], schedulePositioning, {
   deep: true,
   immediate: true,
 })
@@ -197,29 +166,6 @@ onBeforeUnmount(() => {
 
 .edit-check__marker-icon {
   color: var(--color-icon-warning, #ab7f2a);
-}
-
-/* The suggestion speaks in the progressive voice, not the warning one. */
-.edit-check__suggestion-icon {
-  color: var(--color-progressive, #36c);
-}
-
-.edit-check__attribution {
-  margin: 0;
-  color: var(--color-subtle);
-  font-size: var(--font-size-small);
-  line-height: var(--line-height-small);
-}
-
-.edit-check__tips {
-  margin: 0;
-  padding-inline-start: var(--spacing-125);
-  font-size: var(--font-size-medium);
-  line-height: var(--line-height-medium);
-}
-
-.edit-check__tips li {
-  margin-bottom: var(--spacing-35);
 }
 
 .edit-check__card {
