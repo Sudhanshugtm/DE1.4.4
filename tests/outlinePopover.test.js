@@ -27,7 +27,7 @@ const stubs = {
     name: 'CdxPopover',
     props: ['open'],
     emits: ['update:open'],
-    template: '<div class="cdx-popover" v-show="open"><slot /></div>',
+    template: '<div class="cdx-popover" role="dialog" v-show="open"><slot /></div>',
   },
   CdxButton: true,
   CdxIcon: true,
@@ -94,6 +94,16 @@ describe('outline popover', () => {
     expect(wrapper.find('.outline-popover-header__title').text()).toContain('Verified facts')
     expect(wrapper.find('[data-testid="verified-facts-reference-list"]').exists()).toBe(true)
     expect(wrapper.findComponent({ name: 'VerifiedFactsList' }).exists()).toBe(false)
+  })
+
+  it('names the dialog from the active sheet view', async () => {
+    vi.stubGlobal('ResizeObserver', ResizeObserverMock)
+    await mountPopover({
+      initialView: 'verified-facts',
+      verifiedFacts: [reviewedFact],
+    })
+
+    expect(wrapper.get('[role="dialog"]').attributes('aria-label')).toBe('Verified facts')
   })
 
   it('switches an open sheet when its requested view changes', async () => {

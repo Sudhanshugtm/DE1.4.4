@@ -6,6 +6,7 @@
     placement="top-start"
     :use-bottom-sheet="true"
     :hide-backdrop="true"
+    :aria-label="currentItem.label"
   >
     <div class="outline-popover-header">
       <span class="outline-popover-header__title">
