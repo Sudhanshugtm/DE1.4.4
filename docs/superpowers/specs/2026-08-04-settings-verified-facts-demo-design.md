@@ -37,7 +37,7 @@ Coordinates the route and editor session:
 - It considers the demo enabled only when `verifiedfacts=1` and the current route resolves to at least one reviewed fact.
 - It passes that result to the toolbar as the Verified facts visibility Boolean.
 - It handles `open-verified-facts-demo` by navigating to the exact curated Portugal query.
-- It owns an `editorSessionRevision` number and keys `TextEditor` with both the active outline and that revision. It increments the revision only after confirmed successful demo navigation. This guarantees a remount even when the source article already uses the Country outline, so TipTap content, selection, and undo history cannot leak into the demo.
+- It owns an `editorSessionRevision` number and keys `TextEditor` only with that explicitly committed revision. Both the existing outline switch and the new demo launcher increment the revision only after their navigation is confirmed successful. The reactive route or outline is never part of the key. This guarantees a fresh demo even when the source article already uses the Country outline, while a redirected or mismatched route cannot remount and clear the editor before validation.
 - It resets the surrounding article-session state already cleared during an intentional outline switch: added outline progress, edit checks, authored-state, citation numbering, and contextual tips.
 - It closes Settings after success. Failed or rejected navigation preserves both the current draft and the open Settings dialog.
 - It guards the launch with an `isOpeningVerifiedFactsDemo` state so repeated activation cannot start overlapping navigations.
@@ -46,13 +46,13 @@ If the exact curated demo route is already active, selecting the launcher only c
 
 ### `CdxToolbar.vue`
 
-Retains its existing content and behavior. It exposes one narrow `focusInsertButton()` method that focuses the already-existing toolbar `+` button. After a successful demo launch and editor remount, `EditorView` calls this method so focus lands on the next relevant control without opening the menu automatically.
+Retains its existing visual content and insert-menu behavior. Its component API gains one narrow `focusInsertButton()` method that focuses the already-existing toolbar `+` button. After a successful demo launch and editor remount, `EditorView` calls this method so focus lands on the next relevant control without opening the menu automatically.
 
 The existing outline-selection handler and its complete list of outlines remain available. Switching outline continues to use the current behavior. If a flagged route no longer resolves to reviewed facts after a switch, the toolbar entry fails closed.
 
 ### Existing Verified facts components
 
-`CdxToolbar`, `OutlinePopover`, `VerifiedFactsReferenceList`, and the reviewed fixture remain unchanged. The Portugal facts stay static, reviewed, read-only, and free of runtime network requests.
+The toolbar's existing Verified facts entry, `OutlinePopover`, `VerifiedFactsReferenceList`, and the reviewed fixture remain visually and behaviorally unchanged; the toolbar adds only the focus method described above. The Portugal facts stay static, reviewed, read-only, and free of runtime network requests.
 
 ## Navigation and failure handling
 
@@ -78,7 +78,7 @@ Automated tests must prove:
 2. Settings renders the Prototype demos copy and emits `open-verified-facts-demo` from the button.
 3. An unflagged Portugal route has four reviewed facts internally but does not expose Verified facts in the toolbar.
 4. The flagged Portugal route exposes Verified facts and passes the same four facts to the existing sheet.
-5. Launching from another outline and from another Country article performs one `router.push()` to the exact canonical query, closes Settings, increments the dedicated editor-session key, and focuses the toolbar `+` only after confirmed success.
+5. Launching from another outline and from another Country article performs one `router.push()` to the exact canonical query, closes Settings, increments the dedicated editor-session key, and focuses the toolbar `+` only after confirmed success. A redirected or final-route-mismatched navigation does not change that key.
 6. The successful transition resets every surrounding session bucket: added-outline progress, edit checks and active check position, authored/publish state, citation numbering, and contextual-tip state.
 7. Semantic canonical equality ignores query ordering but rejects missing, different, repeated, or extra values and a non-empty hash.
 8. Selecting the launcher on the exact demo route closes Settings without changing the route, session key, draft, or surrounding session state.
@@ -86,6 +86,7 @@ Automated tests must prove:
 10. A final-route mismatch is handled like navigation failure.
 11. Repeated activation while navigation is pending starts no additional navigation.
 12. Unsupported or mismatched flagged routes fail closed when no reviewed facts resolve.
+13. The existing successful outline switch increments the revision and still clears the editor, while a failed outline navigation does not increment it or clear the draft.
 
 Fresh verification before publishing must include the focused tests, full test suite, lint, production build, and an in-app-browser walkthrough. The walkthrough must confirm the normal route hides the entry, the Settings outline list still works, the launcher opens the canonical Portugal demo, `+` reveals Verified facts only there, all four facts appear, the layout works at desktop and mobile widths, and no application errors appear.
 
