@@ -10,6 +10,18 @@
         </p>
         <OutlineSelector :show-intro="false" @select="onSelectOutline" />
       </div>
+      <div class="field-group field-group--prototype">
+        <CdxLabel>Prototype demos</CdxLabel>
+        <p class="field-group__hint">Explore reviewed Wikidata facts using Portugal.</p>
+        <CdxButton
+          data-testid="open-verified-facts-demo"
+          action="progressive"
+          :disabled="demoLaunchPending"
+          @click="emit('open-verified-facts-demo')"
+        >
+          Open Verified facts demo
+        </CdxButton>
+      </div>
     </div>
   </CdxDialog>
 </template>
@@ -17,12 +29,19 @@
 <script setup>
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { CdxDialog, CdxLabel } from '@wikimedia/codex'
+import { CdxButton, CdxDialog, CdxLabel } from '@wikimedia/codex'
 import OutlineSelector from './OutlineSelector.vue'
 import { simpleEnglishOutlinesById } from '../config/outlines/simpleEnglish.js'
 
+defineProps({
+  demoLaunchPending: {
+    type: Boolean,
+    default: false,
+  },
+})
+
 const open = defineModel('open', { type: Boolean, default: false })
-const emit = defineEmits(['outline-selected'])
+const emit = defineEmits(['outline-selected', 'open-verified-facts-demo'])
 
 const route = useRoute()
 
@@ -50,5 +69,11 @@ function onSelectOutline(outlineId) {
   color: var(--color-subtle);
   font-size: var(--font-size-small);
   line-height: var(--line-height-small);
+}
+
+.field-group--prototype {
+  margin-top: var(--spacing-100);
+  padding-top: var(--spacing-100);
+  border-top: var(--border-subtle);
 }
 </style>
