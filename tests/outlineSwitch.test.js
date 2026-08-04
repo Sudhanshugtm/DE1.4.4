@@ -33,6 +33,7 @@ const mocks = vi.hoisted(() => ({
   getEditor: vi.fn(),
   setEditor: vi.fn(),
   focusInsertButton: vi.fn(),
+  focusDemoLauncher: vi.fn(),
 }))
 
 vi.mock('@/components/CdxToolbar.vue', () => ({
@@ -66,6 +67,9 @@ const stubs = {
     name: 'SettingsDialog',
     props: ['open', 'demoLaunchPending'],
     emits: ['outline-selected', 'open-verified-facts-demo', 'update:open'],
+    setup(_, { expose }) {
+      expose({ focusDemoLauncher: mocks.focusDemoLauncher })
+    },
     template: `
       <div class="settings-dialog">
         <button
@@ -108,6 +112,7 @@ let router
 let wrapper
 let removeGuard
 let standaloneEditor
+let demoLauncherPendingAtFocus
 
 function createTestRouter() {
   return createRouter({
@@ -229,6 +234,8 @@ afterEach(() => {
   mocks.getEditor.mockReset()
   mocks.setEditor.mockReset()
   mocks.focusInsertButton.mockReset()
+  mocks.focusDemoLauncher.mockReset()
+  demoLauncherPendingAtFocus = undefined
 })
 
 describe('reviewed verified facts integration', () => {
@@ -399,6 +406,11 @@ describe('Verified facts demo launcher', () => {
     await seedCoordinatorState()
     await openSettings()
     verifiedFactsDemoButton().element.focus()
+    demoLauncherPendingAtFocus = []
+    mocks.focusDemoLauncher.mockImplementation(() => {
+      demoLauncherPendingAtFocus.push(settingsDialog().props('demoLaunchPending'))
+      verifiedFactsDemoButton().element.focus()
+    })
     return editor
   }
 
@@ -411,6 +423,8 @@ describe('Verified facts demo launcher', () => {
     expect(settingsDialog().props('demoLaunchPending')).toBe(false)
     expect(verifiedFactsDemoButton().attributes('disabled')).toBeUndefined()
     expect(document.activeElement).toBe(verifiedFactsDemoButton().element)
+    expect(mocks.focusDemoLauncher).toHaveBeenCalledTimes(1)
+    expect(demoLauncherPendingAtFocus).toEqual([false])
     expect(mocks.focusInsertButton).not.toHaveBeenCalled()
   }
 
@@ -457,9 +471,10 @@ describe('Verified facts demo launcher', () => {
     expect(currentEditor.commands.undo()).toBe(false)
     expectCoordinatorReset()
     expect(settingsDialog().props('open')).toBe(false)
-    expect(outlinePopover().props('open')).toBe(true)
+    expect(outlinePopover().props('open')).toBe(false)
     expect(outlinePopover().props('initialView')).toBe('outline')
     expect(mocks.focusInsertButton).toHaveBeenCalledTimes(1)
+    expect(mocks.focusDemoLauncher).not.toHaveBeenCalled()
     expect(editorAtFocus.instanceId).toBe(currentEditor.instanceId)
   })
 
@@ -482,6 +497,7 @@ describe('Verified facts demo launcher', () => {
     expect(coordinatorSnapshot()).toEqual(previousCoordinator)
     expect(settingsDialog().props('open')).toBe(false)
     expect(mocks.focusInsertButton).not.toHaveBeenCalled()
+    expect(mocks.focusDemoLauncher).not.toHaveBeenCalled()
   })
 
   it('preserves the current session when a guard aborts the canonical launch', async () => {
@@ -598,6 +614,8 @@ describe('Verified facts demo launcher', () => {
     expect(currentEditor.instanceId).not.toBe(previousEditor.instanceId)
     expect(editorAtFocus.instanceId).toBe(currentEditor.instanceId)
     expect(mocks.focusInsertButton).toHaveBeenCalledTimes(1)
+    expect(mocks.focusDemoLauncher).not.toHaveBeenCalled()
+    expect(outlinePopover().props('open')).toBe(false)
   })
 })
 

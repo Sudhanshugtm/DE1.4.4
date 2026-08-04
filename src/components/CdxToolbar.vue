@@ -308,6 +308,12 @@ onBeforeUnmount(() => document.removeEventListener('click', closeInsertMenu))
   box-shadow: none !important;
 }
 
+.cdx-toolbar__btn:focus-visible {
+  outline: var(--border-width-thick) var(--border-style-base)
+    var(--outline-color-progressive--focus);
+  outline-offset: calc(-1 * var(--border-width-thick));
+}
+
 .cdx-toolbar__btn--close {
   flex: 0 0 44px;
   border-right: 1px solid var(--border-color-subtle) !important;

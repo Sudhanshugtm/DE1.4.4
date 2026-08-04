@@ -15,6 +15,7 @@
 ### Task 1: Define the canonical demo route
 
 **Files:**
+
 - Create: `src/config/verifiedFactsDemo.js`
 - Create: `tests/verifiedFactsDemo.test.js`
 
@@ -87,7 +88,8 @@ export function isExactVerifiedFactsDemoRoute(route) {
   return (
     keys.length === canonicalKeys.length &&
     canonicalKeys.every(
-      (key) => typeof query[key] === 'string' && query[key] === VERIFIED_FACTS_DEMO_ROUTE.query[key],
+      (key) =>
+        typeof query[key] === 'string' && query[key] === VERIFIED_FACTS_DEMO_ROUTE.query[key],
     )
   )
 }
@@ -109,6 +111,7 @@ git commit -m "feat: define verified facts demo route"
 ### Task 2: Add the Settings demo launcher without changing outlines
 
 **Files:**
+
 - Modify: `src/components/SettingsDialog.vue`
 - Create: `tests/SettingsDialog.test.js`
 
@@ -202,13 +205,14 @@ describe('SettingsDialog', () => {
 
 Run: `npm test -- tests/SettingsDialog.test.js`
 
-Expected: 3 tests run; the outline-preservation test passes, while the two launcher tests fail because `.field-group[1]` and `[data-testid="open-verified-facts-demo"]` do not exist.
+Expected: the launcher rendering/pending tests fail before the control exists, and the focused-launcher API test fails before `focusDemoLauncher()` is exposed.
 
 - [ ] **Step 3: Implement the presentation-only launcher**
 
 Import `CdxButton`, then make these complete script changes:
 
 ```js
+import { computed, ref } from 'vue'
 import { CdxButton, CdxDialog, CdxLabel } from '@wikimedia/codex'
 
 defineProps({
@@ -219,6 +223,13 @@ defineProps({
 })
 
 const emit = defineEmits(['outline-selected', 'open-verified-facts-demo'])
+const demoLauncherRef = ref(null)
+
+function focusDemoLauncher() {
+  demoLauncherRef.value?.$el?.focus()
+}
+
+defineExpose({ focusDemoLauncher })
 ```
 
 Append this second field group after the existing outline selector:
@@ -228,6 +239,7 @@ Append this second field group after the existing outline selector:
   <CdxLabel>Prototype demos</CdxLabel>
   <p class="field-group__hint">Explore reviewed Wikidata facts using Portugal.</p>
   <CdxButton
+    ref="demoLauncherRef"
     data-testid="open-verified-facts-demo"
     action="progressive"
     :disabled="demoLaunchPending"
@@ -252,7 +264,7 @@ Use existing spacing/design tokens; separate the groups with a top border and sp
 
 Run: `npm test -- tests/SettingsDialog.test.js`
 
-Expected: `tests/SettingsDialog.test.js` reports 3 tests passed.
+Expected: `tests/SettingsDialog.test.js` reports 4 tests passed, including real launcher focus while attached to `document.body`.
 
 - [ ] **Step 5: Commit the Settings launcher**
 
@@ -266,9 +278,12 @@ git commit -m "feat: add verified facts demo launcher"
 ### Task 3: Gate Verified facts and launch a fresh Portugal session
 
 **Files:**
+
 - Modify: `src/components/CdxToolbar.vue`
 - Modify: `src/views/EditorView.vue`
+- Modify: `src/components/SettingsDialog.vue`
 - Modify: `tests/CdxToolbar.test.js`
+- Modify: `tests/SettingsDialog.test.js`
 - Modify: `tests/outlineSwitch.test.js`
 
 - [ ] **Step 1: Write the failing toolbar focus test**
@@ -348,6 +363,16 @@ function focusInsertButton() {
 defineExpose({ focusInsertButton })
 ```
 
+Because jsdom does not reliably apply scoped SFC styles to `getComputedStyle`, add a structural regression test for a visible focus rule and put this immediately after the existing focus reset:
+
+```css
+.cdx-toolbar__btn:focus-visible {
+  outline: var(--border-width-thick) var(--border-style-base)
+    var(--outline-color-progressive--focus);
+  outline-offset: calc(-1 * var(--border-width-thick));
+}
+```
+
 In `EditorView.vue`, add the computed gate and use it in both the toolbar prop and open handler:
 
 ```js
@@ -398,6 +423,7 @@ const mocks = vi.hoisted(() => ({
   getEditor: vi.fn(),
   setEditor: vi.fn(),
   focusInsertButton: vi.fn(),
+  focusDemoLauncher: vi.fn(),
 }))
 ```
 
@@ -421,27 +447,30 @@ Give the Settings stub a real focusable button so pending/focus behavior is obse
 const stubs = {
   // retain the other existing stubs
 
-SettingsDialog: {
-  name: 'SettingsDialog',
-  props: ['open', 'demoLaunchPending'],
-  emits: ['outline-selected', 'open-verified-facts-demo', 'update:open'],
-  template: `<button
+  SettingsDialog: {
+    name: 'SettingsDialog',
+    props: ['open', 'demoLaunchPending'],
+    emits: ['outline-selected', 'open-verified-facts-demo', 'update:open'],
+    setup(_, { expose }) {
+      expose({ focusDemoLauncher: mocks.focusDemoLauncher })
+    },
+    template: `<button
     v-if="open"
     data-testid="open-verified-facts-demo"
     :disabled="demoLaunchPending"
     @click="$emit('open-verified-facts-demo')"
   >Open Verified facts demo</button>`,
-},
-EditCheckRail: {
-  name: 'EditCheckRail',
-  props: ['checks', 'index'],
-  template: '<div />',
-},
-CommunityTipsSheet: {
-  name: 'CommunityTipsSheet',
-  props: ['open'],
-  template: '<div />',
-},
+  },
+  EditCheckRail: {
+    name: 'EditCheckRail',
+    props: ['checks', 'index'],
+    template: '<div />',
+  },
+  CommunityTipsSheet: {
+    name: 'CommunityTipsSheet',
+    props: ['open'],
+    template: '<div />',
+  },
 }
 ```
 
@@ -449,7 +478,7 @@ Change `mountEditor` to accept `{ realTextEditor = false, attach = false }` and 
 
 - [ ] **Step 7: Write failing successful-launch and exact-route tests**
 
-Import `VERIFIED_FACTS_DEMO_ROUTE`. Add one real-editor test from another Country article (`title=Spain`) and one from another outline (`outline=person`). Each must assert a single `router.push(VERIFIED_FACTS_DEMO_ROUTE)`, exact final route, closed Settings, a different editor instance with empty text and no Undo, and one focus call after the instance changes.
+Import `VERIFIED_FACTS_DEMO_ROUTE`. Add one real-editor test from another Country article (`title=Spain`) and one from another outline (`outline=person`). Each must assert a single `router.push(VERIFIED_FACTS_DEMO_ROUTE)`, exact final route, closed Settings, a different editor instance with empty text and no Undo, the outline popover closed with `initialView='outline'`, and one focus call after the instance changes.
 
 ```js
 const previousEditor = wrapper.findComponent(TextEditor).vm.editor
@@ -464,6 +493,8 @@ expect(currentEditor.instanceId).not.toBe(previousEditor.instanceId)
 expect(currentEditor.getText()).toBe('')
 expect(currentEditor.commands.undo()).toBe(false)
 expect(settingsDialog().props('open')).toBe(false)
+expect(outlinePopover().props('open')).toBe(false)
+expect(outlinePopover().props('initialView')).toBe('outline')
 expect(mocks.focusInsertButton).toHaveBeenCalledOnce()
 ```
 
@@ -509,7 +540,10 @@ expect(settingsDialog().props('open')).toBe(true)
 expect(settingsDialog().props('demoLaunchPending')).toBe(false)
 expect(button.element.disabled).toBe(false)
 expect(document.activeElement).toBe(button.element)
+expect(mocks.focusDemoLauncher).toHaveBeenCalledOnce()
 ```
+
+The Settings stub's exposed focus mock must record `demoLaunchPending` at invocation time. Assert it receives `false`, proving focus restoration happens only after the launcher is enabled; production must not query the document by test id.
 
 Rejected case uses `vi.spyOn(router, 'push').mockRejectedValue(new Error('Navigation rejected'))` and repeats the same preservation assertions. The shared assertion helper must compare every seeded session bucket from Step 8, not only the editor document.
 
@@ -558,6 +592,7 @@ await flushPromises()
 
 expect(wrapper.findComponent(TextEditor).vm.editor.instanceId).not.toBe(previousEditor.instanceId)
 expect(mocks.focusInsertButton).toHaveBeenCalledTimes(1)
+expect(outlinePopover().props('open')).toBe(false)
 ```
 
 This proves focus moves only after final-route validation and the keyed editor remount.
@@ -641,31 +676,38 @@ async function onOpenVerifiedFactsDemo() {
   }
 
   isOpeningVerifiedFactsDemo.value = true
+  let launchConfirmed = false
   try {
     const failure = await router.push(VERIFIED_FACTS_DEMO_ROUTE)
     if (isNavigationFailure(failure)) return
     if (!isExactVerifiedFactsDemoRoute(router.currentRoute.value)) return
 
+    launchConfirmed = true
     editorSessionRevision.value += 1
     resetArticleSessionState()
     initialView.value = 'outline'
     settingsDialogOpen.value = false
-    isPopoverOpen.value = true
+    // Keep the focus-trapping popover closed so focus can land visibly on +.
+    isPopoverOpen.value = false
     await nextTick()
     toolbarRef.value?.focusInsertButton()
   } catch {
-    return
+    // Failed navigation keeps the current editor session intact.
   } finally {
     isOpeningVerifiedFactsDemo.value = false
+    if (!launchConfirmed) {
+      await nextTick()
+      settingsDialogRef.value?.focusDemoLauncher()
+    }
   }
 }
 ```
 
-Do not inherit arbitrary query parameters. Do not reset or close Settings before the confirmed-success block. Do not open Verified facts automatically. Pending is always cleared by `finally`; on failure the real Settings button becomes enabled without being replaced, preserving focus.
+Do not inherit arbitrary query parameters. Do not reset or close Settings before the confirmed-success block. Do not open Verified facts or the outline popover automatically. Pending is always cleared by `finally`; on failure focus returns through the narrow `SettingsDialog.focusDemoLauncher()` API only after the real button is enabled.
 
 - [ ] **Step 16: Run the second focused GREEN cycle**
 
-Run: `npm test -- tests/CdxToolbar.test.js tests/outlineSwitch.test.js`
+Run: `npm test -- tests/SettingsDialog.test.js tests/CdxToolbar.test.js tests/outlineSwitch.test.js`
 
 Expected: all toolbar and integration tests PASS, including another-outline, same-outline, exact-route, aborted, rejected, redirected, final-mismatch, duplicate, session-bucket, and focus cases.
 
@@ -687,6 +729,7 @@ git commit -m "feat: launch private verified facts demo"
 ### Task 4: Verify the complete prototype before publishing
 
 **Files:**
+
 - Verify only; no production files expected
 
 - [ ] **Step 1: Record the release base and run focused tests**
@@ -751,7 +794,7 @@ Walk through both normal and demo routes:
 1. Open unflagged Portugal and confirm `+` has no Verified facts item.
 2. Open bottom-right Settings and confirm the full outline selector remains above Prototype demos.
 3. Select City from the existing outline selector; confirm the route changes to `outline=city`, the editor resets, and Suggested sections shows City. Return to the exact normal Portugal URL.
-4. Reopen Settings and activate the launcher; confirm the exact flagged Portugal URL, a fresh draft, and focus on the toolbar `+`.
+4. Reopen Settings and activate the launcher; confirm the exact flagged Portugal URL, a fresh draft, the outline sheet remains closed, and the toolbar `+` has a clearly visible focus ring.
 5. Open `+`, select Verified facts, and confirm all four reviewed facts and their Wikidata links.
 6. Confirm Back returns to the previous route.
 7. Repeat the essential Settings/launch/menu/four-facts checks at a 390×844 viewport with no horizontal overflow.

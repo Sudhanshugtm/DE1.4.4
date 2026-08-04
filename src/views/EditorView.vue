@@ -88,6 +88,7 @@
     />
     <SourceContextSheet v-model:open="sourceContextOpen" @add-citation="onAddCitationFromSource" />
     <SettingsDialog
+      ref="settingsDialogRef"
       v-model:open="settingsDialogOpen"
       :demo-launch-pending="isOpeningVerifiedFactsDemo"
       @outline-selected="onOutlineSelected"
@@ -167,6 +168,7 @@ const isVerifiedFactsDemoEnabled = computed(
   () => route.query.verifiedfacts === '1' && reviewedVerifiedFacts.value.length > 0,
 )
 const toolbarRef = ref(null)
+const settingsDialogRef = ref(null)
 const editorSessionRevision = ref(0)
 const isOpeningVerifiedFactsDemo = ref(false)
 
@@ -477,7 +479,7 @@ async function onOpenVerifiedFactsDemo() {
     resetArticleSessionState()
     initialView.value = 'outline'
     settingsDialogOpen.value = false
-    isPopoverOpen.value = true
+    isPopoverOpen.value = false
     await nextTick()
     toolbarRef.value?.focusInsertButton()
   } catch {
@@ -486,7 +488,7 @@ async function onOpenVerifiedFactsDemo() {
     isOpeningVerifiedFactsDemo.value = false
     if (!launchConfirmed) {
       await nextTick()
-      document.querySelector('[data-testid="open-verified-facts-demo"]')?.focus()
+      settingsDialogRef.value?.focusDemoLauncher()
     }
   }
 }

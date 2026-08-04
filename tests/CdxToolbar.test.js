@@ -3,6 +3,7 @@
 import { mount } from '@vue/test-utils'
 import { afterEach, describe, expect, it } from 'vitest'
 import CdxToolbar from '../src/components/CdxToolbar.vue'
+import toolbarSource from '../src/components/CdxToolbar.vue?raw'
 
 const stubs = {
   CdxButton: {
@@ -46,6 +47,14 @@ describe('CdxToolbar verified facts insert entry', () => {
 
     expect(document.activeElement).toBe(wrapper.get('[aria-label="Insert"]').element)
     expect(wrapper.find('[role="menu"]').exists()).toBe(false)
+  })
+
+  it('defines an inward progressive focus-visible ring without layout shift', () => {
+    expect(toolbarSource).toContain('.cdx-toolbar__btn:focus-visible {')
+    expect(toolbarSource).toContain(
+      'outline: var(--border-width-thick) var(--border-style-base)\n    var(--outline-color-progressive--focus);',
+    )
+    expect(toolbarSource).toContain('outline-offset: calc(-1 * var(--border-width-thick));')
   })
 
   it('shows Verified facts immediately after Suggested sections when enabled', async () => {

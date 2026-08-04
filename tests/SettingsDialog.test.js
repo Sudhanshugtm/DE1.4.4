@@ -49,6 +49,7 @@ async function mountSettings(props = {}) {
       plugins: [router],
       stubs,
     },
+    attachTo: document.body,
   })
 }
 
@@ -99,5 +100,14 @@ describe('SettingsDialog', () => {
     expect(
       wrapper.get('[data-testid="open-verified-facts-demo"]').attributes('disabled'),
     ).toBeDefined()
+  })
+
+  it('focuses the real demo launcher through its narrow exposed API', async () => {
+    await mountSettings()
+    const launcher = wrapper.get('[data-testid="open-verified-facts-demo"]')
+
+    wrapper.vm.focusDemoLauncher()
+
+    expect(document.activeElement).toBe(launcher.element)
   })
 })

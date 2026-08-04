@@ -20,6 +20,7 @@
           Explore reviewed Wikidata facts using Portugal.
         </p>
         <CdxButton
+          ref="demoLauncherRef"
           data-testid="open-verified-facts-demo"
           action="progressive"
           aria-describedby="prototype-demos-description"
@@ -34,7 +35,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { CdxButton, CdxDialog, CdxLabel } from '@wikimedia/codex'
 import OutlineSelector from './OutlineSelector.vue'
@@ -49,6 +50,7 @@ defineProps({
 
 const open = defineModel('open', { type: Boolean, default: false })
 const emit = defineEmits(['outline-selected', 'open-verified-facts-demo'])
+const demoLauncherRef = ref(null)
 
 const route = useRoute()
 
@@ -64,6 +66,12 @@ const currentOutlineLabel = computed(() => {
 function onSelectOutline(outlineId) {
   emit('outline-selected', outlineId)
 }
+
+function focusDemoLauncher() {
+  demoLauncherRef.value?.$el?.focus()
+}
+
+defineExpose({ focusDemoLauncher })
 </script>
 
 <style scoped>
