@@ -10,12 +10,19 @@
         </p>
         <OutlineSelector :show-intro="false" @select="onSelectOutline" />
       </div>
-      <div class="field-group field-group--prototype">
-        <CdxLabel>Prototype demos</CdxLabel>
-        <p class="field-group__hint">Explore reviewed Wikidata facts using Portugal.</p>
+      <div
+        class="field-group field-group--prototype"
+        role="group"
+        aria-labelledby="prototype-demos-label"
+      >
+        <CdxLabel id="prototype-demos-label">Prototype demos</CdxLabel>
+        <p id="prototype-demos-description" class="field-group__hint">
+          Explore reviewed Wikidata facts using Portugal.
+        </p>
         <CdxButton
           data-testid="open-verified-facts-demo"
           action="progressive"
+          aria-describedby="prototype-demos-description"
           :disabled="demoLaunchPending"
           @click="emit('open-verified-facts-demo')"
         >

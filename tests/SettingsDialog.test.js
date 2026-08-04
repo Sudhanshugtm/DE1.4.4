@@ -10,7 +10,7 @@ const stubs = {
     name: 'CdxDialog',
     props: ['open', 'title', 'useCloseButton'],
     emits: ['update:open'],
-    template: '<div class="cdx-dialog"><slot /></div>',
+    template: '<div v-if="open" class="cdx-dialog"><slot /></div>',
   },
   CdxLabel: {
     name: 'CdxLabel',
@@ -25,7 +25,8 @@ const stubs = {
     name: 'OutlineSelector',
     props: ['showIntro'],
     emits: ['select'],
-    template: '<div class="outline-selector-stub" />',
+    template:
+      '<button data-testid="select-city" @click="$emit(\'select\', \'city\')">City</button>',
   },
 }
 
@@ -40,7 +41,10 @@ async function mountSettings(props = {}) {
   await router.isReady()
 
   wrapper = mount(SettingsDialog, {
-    props,
+    props: {
+      open: true,
+      ...props,
+    },
     global: {
       plugins: [router],
       stubs,
@@ -64,7 +68,7 @@ describe('SettingsDialog', () => {
     const outlineSelector = wrapper.findComponent({ name: 'OutlineSelector' })
     expect(outlineSelector.props('showIntro')).toBe(false)
 
-    outlineSelector.vm.$emit('select', 'city')
+    await wrapper.get('[data-testid="select-city"]').trigger('click')
 
     expect(wrapper.emitted('outline-selected')).toEqual([['city']])
   })
@@ -73,13 +77,16 @@ describe('SettingsDialog', () => {
     await mountSettings()
 
     const prototypeGroup = wrapper.get('.field-group--prototype')
-    expect(prototypeGroup.get('label').text()).toBe('Prototype demos')
-    expect(prototypeGroup.get('.field-group__hint').text()).toBe(
+    expect(prototypeGroup.attributes('role')).toBe('group')
+    expect(prototypeGroup.attributes('aria-labelledby')).toBe('prototype-demos-label')
+    expect(wrapper.get('#prototype-demos-label').text()).toBe('Prototype demos')
+    expect(wrapper.get('#prototype-demos-description').text()).toBe(
       'Explore reviewed Wikidata facts using Portugal.',
     )
 
     const launcher = prototypeGroup.get('[data-testid="open-verified-facts-demo"]')
     expect(launcher.text()).toBe('Open Verified facts demo')
+    expect(launcher.attributes('aria-describedby')).toBe('prototype-demos-description')
 
     await launcher.trigger('click')
 
