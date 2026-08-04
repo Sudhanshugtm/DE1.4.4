@@ -217,6 +217,24 @@ test('validateSourceUrl rejects normalized duplicate sources', () => {
   })
 })
 
+test('validateSourceUrl refuses discouraged domains when outline context is given', () => {
+  const outline = { id: 'person', label: 'Person' }
+
+  const rejected = validateSourceUrl('https://www.imdb.com/name/nm1', [], outline)
+  assert.equal(rejected.valid, false)
+  assert.match(rejected.error, /discourage imdb\.com/)
+  assert.match(rejected.error, /Person articles/)
+
+  const subdomain = validateSourceUrl('https://m.facebook.com/someone', [], outline)
+  assert.equal(subdomain.valid, false)
+  assert.match(subdomain.error, /facebook\.com/)
+
+  // Without outline context, the same URL passes: the rule belongs to the
+  // guidance flow, not to URL validity itself.
+  assert.equal(validateSourceUrl('https://www.imdb.com/name/nm1').valid, true)
+  assert.equal(validateSourceUrl('https://www.britannica.com/x', [], outline).valid, true)
+})
+
 test('source changes are immutable and a removed source can be added again', () => {
   const state = createFlowState(personJourney)
   const added = addSource(state, 'https://example.com/one')

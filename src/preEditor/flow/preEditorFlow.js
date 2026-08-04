@@ -1,3 +1,5 @@
+import { findDiscouragedSource } from '../../config/outlines/discouragedSources.js'
+
 const STEPS = Object.freeze({
   SUBJECT: 'subject',
   SOURCES: 'sources',
@@ -28,7 +30,7 @@ const findSubject = (journey, title) => {
   return normalizeTitle(title) === normalizeTitle(journey.subject.title) ? journey.subject : null
 }
 
-const validateSourceUrl = (value, existingSources = []) => {
+const validateSourceUrl = (value, existingSources = [], outline = null) => {
   if (typeof value !== 'string' || !value.trim()) {
     return { valid: false, error: SOURCE_ERRORS.INVALID }
   }
@@ -52,11 +54,23 @@ const validateSourceUrl = (value, existingSources = []) => {
     return { valid: false, error: SOURCE_ERRORS.DUPLICATE }
   }
 
+  // The same rule the editor applies while writing, applied at the door: an
+  // error rather than a warning, because the source cannot be added.
+  if (outline?.id) {
+    const discouraged = findDiscouragedSource(url, outline.id)
+    if (discouraged) {
+      return {
+        valid: false,
+        error: `Simple English editors discourage ${discouraged.domain} as a source for ${outline.label ?? 'this type of'} articles. Add an independent, reliable source instead.`,
+      }
+    }
+  }
+
   return { valid: true, source: { url, domain: parsedUrl.hostname } }
 }
 
-const addSource = (state, value) => {
-  const result = validateSourceUrl(value, state.sources)
+const addSource = (state, value, outline = null) => {
+  const result = validateSourceUrl(value, state.sources, outline)
   if (!result.valid) {
     return { state, error: result.error }
   }

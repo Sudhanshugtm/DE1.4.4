@@ -305,7 +305,10 @@ function updateSourceUrl(value) {
 }
 
 function submitSource() {
-  const result = addSource(flowState.value, sourceUrl.value)
+  const result = addSource(flowState.value, sourceUrl.value, {
+    id: activeJourney.value.handoff.outline,
+    label: activeJourney.value.subject.typeLabel,
+  })
   flowState.value = result.state
   sourceError.value = result.error
 
