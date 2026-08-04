@@ -118,6 +118,24 @@ describe('reviewed verified fact fixtures', () => {
       },
     },
     {
+      label: 'Wikidata homepage path',
+      fact: { ...expectedBuddhismFact, claimUrl: 'https://www.wikidata.org/#P571' },
+    },
+    {
+      label: 'Wikidata special page path',
+      fact: {
+        ...expectedBuddhismFact,
+        claimUrl: 'https://www.wikidata.org/wiki/Special:Random#P571',
+      },
+    },
+    {
+      label: 'arbitrary Wikidata path',
+      fact: {
+        ...expectedBuddhismFact,
+        claimUrl: 'https://www.wikidata.org/not-a-claim/Q748#P571',
+      },
+    },
+    {
       label: 'claim URL without a hash',
       fact: { ...expectedBuddhismFact, claimUrl: 'https://www.wikidata.org/wiki/Q748' },
     },

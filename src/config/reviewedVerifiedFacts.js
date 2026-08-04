@@ -40,6 +40,7 @@ export function isReviewedVerifiedFact(fact) {
     return (
       claimUrl.protocol === 'https:' &&
       claimUrl.hostname === 'www.wikidata.org' &&
+      /^\/wiki\/Q\d+$/.test(claimUrl.pathname) &&
       /^#P\d+$/.test(claimUrl.hash)
     )
   } catch {
